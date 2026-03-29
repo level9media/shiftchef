@@ -42,79 +42,91 @@
   --color-sidebar-ring: var(--sidebar-ring);
 }
 
+/* ── ShiftChef Design Tokens ─────────────────────────────────────────────── */
 :root {
-  --primary: oklch(0.65 0.18 35);
-  --primary-foreground: oklch(0.98 0 0);
-  --sidebar-primary: oklch(0.65 0.18 35);
-  --sidebar-primary-foreground: oklch(0.98 0 0);
-  --chart-1: oklch(0.65 0.18 35);
-  --chart-2: oklch(0.55 0.15 35);
-  --chart-3: oklch(0.45 0.12 35);
-  --chart-4: oklch(0.35 0.09 35);
-  --chart-5: oklch(0.25 0.06 35);
-  --radius: 0.65rem;
-  --background: oklch(0.08 0 0);
-  --foreground: oklch(0.96 0 0);
-  --card: oklch(0.11 0 0);
-  --card-foreground: oklch(0.96 0 0);
-  --popover: oklch(0.13 0 0);
-  --popover-foreground: oklch(0.96 0 0);
-  --secondary: oklch(0.16 0 0);
-  --secondary-foreground: oklch(0.96 0 0);
-  --muted: oklch(0.16 0 0);
-  --muted-foreground: oklch(0.55 0 0);
-  --accent: oklch(0.65 0.18 35);
-  --accent-foreground: oklch(0.98 0 0);
-  --destructive: oklch(0.55 0.2 25);
-  --destructive-foreground: oklch(0.98 0 0);
-  --border: oklch(0.22 0 0);
-  --input: oklch(0.16 0 0);
-  --ring: oklch(0.65 0.18 35);
-  --sidebar: oklch(0.10 0 0);
-  --sidebar-foreground: oklch(0.96 0 0);
-  --sidebar-accent: oklch(0.16 0 0);
-  --sidebar-accent-foreground: oklch(0.96 0 0);
-  --sidebar-border: oklch(0.22 0 0);
-  --sidebar-ring: oklch(0.65 0.18 35);
+  --primary: oklch(0.68 0.22 38);
+  --primary-foreground: oklch(0.99 0 0);
+  --background: oklch(0.06 0 0);
+  --foreground: oklch(0.97 0 0);
+  --card: oklch(0.10 0 0);
+  --card-foreground: oklch(0.97 0 0);
+  --popover: oklch(0.12 0 0);
+  --popover-foreground: oklch(0.97 0 0);
+  --secondary: oklch(0.15 0 0);
+  --secondary-foreground: oklch(0.97 0 0);
+  --muted: oklch(0.15 0 0);
+  --muted-foreground: oklch(0.52 0 0);
+  --accent: oklch(0.68 0.22 38);
+  --accent-foreground: oklch(0.99 0 0);
+  --destructive: oklch(0.55 0.22 25);
+  --destructive-foreground: oklch(0.99 0 0);
+  --border: oklch(0.20 0 0);
+  --input: oklch(0.14 0 0);
+  --ring: oklch(0.68 0.22 38);
+  --radius: 0.875rem;
+  --chart-1: oklch(0.68 0.22 38);
+  --chart-2: oklch(0.58 0.18 38);
+  --chart-3: oklch(0.48 0.14 38);
+  --chart-4: oklch(0.38 0.10 38);
+  --chart-5: oklch(0.28 0.06 38);
+  --sidebar: oklch(0.08 0 0);
+  --sidebar-foreground: oklch(0.97 0 0);
+  --sidebar-primary: oklch(0.68 0.22 38);
+  --sidebar-primary-foreground: oklch(0.99 0 0);
+  --sidebar-accent: oklch(0.15 0 0);
+  --sidebar-accent-foreground: oklch(0.97 0 0);
+  --sidebar-border: oklch(0.20 0 0);
+  --sidebar-ring: oklch(0.68 0.22 38);
 }
 
 .dark {
-  --primary: oklch(0.65 0.18 35);
-  --primary-foreground: oklch(0.98 0 0);
-  --background: oklch(0.08 0 0);
-  --foreground: oklch(0.96 0 0);
-  --card: oklch(0.11 0 0);
-  --card-foreground: oklch(0.96 0 0);
-  --popover: oklch(0.13 0 0);
-  --popover-foreground: oklch(0.96 0 0);
-  --secondary: oklch(0.16 0 0);
-  --secondary-foreground: oklch(0.96 0 0);
-  --muted: oklch(0.16 0 0);
-  --muted-foreground: oklch(0.55 0 0);
-  --accent: oklch(0.65 0.18 35);
-  --accent-foreground: oklch(0.98 0 0);
-  --destructive: oklch(0.55 0.2 25);
-  --destructive-foreground: oklch(0.98 0 0);
-  --border: oklch(0.22 0 0);
-  --input: oklch(0.16 0 0);
-  --ring: oklch(0.65 0.18 35);
-  --sidebar: oklch(0.10 0 0);
-  --sidebar-foreground: oklch(0.96 0 0);
-  --sidebar-accent: oklch(0.16 0 0);
-  --sidebar-accent-foreground: oklch(0.96 0 0);
-  --sidebar-border: oklch(0.22 0 0);
-  --sidebar-ring: oklch(0.65 0.18 35);
+  --primary: oklch(0.68 0.22 38);
+  --primary-foreground: oklch(0.99 0 0);
+  --background: oklch(0.06 0 0);
+  --foreground: oklch(0.97 0 0);
+  --card: oklch(0.10 0 0);
+  --card-foreground: oklch(0.97 0 0);
+  --popover: oklch(0.12 0 0);
+  --popover-foreground: oklch(0.97 0 0);
+  --secondary: oklch(0.15 0 0);
+  --secondary-foreground: oklch(0.97 0 0);
+  --muted: oklch(0.15 0 0);
+  --muted-foreground: oklch(0.52 0 0);
+  --accent: oklch(0.68 0.22 38);
+  --accent-foreground: oklch(0.99 0 0);
+  --destructive: oklch(0.55 0.22 25);
+  --destructive-foreground: oklch(0.99 0 0);
+  --border: oklch(0.20 0 0);
+  --input: oklch(0.14 0 0);
+  --ring: oklch(0.68 0.22 38);
+  --sidebar: oklch(0.08 0 0);
+  --sidebar-foreground: oklch(0.97 0 0);
+  --sidebar-accent: oklch(0.15 0 0);
+  --sidebar-accent-foreground: oklch(0.97 0 0);
+  --sidebar-border: oklch(0.20 0 0);
+  --sidebar-ring: oklch(0.68 0.22 38);
 }
 
 @layer base {
   * {
     @apply border-border outline-ring/50;
   }
-  body {
-    @apply bg-background text-foreground font-sans antialiased;
-    -webkit-tap-highlight-color: transparent;
+  html {
+    color-scheme: dark;
+    --sat: env(safe-area-inset-top, 0px);
+    --sab: env(safe-area-inset-bottom, 0px);
+    --sal: env(safe-area-inset-left, 0px);
+    --sar: env(safe-area-inset-right, 0px);
   }
-  html { color-scheme: dark; }
+  body {
+    @apply bg-background text-foreground antialiased;
+    font-family: "Inter", sans-serif;
+    -webkit-tap-highlight-color: transparent;
+    overscroll-behavior: none;
+  }
+  h1, h2, h3 {
+    font-family: "Plus Jakarta Sans", "Inter", sans-serif;
+  }
   button:not(:disabled),
   [role="button"]:not([aria-disabled="true"]),
   [type="button"]:not(:disabled),
@@ -129,44 +141,76 @@
 }
 
 @layer components {
-  /**
-   * Custom container utility that centers content and adds responsive padding.
-   *
-   * This overrides Tailwind's default container behavior to:
-   * - Auto-center content (mx-auto)
-   * - Add responsive horizontal padding
-   * - Set max-width for large screens
-   *
-   * Usage: <div className="container">...</div>
-   *
-   * For custom widths, use max-w-* utilities directly:
-   * <div className="max-w-6xl mx-auto px-4">...</div>
-   */
   .container {
     width: 100%;
     margin-left: auto;
     margin-right: auto;
-    padding-left: 1rem; /* 16px - mobile padding */
+    padding-left: 1rem;
     padding-right: 1rem;
   }
-
   .flex {
     min-height: 0;
     min-width: 0;
   }
-
   @media (min-width: 640px) {
-    .container {
-      padding-left: 1.5rem; /* 24px - tablet padding */
-      padding-right: 1.5rem;
-    }
+    .container { padding-left: 1.5rem; padding-right: 1.5rem; }
+  }
+  @media (min-width: 1024px) {
+    .container { padding-left: 2rem; padding-right: 2rem; max-width: 1280px; }
   }
 
-  @media (min-width: 1024px) {
-    .container {
-      padding-left: 2rem; /* 32px - desktop padding */
-      padding-right: 2rem;
-      max-width: 1280px; /* Standard content width */
-    }
+  /* ── Phone-app utilities ─────────────────────────────────────────────────── */
+
+  .pb-safe { padding-bottom: calc(var(--sab) + 5rem); }
+  .bottom-nav-safe { padding-bottom: var(--sab); }
+
+  .scrollbar-none { scrollbar-width: none; -ms-overflow-style: none; }
+  .scrollbar-none::-webkit-scrollbar { display: none; }
+
+  .glass-card {
+    background: oklch(0.10 0 0 / 0.88);
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+    border: 1px solid oklch(0.22 0 0 / 0.5);
   }
+
+  .card-press {
+    transition: transform 0.12s ease, box-shadow 0.12s ease;
+    -webkit-user-select: none;
+    user-select: none;
+  }
+  .card-press:active { transform: scale(0.975); }
+
+  .btn-glow { box-shadow: 0 0 24px oklch(0.68 0.22 38 / 0.4); }
+  .btn-glow:hover { box-shadow: 0 0 32px oklch(0.68 0.22 38 / 0.55); }
+
+  @keyframes shimmer {
+    0% { background-position: -200% 0; }
+    100% { background-position: 200% 0; }
+  }
+  .skeleton {
+    background: linear-gradient(90deg, oklch(0.13 0 0) 25%, oklch(0.17 0 0) 50%, oklch(0.13 0 0) 75%);
+    background-size: 200% 100%;
+    animation: shimmer 1.4s infinite;
+    border-radius: var(--radius);
+  }
+
+  @keyframes slideUp {
+    from { transform: translateY(100%); opacity: 0; }
+    to { transform: translateY(0); opacity: 1; }
+  }
+  .slide-up { animation: slideUp 0.3s cubic-bezier(0.32, 0.72, 0, 1); }
+
+  @keyframes fadeInUp {
+    from { transform: translateY(10px); opacity: 0; }
+    to { transform: translateY(0); opacity: 1; }
+  }
+  .fade-in-up { animation: fadeInUp 0.22s ease forwards; }
+
+  /* Staggered card animations */
+  .card-1 { animation-delay: 0ms; }
+  .card-2 { animation-delay: 60ms; }
+  .card-3 { animation-delay: 120ms; }
+  .card-4 { animation-delay: 180ms; }
+  .card-5 { animation-delay: 240ms; }
 }

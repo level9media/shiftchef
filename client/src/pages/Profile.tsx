@@ -1,12 +1,16 @@
 import { useAuth } from "@/_core/hooks/useAuth";
 import { trpc } from "@/lib/trpc";
-import { Button } from "@/components/ui/button";
 import AppShell from "@/components/AppShell";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { useLocation } from "wouter";
 import { useState, useEffect } from "react";
-import { Star, MapPin, Briefcase, Edit2, Check, LogOut, RefreshCw, User } from "lucide-react";
-import { toast } from "sonner";
+import {
+  Star, MapPin, Briefcase, ChefHat, LogOut,
+  Edit3, Check, X, Shield, ChevronRight, Camera
+} from "lucide-react";
 import { cn } from "@/lib/utils";
+import { toast } from "sonner";
 
 const SKILLS = [
   { value: "cook", label: "Cook" },
@@ -32,24 +36,6 @@ export default function Profile() {
     retry: false,
   });
 
-  const updateMutation = trpc.profile.update.useMutation({
-    onSuccess: () => {
-      toast.success("Profile updated!");
-      setEditing(false);
-      refetch();
-    },
-    onError: (e) => toast.error(e.message),
-  });
-
-  const setRoleMutation = trpc.profile.setRole.useMutation({
-    onSuccess: () => {
-      toast.success("Role updated!");
-      refetch();
-    },
-    onError: (e) => toast.error(e.message),
-  });
-
-  // Form state
   const [name, setName] = useState("");
   const [bio, setBio] = useState("");
   const [city, setCity] = useState("Austin, TX");
@@ -66,17 +52,23 @@ export default function Profile() {
       setLocation(profile.location ?? "");
       setExperience(profile.experience ?? "");
       setProfileImage(profile.profileImage ?? "");
-      try {
-        setSelectedSkills(JSON.parse(profile.skills ?? "[]"));
-      } catch {
-        setSelectedSkills([]);
-      }
+      try { setSelectedSkills(JSON.parse(profile.skills ?? "[]")); } catch { setSelectedSkills([]); }
     }
   }, [profile]);
 
   useEffect(() => {
     if (!authLoading && !isAuthenticated) navigate("/");
   }, [isAuthenticated, authLoading]);
+
+  const updateMutation = trpc.profile.update.useMutation({
+    onSuccess: () => { toast.success("Profile saved!"); setEditing(false); refetch(); },
+    onError: (e) => toast.error(e.message),
+  });
+
+  const setRoleMutation = trpc.profile.setRole.useMutation({
+    onSuccess: () => { toast.success("Role updated!"); refetch(); },
+    onError: (e) => toast.error(e.message),
+  });
 
   const handleSave = () => {
     updateMutation.mutate({
@@ -106,267 +98,209 @@ export default function Profile() {
     );
   }
 
-  const isWorker = !profile?.userType || profile.userType === "worker" || profile.userType === "both";
+  const isWorker = !profile?.userType || profile?.userType === "worker" || profile?.userType === "both";
+  const isEmployer = profile?.userType === "employer" || profile?.userType === "both";
   const skills: string[] = (() => {
     try { return JSON.parse(profile?.skills ?? "[]"); } catch { return []; }
   })();
+  const rating = profile?.rating ? parseFloat(String(profile.rating)) : null;
+  const reliability = profile?.reliabilityScore ? parseFloat(String(profile.reliabilityScore)) : null;
 
   return (
     <AppShell>
-      <div className="max-w-lg mx-auto px-4 py-4 space-y-4">
-        {/* Profile header */}
-        <div className="bg-card rounded-2xl border border-border p-5">
-          <div className="flex items-start gap-4">
-            {/* Avatar */}
+      <div className="max-w-lg mx-auto">
+        {/* ── Hero banner ───────────────────────────────────────────────── */}
+        <div className="relative">
+          <div
+            className="h-28"
+            style={{ background: "linear-gradient(135deg, oklch(0.68 0.22 38 / 0.25), oklch(0.60 0.18 250 / 0.15))" }}
+          />
+          {/* Avatar */}
+          <div className="absolute bottom-0 left-4 translate-y-1/2">
             <div className="relative">
-              <div className="w-16 h-16 rounded-2xl bg-secondary flex items-center justify-center overflow-hidden border border-border">
-                {profile?.profileImage ? (
-                  <img src={profile.profileImage} alt={profile.name ?? ""} className="w-full h-full object-cover" />
-                ) : (
-                  <User size={28} className="text-muted-foreground" />
-                )}
-              </div>
-            </div>
-
-            <div className="flex-1 min-w-0">
-              <h2 className="text-xl font-black truncate">{profile?.name ?? "Your Name"}</h2>
-              <p className="text-muted-foreground text-sm">{profile?.email}</p>
-
-              <div className="flex items-center gap-3 mt-2">
-                {/* Rating */}
-                <div className="flex items-center gap-1">
-                  <Star size={14} className="text-yellow-400 fill-yellow-400" />
-                  <span className="text-sm font-bold">{(profile?.rating ?? 5).toFixed(1)}</span>
-                  <span className="text-xs text-muted-foreground">({profile?.totalRatings ?? 0})</span>
+              {profile?.profileImage ? (
+                <img src={profile.profileImage} alt="" className="w-20 h-20 rounded-3xl object-cover border-4 border-background" />
+              ) : (
+                <div className="w-20 h-20 rounded-3xl bg-primary flex items-center justify-center border-4 border-background">
+                  <ChefHat size={30} className="text-primary-foreground" />
                 </div>
-
-                {/* Reliability */}
-                {isWorker && (
-                  <div className="flex items-center gap-1">
-                    <span className="text-xs text-muted-foreground">Reliability:</span>
-                    <span className="text-xs font-bold text-green-400">{(profile?.reliabilityScore ?? 100).toFixed(0)}%</span>
-                  </div>
-                )}
-              </div>
-
-              {profile?.city && (
-                <p className="text-xs text-muted-foreground flex items-center gap-1 mt-1">
-                  <MapPin size={10} />
-                  {profile.city}
-                </p>
               )}
             </div>
-
-            <button
-              onClick={() => setEditing(!editing)}
-              className="p-2 rounded-xl bg-secondary text-muted-foreground hover:text-foreground"
-            >
-              {editing ? <Check size={16} /> : <Edit2 size={16} />}
-            </button>
           </div>
+          {/* Edit button */}
+          <div className="absolute bottom-0 right-4 translate-y-1/2 flex gap-2">
+            {editing ? (
+              <>
+                <button onClick={() => setEditing(false)} className="w-9 h-9 rounded-xl bg-secondary border border-border flex items-center justify-center">
+                  <X size={14} className="text-muted-foreground" />
+                </button>
+                <button onClick={handleSave} disabled={updateMutation.isPending} className="h-9 px-4 rounded-xl bg-primary flex items-center gap-1.5 text-primary-foreground text-xs font-bold">
+                  <Check size={13} strokeWidth={2.5} />Save
+                </button>
+              </>
+            ) : (
+              <button onClick={() => setEditing(true)} className="h-9 px-4 rounded-xl bg-secondary border border-border flex items-center gap-1.5 text-foreground text-xs font-bold">
+                <Edit3 size={13} />Edit
+              </button>
+            )}
+          </div>
+        </div>
 
-          {/* Skills badges */}
-          {!editing && skills.length > 0 && (
-            <div className="flex flex-wrap gap-1.5 mt-3">
-              {skills.map((s) => (
-                <span key={s} className="text-xs bg-primary/20 text-primary px-2 py-0.5 rounded-full font-medium">
-                  {SKILLS.find((sk) => sk.value === s)?.label ?? s}
-                </span>
-              ))}
-            </div>
+        {/* ── Name & badges ─────────────────────────────────────────────── */}
+        <div className="mt-14 px-4 pb-2">
+          {editing ? (
+            <Input value={name} onChange={(e) => setName(e.target.value)} className="text-xl font-black bg-transparent border-0 border-b border-border rounded-none px-0 h-auto focus-visible:ring-0 text-foreground" placeholder="Your name" />
+          ) : (
+            <h2 className="text-2xl font-black text-foreground">{profile?.name ?? "Your Name"}</h2>
           )}
+
+          <div className="flex flex-wrap gap-1.5 mt-2">
+            <span className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground bg-secondary px-2.5 py-1 rounded-full border border-border">
+              {profile?.userType ?? "worker"}
+            </span>
+            {rating !== null && (
+              <span className="flex items-center gap-1 text-[10px] font-bold text-yellow-400 bg-yellow-400/10 px-2.5 py-1 rounded-full">
+                <Star size={10} strokeWidth={2.5} />{rating.toFixed(1)} rating
+              </span>
+            )}
+            {reliability !== null && isWorker && (
+              <span className="flex items-center gap-1 text-[10px] font-bold text-emerald-400 bg-emerald-400/10 px-2.5 py-1 rounded-full">
+                <Shield size={10} strokeWidth={2.5} />{reliability.toFixed(0)}% reliable
+              </span>
+            )}
+          </div>
 
           {!editing && profile?.bio && (
             <p className="text-sm text-muted-foreground mt-3 leading-relaxed">{profile.bio}</p>
           )}
         </div>
 
-        {/* Edit form */}
-        {editing && (
-          <div className="bg-card rounded-2xl border border-border p-4 space-y-4">
-            <h3 className="font-bold">Edit Profile</h3>
-
-            <FormField label="Display Name">
-              <input value={name} onChange={(e) => setName(e.target.value)} placeholder="Your name" className="input-field" />
-            </FormField>
-
-            <FormField label="Profile Image URL">
-              <input value={profileImage} onChange={(e) => setProfileImage(e.target.value)} placeholder="https://..." className="input-field" />
-            </FormField>
-
-            <FormField label="Bio">
-              <textarea value={bio} onChange={(e) => setBio(e.target.value)} placeholder="Tell employers about yourself..." className="input-field h-20 resize-none" maxLength={500} />
-            </FormField>
-
-            <FormField label="City">
-              <select value={city} onChange={(e) => setCity(e.target.value)} className="input-field">
-                {CITIES.map((c) => <option key={c} value={c}>{c}</option>)}
-              </select>
-            </FormField>
-
-            <FormField label="Address / Neighborhood">
-              <input value={location} onChange={(e) => setLocation(e.target.value)} placeholder="East Austin, TX" className="input-field" />
-            </FormField>
-
-            {isWorker && (
-              <>
-                <FormField label="Experience">
-                  <textarea value={experience} onChange={(e) => setExperience(e.target.value)} placeholder="5 years fine dining, 3 years bar..." className="input-field h-20 resize-none" maxLength={1000} />
-                </FormField>
-
-                <div>
-                  <label className="text-sm font-semibold mb-2 block">Skills / Roles</label>
-                  <div className="grid grid-cols-3 gap-2">
-                    {SKILLS.map((s) => (
-                      <button
-                        key={s.value}
-                        onClick={() => toggleSkill(s.value)}
-                        className={cn(
-                          "py-2 px-2 rounded-xl text-xs font-medium transition-colors border",
-                          selectedSkills.includes(s.value)
-                            ? "bg-primary text-primary-foreground border-primary"
-                            : "bg-secondary text-muted-foreground border-border"
-                        )}
-                      >
-                        {s.label}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-              </>
-            )}
-
-            <Button
-              className="w-full"
-              onClick={handleSave}
-              disabled={updateMutation.isPending}
-            >
-              {updateMutation.isPending ? "Saving..." : "Save Changes"}
-            </Button>
+        {/* ── Stats row ─────────────────────────────────────────────────── */}
+        {isWorker && (
+          <div className="px-4 mt-4 grid grid-cols-3 gap-2">
+            <StatCard label="Rating" value={rating ? `${rating.toFixed(1)}★` : "—"} color="text-yellow-400" />
+            <StatCard label="Reliable" value={reliability ? `${reliability.toFixed(0)}%` : "—"} color="text-emerald-400" />
+            <StatCard label="Shifts" value={String((profile as any)?.totalShifts ?? 0)} color="text-primary" />
           </div>
         )}
 
-        {/* Role switcher */}
-        <div className="bg-card rounded-2xl border border-border p-4">
-          <h3 className="font-bold mb-3 flex items-center gap-2">
-            <Briefcase size={16} className="text-primary" />
-            Account Type
-          </h3>
-          <div className="grid grid-cols-3 gap-2">
+        {/* ── Edit form ─────────────────────────────────────────────────── */}
+        {editing && (
+          <div className="px-4 mt-4 space-y-3">
+            <div className="bg-card rounded-2xl border border-border p-4 space-y-3">
+              <p className="text-xs font-bold text-muted-foreground uppercase tracking-wider">Profile Image URL</p>
+              <Input value={profileImage} onChange={(e) => setProfileImage(e.target.value)} placeholder="https://..." className="bg-secondary border-border text-sm h-9" />
+              <p className="text-xs font-bold text-muted-foreground uppercase tracking-wider mt-2">Bio</p>
+              <textarea value={bio} onChange={(e) => setBio(e.target.value)} className="w-full bg-secondary border border-border rounded-xl px-3 py-2.5 text-sm text-foreground resize-none focus:outline-none focus:ring-1 focus:ring-primary" rows={3} placeholder="Tell employers about yourself..." />
+              <p className="text-xs font-bold text-muted-foreground uppercase tracking-wider mt-2">City</p>
+              <select value={city} onChange={(e) => setCity(e.target.value)} className="w-full bg-secondary border border-border rounded-xl px-3 py-2.5 text-sm text-foreground focus:outline-none focus:ring-1 focus:ring-primary">
+                {CITIES.map((c) => <option key={c} value={c}>{c}</option>)}
+              </select>
+              <p className="text-xs font-bold text-muted-foreground uppercase tracking-wider mt-2">Neighborhood</p>
+              <Input value={location} onChange={(e) => setLocation(e.target.value)} placeholder="East Austin, TX" className="bg-secondary border-border text-sm h-9" />
+            </div>
+
+            {isWorker && (
+              <div className="bg-card rounded-2xl border border-border p-4 space-y-3">
+                <p className="text-xs font-bold text-muted-foreground uppercase tracking-wider">Experience</p>
+                <textarea value={experience} onChange={(e) => setExperience(e.target.value)} className="w-full bg-secondary border border-border rounded-xl px-3 py-2.5 text-sm text-foreground resize-none focus:outline-none focus:ring-1 focus:ring-primary" rows={3} placeholder="5 years fine dining, 3 years bar..." />
+                <p className="text-xs font-bold text-muted-foreground uppercase tracking-wider mt-2">Skills & Roles</p>
+                <div className="flex flex-wrap gap-2">
+                  {SKILLS.map((s) => (
+                    <button key={s.value} onClick={() => toggleSkill(s.value)}
+                      className={cn("px-3 py-1.5 rounded-full text-xs font-semibold transition-all",
+                        selectedSkills.includes(s.value) ? "bg-primary text-primary-foreground" : "bg-secondary text-muted-foreground border border-border"
+                      )}>
+                      {s.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* ── Skills display (view mode) ─────────────────────────────────── */}
+        {!editing && skills.length > 0 && (
+          <div className="px-4 mt-4">
+            <div className="bg-card rounded-2xl border border-border p-4">
+              <p className="text-xs font-bold text-muted-foreground uppercase tracking-wider mb-3">Skills & Roles</p>
+              <div className="flex flex-wrap gap-2">
+                {skills.map((s) => (
+                  <span key={s} className="px-3 py-1.5 rounded-full text-xs font-semibold bg-primary/15 text-primary border border-primary/30">
+                    {SKILLS.find((sk) => sk.value === s)?.label ?? s}
+                  </span>
+                ))}
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* ── Location ──────────────────────────────────────────────────── */}
+        {!editing && (profile?.location || profile?.city) && (
+          <div className="px-4 mt-3">
+            <div className="bg-card rounded-2xl border border-border p-4">
+              <div className="flex items-center gap-2">
+                <MapPin size={14} className="text-muted-foreground" />
+                <span className="text-sm text-foreground">{profile?.location ?? profile?.city}</span>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* ── Account type ──────────────────────────────────────────────── */}
+        <div className="px-4 mt-3">
+          <div className="bg-card rounded-2xl border border-border overflow-hidden">
+            <p className="text-xs font-bold text-muted-foreground uppercase tracking-wider px-4 pt-4 pb-2">Switch Role</p>
             {(["worker", "employer", "both"] as const).map((type) => (
-              <button
-                key={type}
-                onClick={() => setRoleMutation.mutate({ userType: type })}
-                className={cn(
-                  "py-2 px-3 rounded-xl text-xs font-semibold transition-colors border capitalize",
-                  profile?.userType === type
-                    ? "bg-primary text-primary-foreground border-primary"
-                    : "bg-secondary text-muted-foreground border-border"
-                )}
-              >
-                {type}
+              <button key={type} onClick={() => setRoleMutation.mutate({ userType: type })}
+                className={cn("w-full flex items-center justify-between px-4 py-3 border-t border-border transition-colors",
+                  profile?.userType === type ? "bg-primary/10" : "hover:bg-secondary"
+                )}>
+                <span className="text-sm font-medium text-foreground capitalize">
+                  {type === "worker" ? "Worker only" : type === "employer" ? "Employer only" : "Both roles"}
+                </span>
+                {profile?.userType === type
+                  ? <Check size={14} className="text-primary" strokeWidth={2.5} />
+                  : <ChevronRight size={14} className="text-muted-foreground" />}
               </button>
             ))}
           </div>
-          <p className="text-xs text-muted-foreground mt-2">
-            Switch between worker and employer modes at any time
-          </p>
         </div>
 
-        {/* Stripe Connect (workers) */}
-        {isWorker && (
-          <StripeConnectCard profile={profile} />
-        )}
-
-        {/* Employer subscription status */}
-        {(profile?.userType === "employer" || profile?.userType === "both") && (
-          <div className="bg-card rounded-2xl border border-border p-4">
-            <h3 className="font-bold mb-2">Posting Credits</h3>
-            <p className="text-sm text-muted-foreground">
-              {profile?.subscriptionStatus === "active"
-                ? "✅ Unlimited posts (subscription active)"
-                : `${profile?.postsRemaining ?? 0} post(s) remaining`}
-            </p>
-            <Button variant="outline" size="sm" className="mt-3" onClick={() => navigate("/post-job")}>
-              Get More Credits
-            </Button>
+        {/* ── Employer credits ──────────────────────────────────────────── */}
+        {isEmployer && (
+          <div className="px-4 mt-3">
+            <div className="bg-card rounded-2xl border border-border p-4">
+              <p className="text-xs font-bold text-muted-foreground uppercase tracking-wider mb-2">Posting Credits</p>
+              <p className="text-sm text-foreground">
+                {profile?.subscriptionStatus === "active"
+                  ? "✅ Unlimited posts (subscription active)"
+                  : `${profile?.postsRemaining ?? 0} post(s) remaining`}
+              </p>
+              <button onClick={() => navigate("/post-job")} className="mt-3 text-xs font-bold text-primary flex items-center gap-1">
+                Buy more credits <ChevronRight size={12} />
+              </button>
+            </div>
           </div>
         )}
 
-        {/* Logout */}
-        <button
-          onClick={() => {
-            logout();
-            navigate("/");
-          }}
-          className="w-full flex items-center justify-center gap-2 py-3 rounded-2xl border border-border text-muted-foreground hover:text-destructive hover:border-destructive transition-colors text-sm font-medium"
-        >
-          <LogOut size={16} />
-          Sign Out
-        </button>
+        {/* ── Logout ────────────────────────────────────────────────────── */}
+        <div className="px-4 mt-3 pb-6">
+          <button onClick={logout} className="w-full flex items-center justify-center gap-2 h-12 rounded-2xl border border-destructive/30 text-destructive text-sm font-semibold hover:bg-destructive/10 transition-colors">
+            <LogOut size={15} />Sign Out
+          </button>
+        </div>
       </div>
-
-      <style>{`
-        .input-field {
-          width: 100%;
-          background: var(--color-secondary);
-          border: 1px solid var(--color-border);
-          border-radius: 0.75rem;
-          padding: 0.625rem 0.75rem;
-          font-size: 0.875rem;
-          color: var(--color-foreground);
-          outline: none;
-          transition: border-color 0.15s;
-        }
-        .input-field:focus { border-color: var(--color-ring); }
-        .input-field::placeholder { color: var(--color-muted-foreground); }
-        select.input-field option { background: var(--color-popover); }
-      `}</style>
     </AppShell>
   );
 }
 
-function StripeConnectCard({ profile }: { profile: any }) {
-  const utils = trpc.useUtils();
-  const connectMutation = trpc.payments.connectStripe.useMutation({
-    onSuccess: () => {
-      toast.success("Stripe account connected!");
-      utils.profile.get.invalidate();
-    },
-    onError: (e) => toast.error(e.message),
-  });
-
+function StatCard({ label, value, color }: { label: string; value: string; color: string }) {
   return (
-    <div className="bg-card rounded-2xl border border-border p-4">
-      <h3 className="font-bold mb-2">Payment Account</h3>
-      {profile?.stripeOnboardingComplete ? (
-        <div className="flex items-center gap-2 text-green-400">
-          <Check size={16} />
-          <span className="text-sm font-medium">Stripe account connected</span>
-        </div>
-      ) : (
-        <>
-          <p className="text-sm text-muted-foreground mb-3">
-            Connect your Stripe account to receive payments after shifts.
-          </p>
-          <Button
-            className="w-full"
-            onClick={() => connectMutation.mutate()}
-            disabled={connectMutation.isPending}
-          >
-            {connectMutation.isPending ? "Connecting..." : "Connect Stripe Account"}
-          </Button>
-        </>
-      )}
-    </div>
-  );
-}
-
-function FormField({ label, children }: { label: string; children: React.ReactNode }) {
-  return (
-    <div>
-      <label className="text-sm font-semibold mb-1.5 block text-foreground">{label}</label>
-      {children}
+    <div className="bg-card rounded-2xl border border-border p-3 text-center">
+      <p className={cn("text-xl font-black", color)}>{value}</p>
+      <p className="text-[10px] text-muted-foreground mt-0.5">{label}</p>
     </div>
   );
 }

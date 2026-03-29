@@ -86,3 +86,29 @@
 - [x] jobs.list tests (city filter, default Austin TX)
 - [x] 90/10 fee calculation unit tests
 - [x] profile.setRole validation test
+
+## ShiftChef Rebrand & Upgrades
+- [x] Rename app to ShiftChef everywhere (title, logo, meta, copy)
+- [x] New color palette: deep charcoal bg (#0A0A0A), hot orange (#FF6B00) accent, Jakarta Sans font
+- [x] Phone-app UI: safe area insets, iOS/Android-style bottom nav with active dots
+- [x] Sticky header with blur backdrop, ShiftChef logo, notification bell
+- [x] Skeleton loading screens for all pages
+- [x] Pull-to-refresh feel on feed
+- [x] Phone-native micro-animations on buttons and cards
+- [x] Push notifications: owner notified on shift confirmed (accept)
+- [x] Push notifications: owner notified on payment released
+- [x] Admin dashboard: total platform fees, active jobs, user counts, revenue metrics
+- [x] Admin dashboard: user management table (workers/employers)
+- [x] Admin dashboard: recent transactions list
+- [x] Admin dashboard: recent jobs list
+- [x] Admin route at /admin with role guard
+
+## Pending / Future
+- [ ] Real Stripe Connect integration (swap simulated payments)
+- [ ] Web push notifications via FCM
+- [ ] In-app notification center (bell icon dropdown)
+- [ ] City auto-detection via geolocation
+- [ ] Image upload for worker profiles and job posts
+- [ ] Search and filter by role, pay rate, distance
+- [ ] Swipe-to-dismiss job cards (Tinder-style)
+- [ ] Bottom sheet modals for apply flow

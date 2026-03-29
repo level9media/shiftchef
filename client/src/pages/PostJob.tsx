@@ -1,27 +1,26 @@
 import { useAuth } from "@/_core/hooks/useAuth";
 import { trpc } from "@/lib/trpc";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
 import AppShell from "@/components/AppShell";
 import { useLocation } from "wouter";
 import { useState } from "react";
-import { ArrowLeft, Check, Zap, Crown, Package } from "lucide-react";
+import { ArrowLeft, Check, Zap, Crown, Package, TrendingUp, DollarSign } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 
 const ROLES = [
-  { value: "cook", label: "Cook" },
-  { value: "sous_chef", label: "Sous Chef" },
-  { value: "prep", label: "Prep Cook" },
-  { value: "dishwasher", label: "Dishwasher" },
-  { value: "cleaner", label: "Cleaner" },
-  { value: "server", label: "Server" },
-  { value: "bartender", label: "Bartender" },
-  { value: "host", label: "Host" },
-  { value: "manager", label: "Manager" },
+  { value: "cook", label: "Cook", emoji: "👨‍🍳" },
+  { value: "sous_chef", label: "Sous Chef", emoji: "🍴" },
+  { value: "prep", label: "Prep Cook", emoji: "🥗" },
+  { value: "dishwasher", label: "Dishwasher", emoji: "🫧" },
+  { value: "cleaner", label: "Cleaner", emoji: "🧹" },
+  { value: "server", label: "Server", emoji: "🍽️" },
+  { value: "bartender", label: "Bartender", emoji: "🍸" },
+  { value: "host", label: "Host", emoji: "🤝" },
+  { value: "manager", label: "Manager", emoji: "📋" },
 ] as const;
 
-const CITIES = ["Austin, TX", "Houston, TX", "Dallas, TX", "San Antonio, TX", "New York, NY"];
+const CITIES = ["Austin, TX", "Houston, TX", "Dallas, TX", "San Antonio, TX", "New York, NY", "Chicago, IL"];
 
 type Step = "pricing" | "form";
 
@@ -44,7 +43,7 @@ export default function PostJob() {
 
   const createJobMutation = trpc.jobs.create.useMutation({
     onSuccess: () => {
-      toast.success("Job posted! It's now live in the feed.");
+      toast.success("Shift is live in the feed!");
       utils.jobs.myJobs.invalidate();
       navigate("/applications");
     },
@@ -53,7 +52,6 @@ export default function PostJob() {
 
   const hasCredits = (profile?.postsRemaining ?? 0) > 0 || profile?.subscriptionStatus === "active";
 
-  // Form state
   const [role, setRole] = useState<string>("server");
   const [payRate, setPayRate] = useState("");
   const [startDate, setStartDate] = useState("");
@@ -66,24 +64,27 @@ export default function PostJob() {
   const [isPermanent, setIsPermanent] = useState(false);
   const [restaurantName, setRestaurantName] = useState("");
 
+  const getPayPreview = () => {
+    if (!payRate || !startDate || !startTime || !endTime) return null;
+    const startMs = new Date(`${startDate}T${startTime}`).getTime();
+    const endMs = new Date(`${startDate}T${endTime}`).getTime();
+    if (isNaN(startMs) || isNaN(endMs) || endMs <= startMs) return null;
+    const hours = (endMs - startMs) / 3600000;
+    const total = parseFloat(payRate) * hours;
+    return { hours: hours.toFixed(1), total: total.toFixed(2), worker: (total * 0.9).toFixed(2) };
+  };
+
   const handleSubmit = () => {
     if (!payRate || !startDate || !startTime || !endTime || !location) {
       toast.error("Please fill in all required fields");
       return;
     }
-
     const startMs = new Date(`${startDate}T${startTime}`).getTime();
     const endMs = new Date(`${startDate}T${endTime}`).getTime();
-
-    if (isNaN(startMs) || isNaN(endMs)) {
-      toast.error("Invalid date/time");
+    if (isNaN(startMs) || isNaN(endMs) || endMs <= startMs) {
+      toast.error("Invalid date/time — end must be after start");
       return;
     }
-    if (endMs <= startMs) {
-      toast.error("End time must be after start time");
-      return;
-    }
-
     createJobMutation.mutate({
       role: role as any,
       payRate: parseFloat(payRate),
@@ -98,65 +99,62 @@ export default function PostJob() {
     });
   };
 
+  const preview = getPayPreview();
+
   return (
     <AppShell>
-      <div className="max-w-lg mx-auto px-4 py-4">
+      <div className="max-w-lg mx-auto px-4 py-4 pb-10">
         {/* Header */}
         <div className="flex items-center gap-3 mb-6">
           <button
             onClick={() => step === "form" ? setStep("pricing") : navigate("/feed")}
-            className="p-2 rounded-xl bg-secondary text-muted-foreground hover:text-foreground"
+            className="w-10 h-10 rounded-2xl bg-secondary border border-border flex items-center justify-center text-muted-foreground hover:text-foreground transition-colors"
           >
-            <ArrowLeft size={18} />
+            <ArrowLeft size={17} />
           </button>
           <div>
-            <h1 className="text-xl font-black">Post a Shift</h1>
+            <h1 className="text-xl font-black text-foreground">Post a Shift</h1>
             <p className="text-xs text-muted-foreground">
-              {step === "pricing" ? "Choose a plan" : "Fill in shift details"}
+              {step === "pricing" ? "Choose a plan to get started" : "Fill in your shift details"}
             </p>
           </div>
         </div>
 
-        {/* Step: Pricing */}
+        {/* ── Step 1: Pricing ───────────────────────────────────────────── */}
         {step === "pricing" && (
-          <div className="space-y-4">
-            {/* Current credits */}
+          <div className="space-y-3">
             {hasCredits && (
-              <div className="bg-green-500/10 border border-green-500/30 rounded-2xl p-4 flex items-center gap-3">
-                <Check size={20} className="text-green-400" />
-                <div>
-                  <p className="font-bold text-sm text-green-400">You have posting credits</p>
+              <div className="bg-emerald-500/10 border border-emerald-500/30 rounded-2xl p-4 flex items-center gap-3">
+                <div className="w-9 h-9 rounded-xl bg-emerald-500/20 flex items-center justify-center flex-shrink-0">
+                  <Check size={16} className="text-emerald-400" strokeWidth={2.5} />
+                </div>
+                <div className="flex-1">
+                  <p className="font-bold text-sm text-emerald-400">Credits available</p>
                   <p className="text-xs text-muted-foreground">
                     {profile?.subscriptionStatus === "active"
                       ? "Unlimited posts (subscription active)"
                       : `${profile?.postsRemaining} post(s) remaining`}
                   </p>
                 </div>
-                <Button
-                  size="sm"
-                  className="ml-auto"
-                  onClick={() => setStep("form")}
-                >
+                <Button size="sm" className="flex-shrink-0 rounded-xl" onClick={() => setStep("form")}>
                   Continue
                 </Button>
               </div>
             )}
 
-            <h2 className="font-bold text-lg">Choose a Plan</h2>
+            <p className="text-xs font-bold text-muted-foreground uppercase tracking-wider pt-1">Choose a Plan</p>
 
-            {/* Pricing cards */}
             <PricingCard
-              icon={<Zap size={20} />}
+              icon={<Zap size={18} />}
               title="Single Post"
               price="$35"
               desc="Post one shift to the live feed"
-              features={["1 job post", "24-hour visibility", "Applicant management"]}
+              features={["1 job post", "Instant live feed listing", "Applicant management"]}
               onClick={() => purchaseMutation.mutate({ tier: "single" })}
               loading={purchaseMutation.isPending}
             />
-
             <PricingCard
-              icon={<Package size={20} />}
+              icon={<Package size={18} />}
               title="3-Post Bundle"
               price="$75"
               desc="Best value for occasional hiring"
@@ -165,9 +163,8 @@ export default function PostJob() {
               onClick={() => purchaseMutation.mutate({ tier: "bundle3" })}
               loading={purchaseMutation.isPending}
             />
-
             <PricingCard
-              icon={<Crown size={20} />}
+              icon={<Crown size={18} />}
               title="Monthly Unlimited"
               price="$99/mo"
               desc="For restaurants that hire regularly"
@@ -178,115 +175,74 @@ export default function PostJob() {
           </div>
         )}
 
-        {/* Step: Form */}
+        {/* ── Step 2: Form ──────────────────────────────────────────────── */}
         {step === "form" && (
           <div className="space-y-4">
-            {/* Role */}
+            {/* Role picker */}
             <div>
-              <label className="text-sm font-semibold mb-2 block">Role Needed *</label>
+              <p className="text-xs font-bold text-muted-foreground uppercase tracking-wider mb-2">Role Needed *</p>
               <div className="grid grid-cols-3 gap-2">
                 {ROLES.map((r) => (
                   <button
                     key={r.value}
                     onClick={() => setRole(r.value)}
                     className={cn(
-                      "py-2 px-3 rounded-xl text-sm font-medium transition-colors border",
+                      "py-2.5 px-2 rounded-xl text-xs font-bold transition-all border flex flex-col items-center gap-1",
                       role === r.value
                         ? "bg-primary text-primary-foreground border-primary"
                         : "bg-secondary text-muted-foreground border-border hover:text-foreground"
                     )}
                   >
+                    <span className="text-base">{r.emoji}</span>
                     {r.label}
                   </button>
                 ))}
               </div>
             </div>
 
-            {/* Restaurant name */}
+            {/* Venue name */}
             <FormField label="Restaurant / Venue Name">
-              <input
-                value={restaurantName}
-                onChange={(e) => setRestaurantName(e.target.value)}
-                placeholder="e.g. The Capital Grille"
-                className="input-field"
-              />
+              <input value={restaurantName} onChange={(e) => setRestaurantName(e.target.value)} placeholder="e.g. The Capital Grille" className="sc-input" />
             </FormField>
 
             {/* Pay rate */}
             <FormField label="Pay Rate ($/hr) *">
               <div className="relative">
-                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">$</span>
-                <input
-                  type="number"
-                  value={payRate}
-                  onChange={(e) => setPayRate(e.target.value)}
-                  placeholder="18.00"
-                  min="7.25"
-                  step="0.25"
-                  className="input-field pl-7"
-                />
+                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground text-sm">$</span>
+                <input type="number" value={payRate} onChange={(e) => setPayRate(e.target.value)} placeholder="18.00" min="7.25" step="0.25" className="sc-input pl-7" />
               </div>
             </FormField>
 
             {/* Date */}
             <FormField label="Shift Date *">
-              <input
-                type="date"
-                value={startDate}
-                onChange={(e) => setStartDate(e.target.value)}
-                min={new Date().toISOString().split("T")[0]}
-                className="input-field"
-              />
+              <input type="date" value={startDate} onChange={(e) => setStartDate(e.target.value)} min={new Date().toISOString().split("T")[0]} className="sc-input" />
             </FormField>
 
             {/* Times */}
             <div className="grid grid-cols-2 gap-3">
               <FormField label="Start Time *">
-                <input
-                  type="time"
-                  value={startTime}
-                  onChange={(e) => setStartTime(e.target.value)}
-                  className="input-field"
-                />
+                <input type="time" value={startTime} onChange={(e) => setStartTime(e.target.value)} className="sc-input" />
               </FormField>
               <FormField label="End Time *">
-                <input
-                  type="time"
-                  value={endTime}
-                  onChange={(e) => setEndTime(e.target.value)}
-                  className="input-field"
-                />
+                <input type="time" value={endTime} onChange={(e) => setEndTime(e.target.value)} className="sc-input" />
               </FormField>
             </div>
 
             {/* City */}
             <FormField label="City *">
-              <select
-                value={city}
-                onChange={(e) => setCity(e.target.value)}
-                className="input-field"
-              >
+              <select value={city} onChange={(e) => setCity(e.target.value)} className="sc-input">
                 {CITIES.map((c) => <option key={c} value={c}>{c}</option>)}
               </select>
             </FormField>
 
-            {/* Location */}
+            {/* Address */}
             <FormField label="Address / Location *">
-              <input
-                value={location}
-                onChange={(e) => setLocation(e.target.value)}
-                placeholder="123 Main St, Austin, TX"
-                className="input-field"
-              />
+              <input value={location} onChange={(e) => setLocation(e.target.value)} placeholder="123 Main St, Austin, TX" className="sc-input" />
             </FormField>
 
             {/* Min rating */}
             <FormField label="Minimum Worker Rating">
-              <select
-                value={minRating}
-                onChange={(e) => setMinRating(e.target.value)}
-                className="input-field"
-              >
+              <select value={minRating} onChange={(e) => setMinRating(e.target.value)} className="sc-input">
                 <option value="0">No minimum</option>
                 <option value="3">3★ or higher</option>
                 <option value="3.5">3.5★ or higher</option>
@@ -297,87 +253,75 @@ export default function PostJob() {
 
             {/* Description */}
             <FormField label="Description">
-              <textarea
-                value={description}
-                onChange={(e) => setDescription(e.target.value)}
-                placeholder="Describe the shift, requirements, dress code, etc."
-                className="input-field h-24 resize-none"
-                maxLength={2000}
-              />
+              <textarea value={description} onChange={(e) => setDescription(e.target.value)} placeholder="Describe the shift, requirements, dress code, etc." className="sc-input h-24 resize-none" maxLength={2000} />
             </FormField>
 
             {/* Permanent toggle */}
             <div className="flex items-center justify-between bg-card rounded-2xl p-4 border border-border">
               <div>
-                <p className="font-semibold text-sm">Permanent Potential</p>
+                <p className="font-bold text-sm text-foreground">Permanent Potential</p>
                 <p className="text-xs text-muted-foreground">Could this become a full-time role?</p>
               </div>
               <button
                 onClick={() => setIsPermanent(!isPermanent)}
-                className={cn(
-                  "w-12 h-6 rounded-full transition-colors relative",
-                  isPermanent ? "bg-green-500" : "bg-secondary"
-                )}
+                className={cn("w-12 h-6 rounded-full transition-colors relative flex-shrink-0", isPermanent ? "bg-emerald-500" : "bg-secondary border border-border")}
               >
-                <span className={cn(
-                  "absolute top-0.5 w-5 h-5 rounded-full bg-white transition-transform",
-                  isPermanent ? "translate-x-6" : "translate-x-0.5"
-                )} />
+                <span className={cn("absolute top-0.5 w-5 h-5 rounded-full bg-white shadow transition-transform", isPermanent ? "translate-x-6" : "translate-x-0.5")} />
               </button>
             </div>
 
             {/* Pay preview */}
-            {payRate && startDate && startTime && endTime && (
+            {preview && (
               <div className="bg-primary/10 border border-primary/30 rounded-2xl p-4">
-                <p className="text-sm font-semibold text-primary mb-1">Pay Preview</p>
-                <div className="flex justify-between text-sm">
-                  <span className="text-muted-foreground">Total shift pay</span>
-                  <span className="font-bold">
-                    ${(parseFloat(payRate) * ((new Date(`${startDate}T${endTime}`).getTime() - new Date(`${startDate}T${startTime}`).getTime()) / 3600000)).toFixed(2)}
-                  </span>
-                </div>
-                <div className="flex justify-between text-sm mt-1">
-                  <span className="text-muted-foreground">Worker receives (90%)</span>
-                  <span className="font-bold text-green-400">
-                    ${(parseFloat(payRate) * ((new Date(`${startDate}T${endTime}`).getTime() - new Date(`${startDate}T${startTime}`).getTime()) / 3600000) * 0.9).toFixed(2)}
-                  </span>
+                <p className="text-xs font-bold text-primary uppercase tracking-wider mb-2">Pay Preview</p>
+                <div className="space-y-1.5 text-sm">
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">{preview.hours}h × ${payRate}/hr</span>
+                    <span className="font-bold text-foreground">${preview.total}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">Worker receives (90%)</span>
+                    <span className="font-bold text-emerald-400">${preview.worker}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">Platform fee (10%)</span>
+                    <span className="text-muted-foreground">${(parseFloat(preview.total) * 0.1).toFixed(2)}</span>
+                  </div>
                 </div>
               </div>
             )}
 
             <Button
               size="lg"
-              className="w-full h-14 text-base font-bold rounded-2xl"
+              className="w-full h-14 text-base font-bold rounded-2xl btn-glow"
               disabled={createJobMutation.isPending}
               onClick={handleSubmit}
             >
-              {createJobMutation.isPending ? "Posting..." : "Post Shift Now"}
+              {createJobMutation.isPending ? (
+                <div className="w-5 h-5 border-2 border-primary-foreground border-t-transparent rounded-full animate-spin" />
+              ) : (
+                "Post Shift Now"
+              )}
             </Button>
           </div>
         )}
       </div>
 
       <style>{`
-        .input-field {
+        .sc-input {
           width: 100%;
-          background: var(--color-secondary);
-          border: 1px solid var(--color-border);
+          background: oklch(0.12 0 0);
+          border: 1px solid oklch(0.22 0 0);
           border-radius: 0.75rem;
           padding: 0.625rem 0.75rem;
           font-size: 0.875rem;
-          color: var(--color-foreground);
+          color: oklch(0.95 0 0);
           outline: none;
           transition: border-color 0.15s;
         }
-        .input-field:focus {
-          border-color: var(--color-ring);
-        }
-        .input-field::placeholder {
-          color: var(--color-muted-foreground);
-        }
-        select.input-field option {
-          background: var(--color-popover);
-        }
+        .sc-input:focus { border-color: oklch(0.68 0.22 38); }
+        .sc-input::placeholder { color: oklch(0.50 0 0); }
+        select.sc-input option { background: oklch(0.10 0 0); }
       `}</style>
     </AppShell>
   );
@@ -386,7 +330,7 @@ export default function PostJob() {
 function FormField({ label, children }: { label: string; children: React.ReactNode }) {
   return (
     <div>
-      <label className="text-sm font-semibold mb-1.5 block text-foreground">{label}</label>
+      <p className="text-xs font-bold text-muted-foreground uppercase tracking-wider mb-1.5">{label}</p>
       {children}
     </div>
   );
@@ -395,46 +339,35 @@ function FormField({ label, children }: { label: string; children: React.ReactNo
 function PricingCard({
   icon, title, price, desc, features, highlighted, onClick, loading
 }: {
-  icon: React.ReactNode;
-  title: string;
-  price: string;
-  desc: string;
-  features: string[];
-  highlighted?: boolean;
-  onClick: () => void;
-  loading: boolean;
+  icon: React.ReactNode; title: string; price: string; desc: string;
+  features: string[]; highlighted?: boolean; onClick: () => void; loading: boolean;
 }) {
   return (
     <div className={cn(
-      "rounded-2xl border p-4",
-      highlighted ? "border-primary bg-primary/5" : "border-border bg-card"
+      "rounded-2xl border p-4 transition-all",
+      highlighted ? "border-primary bg-primary/8" : "border-border bg-card"
     )}>
       <div className="flex items-start justify-between mb-3">
-        <div className="flex items-center gap-2">
-          <div className={cn("p-2 rounded-xl", highlighted ? "bg-primary text-primary-foreground" : "bg-secondary text-muted-foreground")}>
+        <div className="flex items-center gap-2.5">
+          <div className={cn("w-9 h-9 rounded-xl flex items-center justify-center", highlighted ? "bg-primary text-primary-foreground" : "bg-secondary text-muted-foreground")}>
             {icon}
           </div>
           <div>
-            <p className="font-bold">{title}</p>
-            <p className="text-xs text-muted-foreground">{desc}</p>
+            <p className="font-black text-sm text-foreground">{title}</p>
+            <p className="text-[10px] text-muted-foreground">{desc}</p>
           </div>
         </div>
-        <p className="text-xl font-black text-primary">{price}</p>
+        <p className="text-xl font-black text-primary flex-shrink-0 ml-2">{price}</p>
       </div>
-      <ul className="space-y-1 mb-4">
+      <ul className="space-y-1 mb-3">
         {features.map((f) => (
-          <li key={f} className="flex items-center gap-2 text-xs text-muted-foreground">
-            <Check size={12} className="text-green-400 flex-shrink-0" />
+          <li key={f} className="flex items-center gap-1.5 text-xs text-muted-foreground">
+            <Check size={10} className="text-emerald-400 flex-shrink-0" strokeWidth={2.5} />
             {f}
           </li>
         ))}
       </ul>
-      <Button
-        className={cn("w-full", highlighted ? "" : "variant-outline")}
-        variant={highlighted ? "default" : "outline"}
-        onClick={onClick}
-        disabled={loading}
-      >
+      <Button className="w-full rounded-xl" variant={highlighted ? "default" : "outline"} onClick={onClick} disabled={loading} size="sm">
         {loading ? "Processing..." : `Get ${title}`}
       </Button>
     </div>

@@ -15,6 +15,7 @@ import Earnings from "./pages/Earnings";
 import Ratings from "./pages/Ratings";
 import Onboarding from "./pages/Onboarding";
 import WorkerAvailability from "./pages/WorkerAvailability";
+import AdminDashboard from "./pages/AdminDashboard";
 
 function Router() {
   return (
@@ -29,6 +30,7 @@ function Router() {
       <Route path="/earnings" component={Earnings} />
       <Route path="/ratings" component={Ratings} />
       <Route path="/availability" component={WorkerAvailability} />
+      <Route path="/admin" component={AdminDashboard} />
       <Route path="/404" component={NotFound} />
       <Route component={NotFound} />
     </Switch>

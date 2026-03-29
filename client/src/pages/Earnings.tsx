@@ -1,37 +1,33 @@
 import { useAuth } from "@/_core/hooks/useAuth";
 import { trpc } from "@/lib/trpc";
-import { Button } from "@/components/ui/button";
 import AppShell from "@/components/AppShell";
-import { useLocation } from "wouter";
-import { useEffect } from "react";
-import { DollarSign, TrendingUp, Clock, CheckCircle, AlertCircle, Wallet, ArrowDownLeft } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { DollarSign, TrendingUp, Clock, CheckCircle, Wallet, ArrowDownLeft, ChefHat, AlertCircle } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 
-export default function Earnings() {
-  const { isAuthenticated, loading: authLoading } = useAuth();
-  const [, navigate] = useLocation();
+const ROLE_LABELS: Record<string, string> = {
+  cook: "Cook", sous_chef: "Sous Chef", prep: "Prep Cook",
+  dishwasher: "Dishwasher", cleaner: "Cleaner", server: "Server",
+  bartender: "Bartender", host: "Host", manager: "Manager",
+};
 
-  const { data: earnings, isLoading, refetch } = trpc.payments.earnings.useQuery(undefined, {
-    enabled: isAuthenticated,
-  });
+export default function Earnings() {
+  const { isAuthenticated } = useAuth();
+
+  const { data: earnings, isLoading, refetch } = trpc.payments.earnings.useQuery(
+    undefined, { enabled: isAuthenticated }
+  );
 
   const withdrawMutation = trpc.payments.withdraw.useMutation({
-    onSuccess: () => {
-      toast.success("Withdrawal initiated! Funds will arrive in 1-2 business days.");
-      refetch();
-    },
-    onError: (e: any) => toast.error(e.message),
+    onSuccess: () => { toast.success("Withdrawal initiated!"); refetch(); },
+    onError: (e) => toast.error(e.message),
   });
 
-  useEffect(() => {
-    if (!authLoading && !isAuthenticated) navigate("/");
-  }, [isAuthenticated, authLoading]);
-
-  if (authLoading || isLoading) {
+  if (isLoading) {
     return (
       <AppShell>
-        <div className="flex items-center justify-center h-64">
+        <div className="flex items-center justify-center min-h-[60vh]">
           <div className="w-8 h-8 border-2 border-primary border-t-transparent rounded-full animate-spin" />
         </div>
       </AppShell>
@@ -40,146 +36,124 @@ export default function Earnings() {
 
   const available = earnings?.availableBalance ?? 0;
   const totalEarned = earnings?.totalEarned ?? 0;
-  const totalWithdrawn = earnings?.totalFees ?? 0; // fees deducted (proxy for withdrawn)
+  const totalFees = earnings?.totalFees ?? 0;
   const history = earnings?.history ?? [];
   const stripeConnected = earnings?.stripeOnboardingComplete ?? false;
 
+  // amounts come in cents from server
+  const fmt = (cents: number) => (cents / 100).toFixed(2);
+
   return (
     <AppShell>
-      <div className="max-w-lg mx-auto px-4 py-4 space-y-4">
-        {/* Header */}
-        <h1 className="text-2xl font-black">Earnings</h1>
+      <div className="max-w-lg mx-auto px-4 py-4 space-y-4 pb-10">
 
-        {/* Balance card */}
-        <div className="bg-gradient-to-br from-primary/20 to-primary/5 border border-primary/30 rounded-2xl p-6">
-          <div className="flex items-center gap-2 mb-1">
-            <Wallet size={16} className="text-primary" />
-            <span className="text-sm text-muted-foreground font-medium">Available Balance</span>
+        {/* ── Balance Hero ──────────────────────────────────────────────── */}
+        <div className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-primary/20 via-primary/10 to-transparent border border-primary/30 p-6">
+          <div className="absolute -top-8 -right-8 w-32 h-32 bg-primary/20 rounded-full blur-2xl pointer-events-none" />
+          <div className="relative z-10">
+            <div className="flex items-center gap-2 mb-1">
+              <Wallet size={13} className="text-primary" />
+              <p className="text-xs font-bold text-muted-foreground uppercase tracking-wider">Available Balance</p>
+            </div>
+            <p className="text-5xl font-black text-foreground">${fmt(available)}</p>
+            <p className="text-xs text-muted-foreground mt-0.5">After 10% platform fee</p>
           </div>
-          <p className="text-5xl font-black mb-1">
-            ${(available / 100).toFixed(2)}
-          </p>
-          <p className="text-xs text-muted-foreground">Ready to withdraw</p>
 
           {!stripeConnected ? (
-            <div className="mt-4 bg-yellow-500/10 border border-yellow-500/30 rounded-xl p-3">
-              <p className="text-yellow-400 text-sm font-medium flex items-center gap-2">
-                <AlertCircle size={14} />
-                Connect Stripe to withdraw funds
+            <div className="mt-4 bg-yellow-500/10 border border-yellow-500/30 rounded-xl p-3 relative z-10">
+              <p className="text-yellow-400 text-xs font-bold flex items-center gap-1.5 mb-2">
+                <AlertCircle size={12} /> Connect Stripe to withdraw
               </p>
-              <Button
-                size="sm"
-                className="mt-2 w-full"
-                onClick={() => navigate("/profile")}
-              >
-                Connect Stripe Account
+              <Button size="sm" className="w-full rounded-xl text-xs" onClick={() => toast.info("Stripe Connect — add your keys to activate.")}>
+                Connect Bank Account
               </Button>
             </div>
           ) : (
             <Button
-              size="lg"
-              className="w-full mt-4 h-12 font-bold rounded-xl"
+              className="w-full mt-4 h-12 font-bold rounded-2xl btn-glow relative z-10"
               disabled={available <= 0 || withdrawMutation.isPending}
               onClick={() => withdrawMutation.mutate()}
             >
-              {withdrawMutation.isPending ? "Processing..." : `Withdraw $${(available / 100).toFixed(2)}`}
+              {withdrawMutation.isPending ? (
+                <div className="w-4 h-4 border-2 border-primary-foreground border-t-transparent rounded-full animate-spin" />
+              ) : (
+                <><ArrowDownLeft size={16} className="mr-2" />Withdraw ${fmt(available)}</>
+              )}
             </Button>
           )}
         </div>
 
-        {/* Stats row */}
+        {/* ── Stats ─────────────────────────────────────────────────────── */}
         <div className="grid grid-cols-2 gap-3">
-          <StatCard
-            icon={<TrendingUp size={16} className="text-green-400" />}
-            label="Total Earned"
-            value={`$${(totalEarned / 100).toFixed(2)}`}
-          />
-          <StatCard
-            icon={<ArrowDownLeft size={16} className="text-blue-400" />}
-            label="Total Withdrawn"
-            value={`$${(totalWithdrawn / 100).toFixed(2)}`}
-          />
-        </div>
-
-        {/* Platform fee note */}
-        <div className="bg-card rounded-2xl border border-border p-4">
-          <div className="flex items-start gap-3">
-            <DollarSign size={16} className="text-muted-foreground mt-0.5" />
-            <div>
-              <p className="text-sm font-semibold">Platform Fee: 10%</p>
-              <p className="text-xs text-muted-foreground">
-                StaffUp retains 10% of each shift payment. You receive 90% of the agreed pay rate.
-              </p>
+          <div className="bg-card rounded-2xl border border-border p-4">
+            <div className="flex items-center gap-2 mb-2">
+              <div className="w-8 h-8 rounded-xl bg-emerald-500/10 flex items-center justify-center">
+                <TrendingUp size={14} className="text-emerald-400" />
+              </div>
+              <p className="text-xs text-muted-foreground">Total Earned</p>
             </div>
+            <p className="text-2xl font-black text-foreground">${fmt(totalEarned)}</p>
+            <p className="text-[10px] text-muted-foreground mt-0.5">All time gross</p>
+          </div>
+          <div className="bg-card rounded-2xl border border-border p-4">
+            <div className="flex items-center gap-2 mb-2">
+              <div className="w-8 h-8 rounded-xl bg-orange-500/10 flex items-center justify-center">
+                <DollarSign size={14} className="text-orange-400" />
+              </div>
+              <p className="text-xs text-muted-foreground">Platform Fees</p>
+            </div>
+            <p className="text-2xl font-black text-foreground">${fmt(totalFees)}</p>
+            <p className="text-[10px] text-muted-foreground mt-0.5">10% per shift</p>
           </div>
         </div>
 
-        {/* Payment history */}
+        {/* ── History ───────────────────────────────────────────────────── */}
         <div>
-          <h2 className="font-bold mb-3">Payment History</h2>
+          <p className="text-xs font-bold text-muted-foreground uppercase tracking-wider mb-3">Payment History</p>
           {history.length === 0 ? (
-            <div className="flex flex-col items-center justify-center py-12 text-center">
-              <DollarSign size={32} className="text-muted-foreground opacity-40 mb-3" />
-              <p className="font-semibold">No payments yet</p>
-              <p className="text-sm text-muted-foreground">Complete shifts to see your earnings here</p>
+            <div className="flex flex-col items-center py-12 text-center">
+              <ChefHat size={36} className="text-muted-foreground/30 mb-3" />
+              <p className="font-bold text-foreground">No completed shifts yet</p>
+              <p className="text-sm text-muted-foreground mt-1">Complete shifts to see your earnings here</p>
             </div>
           ) : (
             <div className="space-y-2">
-              {history.map((payment: any) => (
-                <PaymentHistoryRow key={payment.id} payment={payment} />
-              ))}
+              {history.map((p: any) => {
+                const isReleased = p.status === "released";
+                const workerPayout = p.workerPayout ?? 0;
+                const platformFee = p.platformFee ?? 0;
+                return (
+                  <div key={p.id} className="bg-card rounded-2xl border border-border p-4 flex items-center gap-3">
+                    <div className={cn("w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0",
+                      isReleased ? "bg-emerald-500/10" : "bg-yellow-500/10"
+                    )}>
+                      {isReleased
+                        ? <CheckCircle size={16} className="text-emerald-400" />
+                        : <Clock size={16} className="text-yellow-400" />
+                      }
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="font-bold text-sm text-foreground">
+                        {p.job ? (ROLE_LABELS[p.job.role] ?? p.job.role) : "Shift Payment"}
+                      </p>
+                      <p className="text-xs text-muted-foreground">
+                        {p.job?.restaurantName ?? ""}
+                        {p.paidAt ? ` · ${new Date(p.paidAt).toLocaleDateString([], { month: "short", day: "numeric" })}` : ""}
+                      </p>
+                    </div>
+                    <div className="text-right flex-shrink-0">
+                      <p className={cn("font-black text-base", isReleased ? "text-emerald-400" : "text-yellow-400")}>
+                        +${fmt(workerPayout)}
+                      </p>
+                      <p className="text-[10px] text-muted-foreground">-${fmt(platformFee)} fee</p>
+                    </div>
+                  </div>
+                );
+              })}
             </div>
           )}
         </div>
       </div>
     </AppShell>
-  );
-}
-
-function StatCard({ icon, label, value }: { icon: React.ReactNode; label: string; value: string }) {
-  return (
-    <div className="bg-card rounded-2xl border border-border p-4">
-      <div className="flex items-center gap-1.5 mb-1">
-        {icon}
-        <span className="text-xs text-muted-foreground">{label}</span>
-      </div>
-      <p className="text-xl font-black">{value}</p>
-    </div>
-  );
-}
-
-function PaymentHistoryRow({ payment }: { payment: any }) {
-  const workerPayout = payment.workerPayout ?? 0;
-  const platformFee = payment.platformFee ?? 0;
-  const isReleased = payment.status === "released";
-
-  return (
-    <div className="bg-card rounded-xl border border-border p-3 flex items-center gap-3">
-      <div className={cn(
-        "w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0",
-        isReleased ? "bg-green-500/20" : "bg-yellow-500/20"
-      )}>
-        {isReleased
-          ? <CheckCircle size={18} className="text-green-400" />
-          : <Clock size={18} className="text-yellow-400" />
-        }
-      </div>
-      <div className="flex-1 min-w-0">
-        <p className="font-semibold text-sm">
-          {payment.job?.restaurantName ?? "Shift Payment"}
-        </p>
-        <p className="text-xs text-muted-foreground">
-          {payment.paidAt ? new Date(payment.paidAt).toLocaleDateString() : ""}
-          {" · "}
-          <span className="capitalize">{payment.status}</span>
-        </p>
-      </div>
-      <div className="text-right flex-shrink-0">
-        <p className={cn("font-black text-sm", isReleased ? "text-green-400" : "text-yellow-400")}>
-          +${(workerPayout / 100).toFixed(2)}
-        </p>
-        <p className="text-xs text-muted-foreground">-${(platformFee / 100).toFixed(2)} fee</p>
-      </div>
-    </div>
   );
 }

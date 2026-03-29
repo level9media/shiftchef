@@ -1,13 +1,12 @@
 import { useAuth } from "@/_core/hooks/useAuth";
 import { trpc } from "@/lib/trpc";
-import { Button } from "@/components/ui/button";
 import AppShell from "@/components/AppShell";
+import { Button } from "@/components/ui/button";
 import { useState } from "react";
-import { Star, MessageSquare, CheckCircle, Lock } from "lucide-react";
+import { Star, MessageSquare, CheckCircle, Lock, ChefHat } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 
-// Rating labels as specified
 const RATING_LABELS: Record<number, string> = {
   5: "Absolutely",
   4: "Sure",
@@ -17,8 +16,8 @@ const RATING_LABELS: Record<number, string> = {
 };
 
 const RATING_COLORS: Record<number, string> = {
-  5: "text-green-400",
-  4: "text-emerald-400",
+  5: "text-emerald-400",
+  4: "text-green-400",
   3: "text-yellow-400",
   2: "text-orange-400",
   1: "text-red-400",
@@ -26,39 +25,51 @@ const RATING_COLORS: Record<number, string> = {
 
 export default function Ratings() {
   const { isAuthenticated, user } = useAuth();
-  const { data: pendingRatings, isLoading: pendingLoading, refetch } = trpc.ratings.pendingRatings.useQuery(undefined, {
-    enabled: isAuthenticated,
-  });
+  const [tab, setTab] = useState<"pending" | "received">("pending");
+
+  const { data: pendingRatings, isLoading: pendingLoading, refetch } = trpc.ratings.pendingRatings.useQuery(
+    undefined, { enabled: isAuthenticated }
+  );
   const { data: myRatings, isLoading: myLoading } = trpc.ratings.forUser.useQuery(
     { userId: user?.id ?? 0 },
     { enabled: isAuthenticated && !!user?.id }
   );
 
-  const [tab, setTab] = useState<"pending" | "received">("pending");
-
   return (
     <AppShell>
       <div className="max-w-lg mx-auto">
-        {/* Tabs */}
-        <div className="sticky top-14 z-30 bg-background/95 backdrop-blur border-b border-border px-4 py-3">
+        {/* ── Sticky Tabs ───────────────────────────────────────────────── */}
+        <div
+          className="sticky z-30 border-b border-border px-4 py-3"
+          style={{
+            top: "calc(3.5rem + var(--sat))",
+            background: "oklch(0.06 0 0 / 0.95)",
+            backdropFilter: "blur(16px)",
+          }}
+        >
           <div className="flex gap-1 bg-secondary rounded-xl p-1">
             <button
               onClick={() => setTab("pending")}
               className={cn(
-                "flex-1 py-2 rounded-lg text-sm font-semibold transition-colors",
-                tab === "pending" ? "bg-card text-foreground" : "text-muted-foreground"
+                "flex-1 flex items-center justify-center gap-1.5 py-2 rounded-lg text-xs font-bold transition-all",
+                tab === "pending" ? "bg-card text-foreground shadow-sm" : "text-muted-foreground"
               )}
             >
-              Rate Now {pendingRatings?.length ? `(${pendingRatings.length})` : ""}
+              <Star size={11} strokeWidth={2.5} /> Rate Now
+              {(pendingRatings?.length ?? 0) > 0 && (
+                <span className="bg-primary text-primary-foreground text-[9px] font-black w-4 h-4 rounded-full flex items-center justify-center">
+                  {pendingRatings!.length}
+                </span>
+              )}
             </button>
             <button
               onClick={() => setTab("received")}
               className={cn(
-                "flex-1 py-2 rounded-lg text-sm font-semibold transition-colors",
-                tab === "received" ? "bg-card text-foreground" : "text-muted-foreground"
+                "flex-1 flex items-center justify-center gap-1.5 py-2 rounded-lg text-xs font-bold transition-all",
+                tab === "received" ? "bg-card text-foreground shadow-sm" : "text-muted-foreground"
               )}
             >
-              My Ratings
+              <MessageSquare size={11} strokeWidth={2.5} /> Received
             </button>
           </div>
         </div>
@@ -66,45 +77,47 @@ export default function Ratings() {
         <div className="px-4 py-4 space-y-3">
           {/* Info banner */}
           <div className="bg-card rounded-2xl border border-border p-3 flex items-start gap-2">
-            <Lock size={14} className="text-primary mt-0.5 flex-shrink-0" />
+            <Lock size={13} className="text-primary mt-0.5 flex-shrink-0" />
             <p className="text-xs text-muted-foreground">
-              Ratings are only unlocked after payment has been released. Both parties rate each other.
+              Ratings unlock only after payment is released. Both parties rate each other.
             </p>
           </div>
 
+          {/* ── Pending ─────────────────────────────────────────────────── */}
           {tab === "pending" && (
             <>
-              {pendingLoading ? (
-                <LoadingSkeleton />
-              ) : !pendingRatings?.length ? (
-                <EmptyState
-                  icon={<Star size={32} />}
-                  title="No ratings pending"
-                  desc="Complete shifts and release payments to unlock ratings"
-                />
-              ) : (
-                pendingRatings.map((item: any) => (
-                  <RatingForm key={item.jobId + item.rateUserId} item={item} onDone={refetch} />
-                ))
-              )}
+              {pendingLoading ? <Skeletons /> :
+                !pendingRatings?.length ? (
+                  <EmptyState
+                    icon={<Star size={36} className="text-muted-foreground/30" />}
+                    title="No pending ratings"
+                    desc="Complete shifts and release payments to unlock ratings"
+                  />
+                ) : (
+                  pendingRatings.map((item: any) => (
+                    <RatingForm key={`${item.jobId}-${item.rateUserId}`} item={item} onDone={refetch} />
+                  ))
+                )
+              }
             </>
           )}
 
+          {/* ── Received ────────────────────────────────────────────────── */}
           {tab === "received" && (
             <>
-              {myLoading ? (
-                <LoadingSkeleton />
-              ) : !myRatings?.length ? (
-                <EmptyState
-                  icon={<Star size={32} />}
-                  title="No ratings yet"
-                  desc="Your ratings will appear here after shifts are completed"
-                />
-              ) : (
-                myRatings.map((rating: any) => (
-                  <ReceivedRatingCard key={rating.id} rating={rating} />
-                ))
-              )}
+              {myLoading ? <Skeletons /> :
+                !myRatings?.length ? (
+                  <EmptyState
+                    icon={<Star size={36} className="text-muted-foreground/30" />}
+                    title="No ratings yet"
+                    desc="Your ratings will appear here after shifts are completed"
+                  />
+                ) : (
+                  myRatings.map((rating: any) => (
+                    <ReceivedRatingCard key={rating.id} rating={rating} />
+                  ))
+                )
+              }
             </>
           )}
         </div>
@@ -119,108 +132,90 @@ function RatingForm({ item, onDone }: { item: any; onDone: () => void }) {
   const [submitted, setSubmitted] = useState(false);
 
   const submitMutation = trpc.ratings.submit.useMutation({
-    onSuccess: () => {
-      setSubmitted(true);
-      toast.success("Rating submitted!");
-      onDone();
-    },
-    onError: (e: any) => toast.error(e.message),
+    onSuccess: () => { setSubmitted(true); toast.success("Rating submitted!"); onDone(); },
+    onError: (e) => toast.error(e.message),
   });
 
   if (submitted) {
     return (
-      <div className="bg-card rounded-2xl border border-green-500/30 p-4 flex items-center gap-3">
-        <CheckCircle size={20} className="text-green-400" />
-        <p className="font-semibold text-sm">Rating submitted for {item.rateName}</p>
+      <div className="bg-card rounded-2xl border border-emerald-500/30 p-5 flex items-center gap-3">
+        <CheckCircle size={20} className="text-emerald-400" />
+        <p className="font-bold text-sm text-foreground">Rating submitted for {item.rateName ?? "user"}</p>
       </div>
     );
   }
 
   return (
-    <div className="bg-card rounded-2xl border border-border p-4 space-y-4">
-      <div className="flex items-start gap-3">
-        <div className="w-10 h-10 rounded-xl bg-secondary flex items-center justify-center flex-shrink-0 overflow-hidden">
+    <div className="bg-card rounded-2xl border border-border p-5 space-y-4">
+      {/* Who to rate */}
+      <div className="flex items-center gap-3">
+        <div className="w-12 h-12 rounded-2xl bg-secondary flex items-center justify-center overflow-hidden flex-shrink-0">
           {item.rateUserImage ? (
             <img src={item.rateUserImage} alt="" className="w-full h-full object-cover" />
           ) : (
-            <span className="font-bold text-muted-foreground">{(item.rateName ?? "U")[0].toUpperCase()}</span>
+            <ChefHat size={18} className="text-muted-foreground" />
           )}
         </div>
         <div>
-          <p className="font-bold text-sm">{item.rateName ?? "User"}</p>
-          <p className="text-xs text-muted-foreground">{item.jobRole} · {item.restaurantName}</p>
-          <p className="text-xs text-muted-foreground">{item.shiftDate}</p>
+          <p className="font-black text-foreground">{item.rateName ?? "User"}</p>
+          <p className="text-xs text-muted-foreground">
+            {item.jobRole} {item.restaurantName ? `· ${item.restaurantName}` : ""}
+          </p>
+          {item.shiftDate && <p className="text-[10px] text-muted-foreground">{item.shiftDate}</p>}
         </div>
       </div>
 
       {/* Question */}
       <div>
-        <p className="font-semibold text-sm mb-3">
-          Would you work with this person again?
+        <p className="text-xs font-bold text-muted-foreground uppercase tracking-wider mb-3">
+          Would you work with them again?
         </p>
-
-        {/* Rating buttons */}
-        <div className="space-y-2">
+        <div className="flex gap-1.5">
           {[5, 4, 3, 2, 1].map((val) => (
             <button
               key={val}
               onClick={() => setScore(val)}
               className={cn(
-                "w-full flex items-center gap-3 p-3 rounded-xl border-2 transition-all text-left",
+                "flex-1 py-3 rounded-xl border text-xs font-black transition-all flex flex-col items-center gap-1",
                 score === val
-                  ? "border-primary bg-primary/10"
-                  : "border-border bg-secondary hover:border-border/60"
+                  ? `border-primary bg-primary/10 ${RATING_COLORS[val]}`
+                  : "border-border bg-secondary text-muted-foreground"
               )}
             >
-              <div className="flex">
-                {[1, 2, 3, 4, 5].map((s) => (
-                  <Star
-                    key={s}
-                    size={14}
-                    className={cn(
-                      s <= val ? "fill-yellow-400 text-yellow-400" : "text-muted-foreground"
-                    )}
-                  />
-                ))}
-              </div>
-              <span className={cn("font-semibold text-sm", score === val ? RATING_COLORS[val] : "text-foreground")}>
-                {RATING_LABELS[val]}
-              </span>
-              <span className="text-xs text-muted-foreground ml-auto">{val}/5</span>
+              <span className="text-sm">{val}</span>
+              <span className="text-[8px] leading-tight text-center">{RATING_LABELS[val]}</span>
             </button>
           ))}
         </div>
+        {score !== null && (
+          <p className={cn("text-center text-sm font-bold mt-2", RATING_COLORS[score])}>
+            {score}★ — {RATING_LABELS[score]}
+          </p>
+        )}
       </div>
 
-      {/* Comment */}
+      {/* Feedback */}
       <div>
-        <label className="text-sm font-semibold mb-1.5 block flex items-center gap-1.5">
-          <MessageSquare size={13} />
-          Feedback (optional)
-        </label>
+        <p className="text-xs font-bold text-muted-foreground uppercase tracking-wider mb-1.5">Feedback (optional)</p>
         <textarea
           value={comment}
           onChange={(e) => setComment(e.target.value)}
-          placeholder="Share your experience working with this person..."
-          className="w-full bg-secondary border border-border rounded-xl p-3 text-sm resize-none h-20 focus:outline-none focus:ring-1 focus:ring-ring text-foreground placeholder:text-muted-foreground"
+          placeholder="Share your experience..."
+          className="w-full bg-secondary border border-border rounded-xl p-3 text-sm resize-none h-20 focus:outline-none focus:ring-1 focus:ring-primary text-foreground placeholder:text-muted-foreground"
           maxLength={500}
         />
       </div>
 
       <Button
-        className="w-full"
+        className="w-full h-12 font-bold rounded-2xl btn-glow"
         disabled={score === null || submitMutation.isPending}
         onClick={() => {
-          if (score !== null) {
-            submitMutation.mutate({
-              jobId: item.jobId,
-              score,
-              comment: comment || undefined,
-            });
-          }
+          if (score !== null) submitMutation.mutate({ jobId: item.jobId, score, comment: comment || undefined });
         }}
       >
-        {submitMutation.isPending ? "Submitting..." : "Submit Rating"}
+        {submitMutation.isPending ? (
+          <div className="w-4 h-4 border-2 border-primary-foreground border-t-transparent rounded-full animate-spin" />
+        ) : "Submit Rating"}
       </Button>
     </div>
   );
@@ -232,90 +227,69 @@ function ReceivedRatingCard({ rating }: { rating: any }) {
   const [saved, setSaved] = useState(false);
 
   const respondMutation = trpc.ratings.respond.useMutation({
-    onSuccess: () => {
-      setSaved(true);
-      toast.success("Response saved!");
-    },
-    onError: (e: any) => toast.error(e.message),
+    onSuccess: () => { setSaved(true); toast.success("Response saved!"); },
+    onError: (e) => toast.error(e.message),
   });
+
+  const color = RATING_COLORS[rating.score as number] ?? "text-muted-foreground";
 
   return (
     <div className="bg-card rounded-2xl border border-border p-4 space-y-3">
       <div className="flex items-start justify-between">
-        <div className="flex items-start gap-3">
-          <div className="w-10 h-10 rounded-xl bg-secondary flex items-center justify-center flex-shrink-0 overflow-hidden">
+        <div className="flex items-center gap-2.5">
+          <div className="w-10 h-10 rounded-xl bg-secondary flex items-center justify-center overflow-hidden flex-shrink-0">
             {rating.rater?.profileImage ? (
               <img src={rating.rater.profileImage} alt="" className="w-full h-full object-cover" />
             ) : (
-              <span className="font-bold text-muted-foreground">{(rating.rater?.name ?? "U")[0].toUpperCase()}</span>
+              <ChefHat size={14} className="text-muted-foreground" />
             )}
           </div>
           <div>
-            <p className="font-bold text-sm">{rating.rater?.name ?? "User"}</p>
-            <p className="text-xs text-muted-foreground">
-              {new Date(rating.createdAt).toLocaleDateString()}
+            <p className="font-bold text-sm text-foreground">{rating.rater?.name ?? "User"}</p>
+            <p className="text-[10px] text-muted-foreground">
+              {new Date(rating.createdAt).toLocaleDateString([], { month: "short", day: "numeric", year: "numeric" })}
             </p>
           </div>
         </div>
-
-        <div className="text-right">
-          <div className="flex items-center gap-1">
-            {[1, 2, 3, 4, 5].map((s) => (
-              <Star
-                key={s}
-                size={14}
-                className={cn(s <= rating.score ? "fill-yellow-400 text-yellow-400" : "text-muted-foreground")}
-              />
-            ))}
-          </div>
-          <p className={cn("text-xs font-bold mt-0.5", RATING_COLORS[rating.score as number] ?? "text-foreground")}>
-            {RATING_LABELS[rating.score as number] ?? rating.score}
-          </p>
+        <div className="text-right flex-shrink-0 ml-2">
+          <p className={cn("text-2xl font-black", color)}>{rating.score}★</p>
+          <p className={cn("text-[10px] font-bold", color)}>{RATING_LABELS[rating.score as number]}</p>
         </div>
       </div>
 
       {rating.comment && (
-        <p className="text-sm text-muted-foreground italic">"{rating.comment}"</p>
+        <p className="text-sm text-muted-foreground italic border-t border-border pt-2">
+          "{rating.comment}"
+        </p>
       )}
 
       {/* Employer response */}
-      {rating.employerResponse && !showReply && (
+      {rating.response && !showReply && (
         <div className="bg-secondary rounded-xl p-3">
-          <p className="text-xs text-muted-foreground font-medium mb-1">Your response:</p>
-          <p className="text-sm">{rating.employerResponse}</p>
+          <p className="text-[10px] text-muted-foreground font-bold mb-1">YOUR RESPONSE</p>
+          <p className="text-sm text-foreground">{rating.response}</p>
         </div>
       )}
-
-      {!rating.employerResponse && !showReply && (
-        <button
-          onClick={() => setShowReply(true)}
-          className="text-xs text-primary hover:underline"
-        >
+      {!rating.response && !showReply && !saved && (
+        <button onClick={() => setShowReply(true)} className="text-xs text-primary font-bold">
           + Add response
         </button>
       )}
-
       {showReply && !saved && (
         <div className="space-y-2">
           <textarea
             value={reply}
             onChange={(e) => setReply(e.target.value)}
             placeholder="Respond to this rating..."
-            className="w-full bg-secondary border border-border rounded-xl p-3 text-sm resize-none h-20 focus:outline-none focus:ring-1 focus:ring-ring text-foreground placeholder:text-muted-foreground"
+            className="w-full bg-secondary border border-border rounded-xl p-3 text-sm resize-none h-16 focus:outline-none focus:ring-1 focus:ring-primary text-foreground placeholder:text-muted-foreground"
             maxLength={500}
           />
           <div className="flex gap-2">
-            <Button
-              size="sm"
-              className="flex-1"
-              disabled={!reply || respondMutation.isPending}
-              onClick={() => respondMutation.mutate({ ratingId: rating.id, response: reply })}
-            >
-              {respondMutation.isPending ? "Saving..." : "Save Response"}
+            <Button size="sm" className="flex-1 rounded-xl" disabled={!reply || respondMutation.isPending}
+              onClick={() => respondMutation.mutate({ ratingId: rating.id, response: reply })}>
+              {respondMutation.isPending ? "Saving..." : "Save"}
             </Button>
-            <Button size="sm" variant="outline" onClick={() => setShowReply(false)}>
-              Cancel
-            </Button>
+            <Button size="sm" variant="outline" className="rounded-xl" onClick={() => setShowReply(false)}>Cancel</Button>
           </div>
         </div>
       )}
@@ -323,11 +297,20 @@ function ReceivedRatingCard({ rating }: { rating: any }) {
   );
 }
 
-function LoadingSkeleton() {
+function Skeletons() {
   return (
     <div className="space-y-3">
       {[1, 2].map((i) => (
-        <div key={i} className="bg-card rounded-2xl h-48 animate-pulse border border-border" />
+        <div key={i} className="bg-card rounded-2xl border border-border p-5 space-y-3 animate-pulse">
+          <div className="flex gap-3">
+            <div className="w-12 h-12 bg-secondary rounded-2xl" />
+            <div className="flex-1 space-y-2">
+              <div className="h-4 bg-secondary rounded-lg w-1/2" />
+              <div className="h-3 bg-secondary rounded-lg w-1/3" />
+            </div>
+          </div>
+          <div className="h-16 bg-secondary rounded-xl" />
+        </div>
       ))}
     </div>
   );
@@ -335,10 +318,10 @@ function LoadingSkeleton() {
 
 function EmptyState({ icon, title, desc }: { icon: React.ReactNode; title: string; desc: string }) {
   return (
-    <div className="flex flex-col items-center justify-center py-16 text-center">
-      <div className="mb-4 opacity-40">{icon}</div>
-      <p className="font-bold mb-1">{title}</p>
-      <p className="text-sm text-muted-foreground">{desc}</p>
+    <div className="flex flex-col items-center py-16 text-center">
+      <div className="mb-3">{icon}</div>
+      <p className="font-bold text-foreground">{title}</p>
+      <p className="text-sm text-muted-foreground mt-1 max-w-xs">{desc}</p>
     </div>
   );
 }

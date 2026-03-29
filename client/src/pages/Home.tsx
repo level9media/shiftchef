@@ -3,7 +3,7 @@ import { getLoginUrl } from "@/const";
 import { Button } from "@/components/ui/button";
 import { useEffect } from "react";
 import { useLocation } from "wouter";
-import { Zap, Shield, DollarSign, Star, ChevronRight } from "lucide-react";
+import { ChefHat, Zap, Shield, DollarSign, Star, ArrowRight, TrendingUp } from "lucide-react";
 
 export default function Home() {
   const { isAuthenticated, loading } = useAuth();
@@ -18,92 +18,170 @@ export default function Home() {
   if (loading) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
-        <div className="w-8 h-8 border-2 border-primary border-t-transparent rounded-full animate-spin" />
+        <div className="w-10 h-10 border-2 border-primary border-t-transparent rounded-full animate-spin" />
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-background flex flex-col">
-      {/* Hero */}
-      <div className="flex-1 flex flex-col items-center justify-center px-6 pt-16 pb-8 text-center">
-        {/* Logo */}
-        <div className="mb-8">
-          <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-primary mb-4">
-            <Zap size={32} className="text-primary-foreground" />
+    <div
+      className="min-h-screen bg-background flex flex-col overflow-hidden"
+      style={{ paddingTop: "var(--sat)" }}
+    >
+      {/* Background glow */}
+      <div
+        className="absolute inset-0 pointer-events-none"
+        style={{
+          background:
+            "radial-gradient(ellipse 80% 50% at 50% -10%, oklch(0.68 0.22 38 / 0.12), transparent)",
+        }}
+      />
+
+      {/* Header */}
+      <div className="relative z-10 flex items-center justify-between px-5 pt-4 pb-2">
+        <div className="flex items-center gap-2">
+          <div className="w-9 h-9 rounded-2xl bg-primary flex items-center justify-center shadow-lg btn-glow">
+            <ChefHat size={18} className="text-primary-foreground" strokeWidth={2.5} />
           </div>
-          <h1 className="text-4xl font-black tracking-tight">
-            Staff<span className="text-primary">Up</span>
-          </h1>
-          <p className="text-muted-foreground mt-2 text-sm font-medium uppercase tracking-widest">
-            Hospitality Staffing
-          </p>
+          <span
+            className="text-xl font-black tracking-tight"
+            style={{ fontFamily: "'Plus Jakarta Sans', sans-serif" }}
+          >
+            Shift<span className="text-primary">Chef</span>
+          </span>
+        </div>
+        <a href={getLoginUrl()}>
+          <button className="text-sm font-semibold text-muted-foreground hover:text-foreground transition-colors px-3 py-1.5 rounded-xl hover:bg-secondary">
+            Sign in
+          </button>
+        </a>
+      </div>
+
+      {/* Hero */}
+      <div className="relative z-10 flex-1 flex flex-col items-center justify-center px-6 pt-8 pb-6 text-center">
+        {/* Badge */}
+        <div className="inline-flex items-center gap-1.5 bg-primary/15 border border-primary/30 text-primary text-xs font-bold px-3 py-1.5 rounded-full mb-6 fade-in-up">
+          <Zap size={11} strokeWidth={2.5} />
+          Real-time hospitality staffing
         </div>
 
         {/* Headline */}
-        <h2 className="text-3xl font-bold leading-tight mb-4 max-w-xs">
-          Find shifts or hire staff{" "}
-          <span className="text-primary">instantly</span>
-        </h2>
-        <p className="text-muted-foreground text-base max-w-sm mb-10">
-          Real-time marketplace connecting restaurants with skilled hospitality workers. Get paid same day.
+        <h1
+          className="text-5xl font-black leading-[1.05] tracking-tight mb-4 fade-in-up card-2"
+          style={{ fontFamily: "'Plus Jakarta Sans', sans-serif" }}
+        >
+          Find shifts.
+          <br />
+          <span className="text-primary">Hire fast.</span>
+        </h1>
+
+        <p className="text-muted-foreground text-base max-w-xs leading-relaxed mb-10 fade-in-up card-3">
+          Connect with skilled kitchen staff in minutes. Post a shift, get paid same day.
         </p>
 
-        {/* CTA */}
-        <div className="w-full max-w-sm space-y-3">
+        {/* CTAs */}
+        <div className="w-full max-w-xs space-y-3 fade-in-up card-4">
           <a href={getLoginUrl()} className="block">
-            <Button size="lg" className="w-full h-14 text-base font-bold rounded-2xl bg-primary hover:bg-primary/90">
+            <Button
+              size="lg"
+              className="w-full h-14 text-base font-bold rounded-2xl btn-glow"
+            >
               Get Started Free
-              <ChevronRight size={20} className="ml-1" />
+              <ArrowRight size={18} className="ml-2" />
             </Button>
           </a>
           <a href={getLoginUrl()} className="block">
-            <Button variant="outline" size="lg" className="w-full h-14 text-base font-semibold rounded-2xl border-border text-foreground">
-              Browse Live Jobs
+            <Button
+              variant="outline"
+              size="lg"
+              className="w-full h-14 text-base font-semibold rounded-2xl border-border bg-secondary/50 text-foreground"
+            >
+              Browse Live Shifts
             </Button>
           </a>
         </div>
+
+        {/* Social proof */}
+        <div className="flex items-center gap-2 mt-8 fade-in-up card-5">
+          <div className="flex -space-x-2">
+            {["#FF6B35", "#FF8C42", "#FFA552", "#FFB86C"].map((c, i) => (
+              <div
+                key={i}
+                className="w-7 h-7 rounded-full border-2 border-background flex items-center justify-center text-xs font-bold text-white"
+                style={{ background: c }}
+              >
+                {["C", "S", "P", "D"][i]}
+              </div>
+            ))}
+          </div>
+          <p className="text-xs text-muted-foreground">
+            <span className="text-foreground font-semibold">500+</span> shifts filled in Austin
+          </p>
+        </div>
       </div>
 
-      {/* Feature highlights */}
-      <div className="px-6 pb-12 space-y-3 max-w-sm mx-auto w-full">
-        <FeatureRow
-          icon={<Zap size={18} className="text-primary" />}
+      {/* Feature cards */}
+      <div className="relative z-10 px-5 pb-10 space-y-2.5 max-w-sm mx-auto w-full">
+        <FeatureCard
+          icon={<Zap size={16} className="text-primary" />}
+          color="oklch(0.68 0.22 38 / 0.12)"
           title="Live job feed"
-          desc="Real-time shifts posted by local restaurants"
+          desc="Real-time shifts from local restaurants"
         />
-        <FeatureRow
-          icon={<Shield size={18} className="text-green-400" />}
+        <FeatureCard
+          icon={<Shield size={16} className="text-emerald-400" />}
+          color="oklch(0.55 0.15 155 / 0.12)"
           title="Secure escrow payments"
           desc="Funds held safely, released after shift"
         />
-        <FeatureRow
-          icon={<DollarSign size={18} className="text-yellow-400" />}
+        <FeatureCard
+          icon={<DollarSign size={16} className="text-yellow-400" />}
+          color="oklch(0.85 0.18 95 / 0.12)"
           title="90% payout to workers"
-          desc="Platform only takes 10% per shift"
+          desc="We only take 10% — you keep the rest"
         />
-        <FeatureRow
-          icon={<Star size={18} className="text-orange-400" />}
-          title="Verified ratings"
-          desc="Ratings unlocked only after payment"
+        <FeatureCard
+          icon={<TrendingUp size={16} className="text-blue-400" />}
+          color="oklch(0.60 0.18 250 / 0.12)"
+          title="Permanent potential"
+          desc="Temp shifts that can turn into full-time roles"
         />
       </div>
 
       {/* Footer */}
-      <div className="pb-8 text-center text-xs text-muted-foreground">
-        Austin, TX · Expanding to more cities soon
+      <div
+        className="relative z-10 pb-6 text-center text-xs text-muted-foreground"
+        style={{ paddingBottom: "calc(var(--sab) + 1.5rem)" }}
+      >
+        Austin, TX · Expanding nationwide
       </div>
     </div>
   );
 }
 
-function FeatureRow({ icon, title, desc }: { icon: React.ReactNode; title: string; desc: string }) {
+function FeatureCard({
+  icon,
+  color,
+  title,
+  desc,
+}: {
+  icon: React.ReactNode;
+  color: string;
+  title: string;
+  desc: string;
+}) {
   return (
-    <div className="flex items-start gap-3 bg-card rounded-xl p-3 border border-border">
-      <div className="mt-0.5">{icon}</div>
+    <div className="flex items-center gap-3 rounded-2xl p-3.5 border border-border card-press"
+      style={{ background: "oklch(0.10 0 0)" }}>
+      <div
+        className="w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0"
+        style={{ background: color }}
+      >
+        {icon}
+      </div>
       <div>
-        <p className="font-semibold text-sm">{title}</p>
-        <p className="text-muted-foreground text-xs">{desc}</p>
+        <p className="font-semibold text-sm text-foreground">{title}</p>
+        <p className="text-muted-foreground text-xs mt-0.5">{desc}</p>
       </div>
     </div>
   );

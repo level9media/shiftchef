@@ -1,5 +1,6 @@
 import { TRPCError } from "@trpc/server";
 import { z } from "zod";
+import { notifyOwner } from "../_core/notification";
 import {
   addPostCredits,
   createPayment,
@@ -104,6 +105,12 @@ export const paymentsRouter = router({
           });
         }
       }
+
+      // Notify owner of payment release
+      notifyOwner({
+        title: "ShiftChef: Payment Released",
+        content: `Payment of $${(payment.workerPayout / 100).toFixed(2)} released for ${job.role} at ${job.restaurantName ?? "venue"}. Platform fee: $${(payment.platformFee / 100).toFixed(2)}.`,
+      }).catch(() => {});
 
       return { success: true, workerPayout: payment.workerPayout, platformFee: payment.platformFee };
     }),

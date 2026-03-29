@@ -1,19 +1,17 @@
 import { useAuth } from "@/_core/hooks/useAuth";
 import { trpc } from "@/lib/trpc";
-import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
 import AppShell from "@/components/AppShell";
 import { useLocation } from "wouter";
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import {
-  MapPin, Clock, DollarSign, Star, TrendingUp, Flag,
-  Zap, ChevronRight, Plus, RefreshCw, User
+  MapPin, Clock, Star, TrendingUp, Flag,
+  Zap, Plus, RefreshCw, User, ChefHat, ArrowRight
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import { formatDistanceToNow } from "date-fns";
 
-const CITIES = ["Austin, TX", "Houston, TX", "Dallas, TX", "San Antonio, TX", "New York, NY"];
+const CITIES = ["Austin, TX", "Houston, TX", "Dallas, TX", "San Antonio, TX", "New York, NY", "Chicago, IL"];
 
 const ROLE_LABELS: Record<string, string> = {
   cook: "Cook", sous_chef: "Sous Chef", prep: "Prep Cook",
@@ -21,22 +19,14 @@ const ROLE_LABELS: Record<string, string> = {
   bartender: "Bartender", host: "Host", manager: "Manager",
 };
 
-const ROLE_COLORS: Record<string, string> = {
-  cook: "bg-orange-500/20 text-orange-300",
-  sous_chef: "bg-red-500/20 text-red-300",
-  prep: "bg-yellow-500/20 text-yellow-300",
-  dishwasher: "bg-blue-500/20 text-blue-300",
-  cleaner: "bg-green-500/20 text-green-300",
-  server: "bg-purple-500/20 text-purple-300",
-  bartender: "bg-pink-500/20 text-pink-300",
-  host: "bg-cyan-500/20 text-cyan-300",
-  manager: "bg-indigo-500/20 text-indigo-300",
+const ROLE_EMOJI: Record<string, string> = {
+  cook: "👨‍🍳", sous_chef: "🍴", prep: "🥗", dishwasher: "🫧",
+  cleaner: "🧹", server: "🍽️", bartender: "🍸", host: "🤝", manager: "📋",
 };
 
 function formatTime(ms: number) {
   return new Date(ms).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
 }
-
 function formatDate(ms: number) {
   const d = new Date(ms);
   const today = new Date();
@@ -46,194 +36,171 @@ function formatDate(ms: number) {
   if (d.toDateString() === tomorrow.toDateString()) return "Tomorrow";
   return d.toLocaleDateString([], { month: "short", day: "numeric" });
 }
-
 function calcHours(start: number, end: number) {
   return ((end - start) / (1000 * 60 * 60)).toFixed(1);
 }
 
 export default function Feed() {
-  const { isAuthenticated, loading: authLoading } = useAuth();
+  const { isAuthenticated } = useAuth();
   const [, navigate] = useLocation();
   const [city, setCity] = useState("Austin, TX");
   const [tab, setTab] = useState<"jobs" | "workers">("jobs");
+  const [isRefreshing, setIsRefreshing] = useState(false);
 
   const { data: profile } = trpc.profile.get.useQuery(undefined, { enabled: isAuthenticated, retry: false });
-
   const { data: jobs, isLoading: jobsLoading, refetch: refetchJobs } = trpc.jobs.list.useQuery(
-    { city },
-    { refetchInterval: 30000 }
+    { city }, { refetchInterval: 30000 }
   );
-
   const { data: availableWorkers, isLoading: workersLoading, refetch: refetchWorkers } = trpc.availability.list.useQuery(
-    { city },
-    { refetchInterval: 30000 }
+    { city }, { refetchInterval: 30000 }
   );
 
   const isEmployer = profile?.userType === "employer" || profile?.userType === "both";
   const isWorker = !profile?.userType || profile.userType === "worker" || profile.userType === "both";
 
-  const handleRefresh = () => {
-    refetchJobs();
-    refetchWorkers();
-    toast.success("Feed refreshed");
+  const handleRefresh = async () => {
+    setIsRefreshing(true);
+    await Promise.all([refetchJobs(), refetchWorkers()]);
+    setIsRefreshing(false);
+    toast.success("Feed updated");
   };
-
-  if (authLoading) {
-    return (
-      <div className="min-h-screen bg-background flex items-center justify-center">
-        <div className="w-8 h-8 border-2 border-primary border-t-transparent rounded-full animate-spin" />
-      </div>
-    );
-  }
 
   return (
     <AppShell>
       <div className="max-w-lg mx-auto">
-        {/* City selector + refresh */}
-        <div className="sticky top-14 z-30 bg-background/95 backdrop-blur border-b border-border px-4 py-3">
+        {/* ── Sticky sub-header ─────────────────────────────────────────── */}
+        <div
+          className="sticky z-30 border-b border-border px-4 py-3"
+          style={{
+            top: "calc(3.5rem + var(--sat))",
+            background: "oklch(0.06 0 0 / 0.95)",
+            backdropFilter: "blur(16px)",
+            WebkitBackdropFilter: "blur(16px)",
+          }}
+        >
+          {/* City chips */}
           <div className="flex items-center gap-2">
             <div className="flex-1 overflow-x-auto scrollbar-none">
-              <div className="flex gap-2 pb-1">
+              <div className="flex gap-1.5">
                 {CITIES.map((c) => (
                   <button
                     key={c}
                     onClick={() => setCity(c)}
                     className={cn(
-                      "whitespace-nowrap px-3 py-1.5 rounded-full text-xs font-semibold transition-colors flex-shrink-0",
+                      "flex-shrink-0 px-3 py-1.5 rounded-full text-xs font-bold transition-all duration-150 whitespace-nowrap",
                       city === c
                         ? "bg-primary text-primary-foreground"
-                        : "bg-secondary text-muted-foreground hover:text-foreground"
+                        : "bg-secondary text-muted-foreground hover:text-foreground border border-border"
                     )}
                   >
-                    {c}
+                    {c.split(",")[0]}
                   </button>
                 ))}
               </div>
             </div>
             <button
               onClick={handleRefresh}
-              className="p-1.5 rounded-full bg-secondary text-muted-foreground hover:text-foreground flex-shrink-0"
+              className="flex-shrink-0 w-8 h-8 rounded-xl bg-secondary flex items-center justify-center text-muted-foreground hover:text-foreground transition-colors"
             >
-              <RefreshCw size={14} />
+              <RefreshCw size={13} className={cn(isRefreshing && "animate-spin")} />
             </button>
           </div>
 
           {/* Tabs */}
-          <div className="flex gap-1 mt-3 bg-secondary rounded-xl p-1">
-            <button
-              onClick={() => setTab("jobs")}
-              className={cn(
-                "flex-1 py-2 rounded-lg text-sm font-semibold transition-colors",
-                tab === "jobs" ? "bg-card text-foreground" : "text-muted-foreground"
-              )}
-            >
-              <span className="flex items-center justify-center gap-1.5">
-                <Zap size={14} />
-                Live Jobs {jobs?.length ? `(${jobs.length})` : ""}
-              </span>
-            </button>
-            <button
-              onClick={() => setTab("workers")}
-              className={cn(
-                "flex-1 py-2 rounded-lg text-sm font-semibold transition-colors",
-                tab === "workers" ? "bg-card text-foreground" : "text-muted-foreground"
-              )}
-            >
-              <span className="flex items-center justify-center gap-1.5">
-                <User size={14} />
-                Workers {availableWorkers?.length ? `(${availableWorkers.length})` : ""}
-              </span>
-            </button>
+          <div className="flex gap-1 mt-2.5 bg-secondary rounded-xl p-1">
+            {(["jobs", "workers"] as const).map((t) => (
+              <button
+                key={t}
+                onClick={() => setTab(t)}
+                className={cn(
+                  "flex-1 flex items-center justify-center gap-1.5 py-2 rounded-lg text-xs font-bold transition-all duration-150",
+                  tab === t ? "bg-card text-foreground shadow-sm" : "text-muted-foreground"
+                )}
+              >
+                {t === "jobs" ? <Zap size={11} strokeWidth={2.5} /> : <User size={11} strokeWidth={2.5} />}
+                {t === "jobs" ? "Live Shifts" : "Available Now"}
+                {t === "jobs" && jobs && jobs.length > 0 && (
+                  <span className="bg-primary text-primary-foreground text-[9px] font-black px-1.5 py-0.5 rounded-full leading-none">
+                    {jobs.length}
+                  </span>
+                )}
+                {t === "workers" && availableWorkers && availableWorkers.length > 0 && (
+                  <span className="bg-emerald-500 text-white text-[9px] font-black px-1.5 py-0.5 rounded-full leading-none">
+                    {availableWorkers.length}
+                  </span>
+                )}
+              </button>
+            ))}
           </div>
         </div>
 
-        {/* Content */}
+        {/* ── Feed content ──────────────────────────────────────────────── */}
         <div className="px-4 py-4 space-y-3">
-          {/* Employer: post job CTA */}
-          {isEmployer && tab === "jobs" && (
-            <button
-              onClick={() => navigate("/post-job")}
-              className="w-full flex items-center justify-between bg-primary/10 border border-primary/30 rounded-2xl p-4 hover:bg-primary/15 transition-colors"
-            >
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-xl bg-primary flex items-center justify-center">
-                  <Plus size={20} className="text-primary-foreground" />
-                </div>
-                <div className="text-left">
-                  <p className="font-bold text-sm">Post a Shift</p>
-                  <p className="text-xs text-muted-foreground">From $35 · Unlimited with subscription</p>
-                </div>
-              </div>
-              <ChevronRight size={18} className="text-muted-foreground" />
-            </button>
-          )}
-
-          {/* Worker: post availability CTA */}
-          {isWorker && tab === "workers" && (
-            <button
-              onClick={() => navigate("/availability")}
-              className="w-full flex items-center justify-between bg-green-500/10 border border-green-500/30 rounded-2xl p-4 hover:bg-green-500/15 transition-colors"
-            >
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-xl bg-green-500 flex items-center justify-center">
-                  <Plus size={20} className="text-white" />
-                </div>
-                <div className="text-left">
-                  <p className="font-bold text-sm">Post Availability</p>
-                  <p className="text-xs text-muted-foreground">Let employers find you</p>
-                </div>
-              </div>
-              <ChevronRight size={18} className="text-muted-foreground" />
-            </button>
-          )}
-
-          {/* Jobs tab */}
-          {tab === "jobs" && (
+          {tab === "jobs" ? (
             <>
+              {isEmployer && (
+                <button
+                  onClick={() => navigate("/post-job")}
+                  className="w-full flex items-center justify-between bg-primary/10 border border-primary/30 rounded-2xl p-4 card-press"
+                >
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-xl bg-primary flex items-center justify-center">
+                      <Plus size={18} className="text-primary-foreground" strokeWidth={2.5} />
+                    </div>
+                    <div className="text-left">
+                      <p className="font-bold text-sm text-foreground">Post a Shift</p>
+                      <p className="text-xs text-muted-foreground">From $35 · Get applicants fast</p>
+                    </div>
+                  </div>
+                  <ArrowRight size={15} className="text-primary" />
+                </button>
+              )}
+
               {jobsLoading ? (
-                <div className="space-y-3">
-                  {[1, 2, 3].map((i) => (
-                    <div key={i} className="bg-card rounded-2xl h-48 animate-pulse border border-border" />
-                  ))}
-                </div>
+                <JobSkeletons />
               ) : !jobs?.length ? (
                 <EmptyState
-                  icon={<Zap size={32} className="text-muted-foreground" />}
-                  title="No live jobs in this city"
-                  desc="Check back soon or try another city"
+                  icon={<Zap size={36} className="text-muted-foreground/30" />}
+                  title="No live shifts"
+                  desc={`No shifts posted in ${city.split(",")[0]} right now. Check back soon.`}
                 />
               ) : (
-                jobs.map((job) => (
-                  <JobCard
-                    key={job.id}
-                    job={job}
-                    workerRating={profile?.rating ?? 5}
-                    isWorker={isWorker}
-                    onClick={() => navigate(`/jobs/${job.id}`)}
-                  />
+                jobs.map((job: any, i: number) => (
+                  <JobCard key={job.id} job={job} index={i} onClick={() => navigate(`/jobs/${job.id}`)} />
                 ))
               )}
             </>
-          )}
-
-          {/* Workers tab */}
-          {tab === "workers" && (
+          ) : (
             <>
+              {isWorker && (
+                <button
+                  onClick={() => navigate("/availability")}
+                  className="w-full flex items-center justify-between bg-emerald-500/10 border border-emerald-500/30 rounded-2xl p-4 card-press"
+                >
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-xl bg-emerald-500/20 flex items-center justify-center">
+                      <Zap size={18} className="text-emerald-400" strokeWidth={2.5} />
+                    </div>
+                    <div className="text-left">
+                      <p className="font-bold text-sm text-foreground">Post Availability</p>
+                      <p className="text-xs text-muted-foreground">Let employers find you now</p>
+                    </div>
+                  </div>
+                  <ArrowRight size={15} className="text-emerald-400" />
+                </button>
+              )}
+
               {workersLoading ? (
-                <div className="space-y-3">
-                  {[1, 2, 3].map((i) => (
-                    <div key={i} className="bg-card rounded-2xl h-32 animate-pulse border border-border" />
-                  ))}
-                </div>
+                <WorkerSkeletons />
               ) : !availableWorkers?.length ? (
                 <EmptyState
-                  icon={<User size={32} className="text-muted-foreground" />}
-                  title="No workers available right now"
-                  desc="Workers can post their availability here"
+                  icon={<User size={36} className="text-muted-foreground/30" />}
+                  title="No workers available"
+                  desc={`No workers posted availability in ${city.split(",")[0]} right now.`}
                 />
               ) : (
-                availableWorkers.map((post) => (
-                  <WorkerCard key={post.id} post={post} isEmployer={isEmployer} />
+                availableWorkers.map((post: any, i: number) => (
+                  <WorkerCard key={post.id} post={post} index={i} />
                 ))
               )}
             </>
@@ -244,178 +211,192 @@ export default function Feed() {
   );
 }
 
-function JobCard({
-  job,
-  workerRating,
-  isWorker,
-  onClick,
-}: {
-  job: any;
-  workerRating: number;
-  isWorker: boolean;
-  onClick: () => void;
-}) {
+/* ── Job Card ──────────────────────────────────────────────────────────────── */
+function JobCard({ job, index, onClick }: { job: any; index: number; onClick: () => void }) {
   const hours = calcHours(job.startTime, job.endTime);
   const totalPay = job.totalPay ? parseFloat(job.totalPay) : parseFloat(job.payRate) * parseFloat(hours);
-  const belowMin = isWorker && job.minRating > 0 && workerRating < job.minRating;
 
   return (
-    <button
+    <div
       onClick={onClick}
       className={cn(
-        "job-card w-full bg-card rounded-2xl border border-border overflow-hidden text-left",
-        belowMin && "opacity-60"
+        "bg-card rounded-2xl border border-border overflow-hidden card-press fade-in-up",
+        `card-${Math.min(index + 1, 5)}`
       )}
     >
-      {/* Image / header */}
-      <div className="relative h-32 bg-gradient-to-br from-secondary to-card flex items-center justify-center">
+      {/* Visual header */}
+      <div className="relative h-36 bg-secondary flex items-center justify-center overflow-hidden">
         {job.restaurantImage ? (
-          <img src={job.restaurantImage} alt={job.restaurantName ?? ""} className="w-full h-full object-cover" />
+          <img src={job.restaurantImage} alt="" className="w-full h-full object-cover" />
         ) : (
-          <div className="text-4xl">🍽️</div>
+          <span className="text-5xl">{ROLE_EMOJI[job.role] ?? "🍽️"}</span>
         )}
-        {/* Permanent indicator */}
+        <div className="absolute inset-0 bg-gradient-to-t from-card/90 via-card/20 to-transparent" />
+
+        {/* Type badge */}
         <div className="absolute top-3 left-3">
           {job.isPermanent ? (
-            <span className="flex items-center gap-1 bg-green-500/90 text-white text-xs font-bold px-2 py-1 rounded-full">
-              <TrendingUp size={10} />
-              Perm potential
+            <span className="flex items-center gap-1 bg-emerald-500 text-white text-[10px] font-black px-2.5 py-1 rounded-full">
+              <TrendingUp size={9} strokeWidth={3} /> Perm Potential
             </span>
           ) : (
-            <span className="flex items-center gap-1 bg-orange-500/90 text-white text-xs font-bold px-2 py-1 rounded-full">
-              <Flag size={10} />
-              Temp
+            <span className="flex items-center gap-1 bg-orange-500 text-white text-[10px] font-black px-2.5 py-1 rounded-full">
+              <Flag size={9} strokeWidth={3} /> Temp
             </span>
           )}
         </div>
-        {/* Pay badge */}
-        <div className="absolute top-3 right-3 bg-background/90 backdrop-blur rounded-xl px-2.5 py-1">
-          <span className="text-sm font-black text-foreground">${job.payRate}/hr</span>
-        </div>
-        {/* Live dot */}
-        <div className="absolute bottom-3 right-3 flex items-center gap-1.5 bg-background/80 backdrop-blur rounded-full px-2 py-1">
-          <span className="w-1.5 h-1.5 rounded-full bg-green-400 pulse-dot" />
-          <span className="text-xs text-muted-foreground">Live</span>
+
+        {/* Pay rate */}
+        <div className="absolute bottom-3 right-3 bg-background/90 backdrop-blur-sm rounded-xl px-3 py-1.5">
+          <span className="text-xl font-black text-primary">${job.payRate}</span>
+          <span className="text-xs text-muted-foreground">/hr</span>
         </div>
       </div>
 
-      {/* Content */}
+      {/* Body */}
       <div className="p-4">
-        <div className="flex items-start justify-between mb-2">
+        <div className="flex items-start justify-between mb-3">
           <div>
-            <span className={cn("text-xs font-semibold px-2 py-0.5 rounded-full", ROLE_COLORS[job.role] ?? "bg-secondary text-foreground")}>
-              {ROLE_LABELS[job.role] ?? job.role}
-            </span>
-            {job.restaurantName && (
-              <p className="font-bold mt-1 text-sm">{job.restaurantName}</p>
-            )}
+            <h3 className="font-black text-base text-foreground">{ROLE_LABELS[job.role] ?? job.role}</h3>
+            {job.restaurantName && <p className="text-xs text-muted-foreground mt-0.5">{job.restaurantName}</p>}
           </div>
           <div className="text-right">
-            <p className="text-lg font-black text-primary">${totalPay.toFixed(0)}</p>
-            <p className="text-xs text-muted-foreground">total est.</p>
+            <p className="text-sm font-black text-foreground">~${totalPay.toFixed(0)}</p>
+            <p className="text-[10px] text-muted-foreground">total</p>
           </div>
         </div>
 
-        <div className="flex flex-wrap gap-2 text-xs text-muted-foreground">
-          <span className="flex items-center gap-1">
-            <Clock size={11} />
-            {formatDate(job.startTime)} · {formatTime(job.startTime)} – {formatTime(job.endTime)} ({hours}h)
-          </span>
-          {job.location && (
-            <span className="flex items-center gap-1">
-              <MapPin size={11} />
-              {job.location}
-            </span>
-          )}
-          {job.minRating > 0 && (
-            <span className={cn("flex items-center gap-1", belowMin && "text-destructive")}>
-              <Star size={11} />
-              Min {job.minRating}★ required
-            </span>
-          )}
+        <div className="flex flex-wrap gap-1.5">
+          <MetaPill icon={<Clock size={10} />}>
+            {formatDate(job.startTime)} · {formatTime(job.startTime)}–{formatTime(job.endTime)} ({hours}h)
+          </MetaPill>
+          {job.city && <MetaPill icon={<MapPin size={10} />}>{job.city.split(",")[0]}</MetaPill>}
+          {job.minRating > 0 && <MetaPill icon={<Star size={10} />}>{job.minRating}★ min</MetaPill>}
         </div>
 
-        {belowMin && (
-          <p className="mt-2 text-xs text-destructive font-medium">
-            Your rating ({workerRating.toFixed(1)}) is below the minimum
-          </p>
-        )}
+        <div className="mt-3 pt-3 border-t border-border flex items-center justify-between">
+          <span className="text-xs text-muted-foreground">
+            Worker earns <span className="text-emerald-400 font-bold">${(totalPay * 0.9).toFixed(0)}</span>
+          </span>
+          <span className="text-xs font-bold text-primary flex items-center gap-1">
+            View & Apply <ArrowRight size={11} />
+          </span>
+        </div>
       </div>
-    </button>
+    </div>
   );
 }
 
-function WorkerCard({ post, isEmployer }: { post: any; isEmployer: boolean }) {
-  const worker = post.worker;
+/* ── Worker Card ───────────────────────────────────────────────────────────── */
+function WorkerCard({ post, index }: { post: any; index: number }) {
   const skills: string[] = (() => {
-    try { return JSON.parse(post.skills); } catch { return []; }
+    try { return JSON.parse(post.skills || "[]"); } catch { return []; }
   })();
 
   return (
-    <div className="bg-card rounded-2xl border border-border p-4">
+    <div className={cn("bg-card rounded-2xl border border-border p-4 card-press fade-in-up", `card-${Math.min(index + 1, 5)}`)}>
       <div className="flex items-start gap-3">
-        {/* Avatar */}
-        <div className="w-12 h-12 rounded-xl bg-secondary flex-shrink-0 overflow-hidden flex items-center justify-center">
-          {worker?.profileImage ? (
-            <img src={worker.profileImage} alt={worker.name ?? ""} className="w-full h-full object-cover" />
+        <div className="relative flex-shrink-0">
+          {post.worker?.profileImage ? (
+            <img src={post.worker.profileImage} alt="" className="w-12 h-12 rounded-2xl object-cover" />
           ) : (
-            <span className="text-xl font-bold text-muted-foreground">
-              {(worker?.name ?? "W")[0].toUpperCase()}
-            </span>
+            <div className="w-12 h-12 rounded-2xl bg-primary/15 flex items-center justify-center">
+              <ChefHat size={20} className="text-primary" />
+            </div>
           )}
+          <div className="absolute -bottom-1 -right-1 w-4 h-4 bg-emerald-500 rounded-full border-2 border-card" />
         </div>
 
         <div className="flex-1 min-w-0">
-          <div className="flex items-center justify-between">
-            <p className="font-bold text-sm truncate">{worker?.name ?? "Anonymous Worker"}</p>
-            <div className="flex items-center gap-1 flex-shrink-0">
-              <Star size={12} className="text-yellow-400 fill-yellow-400" />
-              <span className="text-xs font-bold">{(worker?.rating ?? 5).toFixed(1)}</span>
-            </div>
+          <div className="flex items-center justify-between mb-1">
+            <p className="font-bold text-sm text-foreground truncate">{post.worker?.name ?? "Chef"}</p>
+            {post.worker?.rating && (
+              <span className="flex items-center gap-0.5 text-xs text-yellow-400 font-bold">
+                <Star size={10} strokeWidth={2.5} />
+                {parseFloat(post.worker.rating).toFixed(1)}
+              </span>
+            )}
           </div>
 
-          {post.location && (
-            <p className="text-xs text-muted-foreground flex items-center gap-1 mt-0.5">
-              <MapPin size={10} />
-              {post.location}
-            </p>
-          )}
-
-          {/* Skills */}
-          <div className="flex flex-wrap gap-1 mt-2">
-            {skills.slice(0, 3).map((s) => (
-              <span key={s} className={cn("text-xs px-2 py-0.5 rounded-full", ROLE_COLORS[s] ?? "bg-secondary text-muted-foreground")}>
+          <div className="flex flex-wrap gap-1 mb-2">
+            {skills.slice(0, 3).map((s: string) => (
+              <span key={s} className="text-[10px] bg-secondary text-muted-foreground px-2 py-0.5 rounded-full font-medium">
                 {ROLE_LABELS[s] ?? s}
               </span>
             ))}
+            {skills.length > 3 && <span className="text-[10px] text-muted-foreground">+{skills.length - 3}</span>}
           </div>
 
-          {post.note && (
-            <p className="text-xs text-muted-foreground mt-2 italic">"{post.note}"</p>
-          )}
+          <div className="flex items-center gap-2 text-[10px] text-muted-foreground">
+            <span className="flex items-center gap-0.5"><MapPin size={9} />{post.city?.split(",")[0] ?? "Austin"}</span>
+            <span className="flex items-center gap-0.5"><Clock size={9} />{formatDistanceToNow(new Date(post.createdAt), { addSuffix: true })}</span>
+          </div>
         </div>
       </div>
 
-      {/* Availability badge */}
-      <div className="mt-3 flex items-center justify-between">
-        <span className="flex items-center gap-1.5 text-xs text-green-400 font-semibold">
-          <span className="w-1.5 h-1.5 rounded-full bg-green-400 pulse-dot" />
-          Available Now
-        </span>
-        <span className="text-xs text-muted-foreground">
-          {formatDistanceToNow(new Date(post.createdAt), { addSuffix: true })}
-        </span>
-      </div>
+      {post.note && (
+        <p className="mt-3 text-xs text-muted-foreground italic border-t border-border pt-3">"{post.note}"</p>
+      )}
     </div>
+  );
+}
+
+/* ── Skeletons ─────────────────────────────────────────────────────────────── */
+function JobSkeletons() {
+  return (
+    <div className="space-y-3">
+      {[1, 2, 3].map((i) => (
+        <div key={i} className="bg-card rounded-2xl border border-border overflow-hidden">
+          <div className="skeleton h-36 rounded-none" />
+          <div className="p-4 space-y-2">
+            <div className="skeleton h-5 w-2/3" />
+            <div className="skeleton h-3 w-1/2" />
+            <div className="flex gap-2 mt-3">
+              <div className="skeleton h-5 w-28 rounded-full" />
+              <div className="skeleton h-5 w-16 rounded-full" />
+            </div>
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function WorkerSkeletons() {
+  return (
+    <div className="space-y-3">
+      {[1, 2, 3].map((i) => (
+        <div key={i} className="bg-card rounded-2xl border border-border p-4 flex gap-3">
+          <div className="skeleton w-12 h-12 rounded-2xl flex-shrink-0" />
+          <div className="flex-1 space-y-2">
+            <div className="skeleton h-4 w-1/3" />
+            <div className="flex gap-1">
+              <div className="skeleton h-4 w-14 rounded-full" />
+              <div className="skeleton h-4 w-14 rounded-full" />
+            </div>
+            <div className="skeleton h-3 w-1/2" />
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+/* ── Helpers ───────────────────────────────────────────────────────────────── */
+function MetaPill({ icon, children }: { icon: React.ReactNode; children: React.ReactNode }) {
+  return (
+    <span className="flex items-center gap-1 text-[10px] text-muted-foreground bg-secondary px-2 py-1 rounded-full">
+      {icon}{children}
+    </span>
   );
 }
 
 function EmptyState({ icon, title, desc }: { icon: React.ReactNode; title: string; desc: string }) {
   return (
     <div className="flex flex-col items-center justify-center py-16 text-center">
-      <div className="mb-4 opacity-40">{icon}</div>
+      <div className="mb-4">{icon}</div>
       <p className="font-bold text-foreground mb-1">{title}</p>
-      <p className="text-sm text-muted-foreground">{desc}</p>
+      <p className="text-sm text-muted-foreground max-w-xs">{desc}</p>
     </div>
   );
 }

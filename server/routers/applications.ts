@@ -1,5 +1,6 @@
 import { TRPCError } from "@trpc/server";
 import { z } from "zod";
+import { notifyOwner } from "../_core/notification";
 import {
   createApplication,
   getApplicationByJobAndWorker,
@@ -127,6 +128,13 @@ export const applicationsRouter = router({
 
       // Mark job as filled
       await updateJob(app.jobId, { status: "filled", acceptedWorkerId: app.workerId });
+
+      // Notify owner of accepted shift
+      const worker = await getUserById(app.workerId);
+      notifyOwner({
+        title: "ShiftChef: Shift Confirmed",
+        content: `${job.restaurantName ?? "Employer"} accepted ${worker?.name ?? "a worker"} for ${job.role} shift.`,
+      }).catch(() => {});
 
       return { success: true };
     }),

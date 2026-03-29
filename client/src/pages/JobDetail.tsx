@@ -3,7 +3,10 @@ import { trpc } from "@/lib/trpc";
 import { Button } from "@/components/ui/button";
 import AppShell from "@/components/AppShell";
 import { useLocation, useParams } from "wouter";
-import { ArrowLeft, Clock, MapPin, Star, TrendingUp, Flag, DollarSign, User, CheckCircle } from "lucide-react";
+import {
+  ArrowLeft, Clock, MapPin, Star, TrendingUp, Flag,
+  DollarSign, CheckCircle, AlertCircle, Zap, ChevronRight
+} from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { useState } from "react";
@@ -13,12 +16,22 @@ const ROLE_LABELS: Record<string, string> = {
   dishwasher: "Dishwasher", cleaner: "Cleaner", server: "Server",
   bartender: "Bartender", host: "Host", manager: "Manager",
 };
+const ROLE_EMOJI: Record<string, string> = {
+  cook: "👨‍🍳", sous_chef: "🍴", prep: "🥗", dishwasher: "🫧",
+  cleaner: "🧹", server: "🍽️", bartender: "🍸", host: "🤝", manager: "📋",
+};
 
 function formatTime(ms: number) {
   return new Date(ms).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
 }
 function formatDate(ms: number) {
-  return new Date(ms).toLocaleDateString([], { weekday: "long", month: "long", day: "numeric" });
+  const d = new Date(ms);
+  const today = new Date();
+  if (d.toDateString() === today.toDateString()) return "Today";
+  const tomorrow = new Date(today);
+  tomorrow.setDate(today.getDate() + 1);
+  if (d.toDateString() === tomorrow.toDateString()) return "Tomorrow";
+  return d.toLocaleDateString([], { weekday: "short", month: "short", day: "numeric" });
 }
 function calcHours(start: number, end: number) {
   return ((end - start) / (1000 * 60 * 60)).toFixed(1);
@@ -38,7 +51,7 @@ export default function JobDetail() {
   const applyMutation = trpc.applications.applyToJob.useMutation({
     onSuccess: () => {
       setApplied(true);
-      toast.success("Application submitted!");
+      toast.success("Application sent! 🎉");
       utils.applications.myApplications.invalidate();
     },
     onError: (e) => toast.error(e.message),
@@ -47,7 +60,7 @@ export default function JobDetail() {
   if (isLoading) {
     return (
       <AppShell>
-        <div className="flex items-center justify-center h-64">
+        <div className="flex items-center justify-center min-h-[60vh]">
           <div className="w-8 h-8 border-2 border-primary border-t-transparent rounded-full animate-spin" />
         </div>
       </AppShell>
@@ -57,9 +70,11 @@ export default function JobDetail() {
   if (!job) {
     return (
       <AppShell>
-        <div className="flex flex-col items-center justify-center h-64 gap-4">
-          <p className="text-muted-foreground">Job not found</p>
-          <Button onClick={() => navigate("/feed")}>Back to Feed</Button>
+        <div className="flex flex-col items-center justify-center min-h-[60vh] px-6 text-center">
+          <AlertCircle size={40} className="text-muted-foreground mb-3" />
+          <p className="font-bold text-foreground">Shift not found</p>
+          <p className="text-sm text-muted-foreground mt-1">It may have expired or been removed.</p>
+          <button onClick={() => navigate("/feed")} className="mt-4 text-primary text-sm font-bold">← Back to Feed</button>
         </div>
       </AppShell>
     );
@@ -67,8 +82,9 @@ export default function JobDetail() {
 
   const hours = calcHours(job.startTime, job.endTime);
   const totalPay = job.totalPay ? parseFloat(job.totalPay) : parseFloat(job.payRate) * parseFloat(hours);
-  const workerRating = profile?.rating ?? 5;
-  const belowMin = job.minRating && workerRating < job.minRating;
+  const workerRating = profile?.rating ? parseFloat(String(profile.rating)) : 5;
+  const minRating = job.minRating ? parseFloat(String(job.minRating)) : 0;
+  const belowMin = isAuthenticated && minRating > 0 && workerRating < minRating;
   const isWorker = !profile?.userType || profile.userType === "worker" || profile.userType === "both";
   const isOwnJob = profile?.id === job.employerId;
   const isExpired = job.status !== "live";
@@ -76,175 +92,204 @@ export default function JobDetail() {
   return (
     <AppShell>
       <div className="max-w-lg mx-auto">
-        {/* Back button */}
-        <div className="px-4 pt-4">
+        {/* ── Hero ──────────────────────────────────────────────────────── */}
+        <div className="relative">
+          <div className="relative h-56 bg-secondary flex items-center justify-center overflow-hidden">
+            {job.restaurantImage ? (
+              <img src={job.restaurantImage} alt="" className="w-full h-full object-cover" />
+            ) : (
+              <span className="text-7xl">{ROLE_EMOJI[job.role] ?? "🍽️"}</span>
+            )}
+            <div className="absolute inset-0 bg-gradient-to-t from-background via-background/30 to-transparent" />
+            {isExpired && (
+              <div className="absolute inset-0 bg-background/70 flex items-center justify-center">
+                <span className="bg-destructive text-destructive-foreground font-black px-5 py-2 rounded-2xl text-sm uppercase tracking-widest">
+                  {job.status}
+                </span>
+              </div>
+            )}
+          </div>
+
+          {/* Back */}
           <button
             onClick={() => navigate("/feed")}
-            className="flex items-center gap-2 text-muted-foreground hover:text-foreground transition-colors"
+            className="absolute top-4 left-4 w-10 h-10 rounded-2xl bg-background/80 backdrop-blur-sm flex items-center justify-center border border-border"
           >
-            <ArrowLeft size={18} />
-            <span className="text-sm">Back to Feed</span>
+            <ArrowLeft size={18} className="text-foreground" />
           </button>
-        </div>
 
-        {/* Hero image */}
-        <div className="relative h-48 mx-4 mt-4 rounded-2xl overflow-hidden bg-secondary flex items-center justify-center">
-          {job.restaurantImage ? (
-            <img src={job.restaurantImage} alt={job.restaurantName ?? ""} className="w-full h-full object-cover" />
-          ) : (
-            <span className="text-6xl">🍽️</span>
-          )}
-          <div className="absolute top-3 left-3">
+          {/* Type badge */}
+          <div className="absolute top-4 right-4">
             {job.isPermanent ? (
-              <span className="flex items-center gap-1 bg-green-500/90 text-white text-xs font-bold px-2 py-1 rounded-full">
-                <TrendingUp size={10} />
-                Permanent Potential
+              <span className="flex items-center gap-1 bg-emerald-500 text-white text-[10px] font-black px-2.5 py-1 rounded-full">
+                <TrendingUp size={9} strokeWidth={3} /> Perm Potential
               </span>
             ) : (
-              <span className="flex items-center gap-1 bg-orange-500/90 text-white text-xs font-bold px-2 py-1 rounded-full">
-                <Flag size={10} />
-                Temporary
+              <span className="flex items-center gap-1 bg-orange-500 text-white text-[10px] font-black px-2.5 py-1 rounded-full">
+                <Flag size={9} strokeWidth={3} /> Temp
               </span>
             )}
           </div>
-          {isExpired && (
-            <div className="absolute inset-0 bg-background/70 flex items-center justify-center">
-              <span className="bg-destructive text-destructive-foreground font-bold px-4 py-2 rounded-xl text-sm uppercase tracking-wide">
-                {job.status}
-              </span>
-            </div>
-          )}
         </div>
 
-        {/* Job info */}
-        <div className="px-4 py-4 space-y-4">
-          <div className="flex items-start justify-between">
-            <div>
-              <h1 className="text-2xl font-black">{ROLE_LABELS[job.role] ?? job.role}</h1>
-              {job.restaurantName && <p className="text-muted-foreground">{job.restaurantName}</p>}
-            </div>
-            <div className="text-right">
-              <p className="text-3xl font-black text-primary">${job.payRate}/hr</p>
-              <p className="text-sm text-muted-foreground">~${totalPay.toFixed(0)} total</p>
+        {/* ── Content ───────────────────────────────────────────────────── */}
+        <div className="px-4 -mt-4 relative z-10 space-y-3 pb-36">
+          {/* Title */}
+          <div className="bg-card rounded-2xl border border-border p-5">
+            <div className="flex items-start justify-between">
+              <div>
+                <h1 className="text-2xl font-black text-foreground">{ROLE_LABELS[job.role] ?? job.role}</h1>
+                {job.restaurantName && <p className="text-sm text-muted-foreground mt-0.5">{job.restaurantName}</p>}
+              </div>
+              <div className="text-right flex-shrink-0 ml-3">
+                <p className="text-3xl font-black text-primary">${job.payRate}</p>
+                <p className="text-xs text-muted-foreground">/hr</p>
+              </div>
             </div>
           </div>
 
-          {/* Details grid */}
-          <div className="grid grid-cols-2 gap-3">
-            <InfoCard icon={<Clock size={16} className="text-primary" />} label="Shift Time">
-              <p className="font-semibold text-sm">{formatDate(job.startTime)}</p>
-              <p className="text-xs text-muted-foreground">{formatTime(job.startTime)} – {formatTime(job.endTime)} ({hours}h)</p>
-            </InfoCard>
-
-            {job.location && (
-              <InfoCard icon={<MapPin size={16} className="text-primary" />} label="Location">
-                <p className="font-semibold text-sm">{job.location}</p>
-                <p className="text-xs text-muted-foreground">{job.city}</p>
-              </InfoCard>
+          {/* Details */}
+          <div className="bg-card rounded-2xl border border-border p-4 space-y-3">
+            <p className="text-xs font-bold text-muted-foreground uppercase tracking-wider">Shift Details</p>
+            <DetailRow icon={<Clock size={14} className="text-primary" />} label="Date & Time">
+              {formatDate(job.startTime)} · {formatTime(job.startTime)}–{formatTime(job.endTime)} ({hours}h)
+            </DetailRow>
+            {job.city && (
+              <DetailRow icon={<MapPin size={14} className="text-primary" />} label="Location">
+                {job.city}
+              </DetailRow>
             )}
-
-            <InfoCard icon={<DollarSign size={16} className="text-green-400" />} label="Your Payout">
-              <p className="font-semibold text-sm">${(totalPay * 0.9).toFixed(0)}</p>
-              <p className="text-xs text-muted-foreground">After 10% platform fee</p>
-            </InfoCard>
-
-            {(job.minRating ?? 0) > 0 && (
-              <InfoCard icon={<Star size={16} className="text-yellow-400" />} label="Min Rating">
-                <p className={cn("font-semibold text-sm", belowMin ? "text-destructive" : "text-foreground")}>
-                  {job.minRating}★ required
-                </p>
-                <p className="text-xs text-muted-foreground">Your rating: {workerRating.toFixed(1)}★</p>
-              </InfoCard>
+            {minRating > 0 && (
+              <DetailRow icon={<Star size={14} className="text-yellow-400" />} label="Min Rating">
+                <span className={cn(belowMin ? "text-destructive" : "text-foreground")}>
+                  {minRating}★ required {isAuthenticated && `(yours: ${workerRating.toFixed(1)}★)`}
+                </span>
+              </DetailRow>
             )}
+          </div>
+
+          {/* Pay breakdown */}
+          <div className="bg-card rounded-2xl border border-border p-4">
+            <p className="text-xs font-bold text-muted-foreground uppercase tracking-wider mb-3">Pay Breakdown</p>
+            <div className="space-y-2 text-sm">
+              <div className="flex justify-between">
+                <span className="text-muted-foreground">Gross ({hours}h × ${job.payRate}/hr)</span>
+                <span className="font-bold text-foreground">${totalPay.toFixed(2)}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-muted-foreground">Platform fee (10%)</span>
+                <span className="text-muted-foreground">-${(totalPay * 0.1).toFixed(2)}</span>
+              </div>
+              <div className="border-t border-border pt-2 flex justify-between items-center">
+                <span className="font-bold text-foreground">You earn</span>
+                <span className="text-2xl font-black text-emerald-400">${(totalPay * 0.9).toFixed(2)}</span>
+              </div>
+            </div>
           </div>
 
           {/* Description */}
           {job.description && (
-            <div className="bg-card rounded-2xl p-4 border border-border">
-              <h3 className="font-bold text-sm mb-2">About this shift</h3>
-              <p className="text-sm text-muted-foreground leading-relaxed">{job.description}</p>
+            <div className="bg-card rounded-2xl border border-border p-4">
+              <p className="text-xs font-bold text-muted-foreground uppercase tracking-wider mb-2">About This Shift</p>
+              <p className="text-sm text-foreground leading-relaxed">{job.description}</p>
             </div>
           )}
 
-          {/* Apply section */}
+          {/* Rating warning */}
+          {belowMin && (
+            <div className="bg-destructive/10 border border-destructive/30 rounded-2xl p-4 flex items-start gap-3">
+              <AlertCircle size={16} className="text-destructive flex-shrink-0 mt-0.5" />
+              <p className="text-sm text-destructive">
+                Your rating ({workerRating.toFixed(1)}★) is below the {minRating}★ minimum for this shift.
+              </p>
+            </div>
+          )}
+
+          {/* Employer: view applicants */}
+          {isOwnJob && (
+            <button
+              onClick={() => navigate("/applications")}
+              className="w-full flex items-center justify-between bg-primary/10 border border-primary/30 rounded-2xl p-4 card-press"
+            >
+              <span className="font-bold text-sm text-foreground">View Applicants</span>
+              <ChevronRight size={16} className="text-primary" />
+            </button>
+          )}
+
+          {/* Worker: apply */}
           {isWorker && !isOwnJob && !isExpired && (
-            <div className="bg-card rounded-2xl p-4 border border-border space-y-3">
-              <h3 className="font-bold">Apply for this shift</h3>
-
-              {belowMin && (
-                <div className="bg-destructive/10 border border-destructive/30 rounded-xl p-3">
-                  <p className="text-destructive text-sm font-medium">
-                    Your rating ({workerRating.toFixed(1)}) is below the minimum required ({job.minRating}).
-                  </p>
-                </div>
-              )}
-
+            <div className="bg-card rounded-2xl border border-border p-4 space-y-3">
+              <p className="text-xs font-bold text-muted-foreground uppercase tracking-wider">Your Application</p>
               {!applied && !belowMin && (
                 <textarea
                   value={coverNote}
                   onChange={(e) => setCoverNote(e.target.value)}
                   placeholder="Add a note (optional) — introduce yourself, your experience..."
-                  className="w-full bg-secondary border border-border rounded-xl p-3 text-sm resize-none h-24 focus:outline-none focus:ring-1 focus:ring-ring text-foreground placeholder:text-muted-foreground"
+                  className="w-full bg-secondary border border-border rounded-xl p-3 text-sm resize-none h-24 focus:outline-none focus:ring-1 focus:ring-primary text-foreground placeholder:text-muted-foreground"
                   maxLength={500}
                 />
               )}
-
-              {applied ? (
-                <div className="flex items-center gap-2 text-green-400 font-semibold">
-                  <CheckCircle size={18} />
-                  Application submitted! Employer will review soon.
+              {applied && (
+                <div className="flex items-center gap-2 text-emerald-400 font-semibold text-sm">
+                  <CheckCircle size={16} strokeWidth={2.5} />
+                  Application sent! Employer will review soon.
                 </div>
-              ) : (
-                <Button
-                  size="lg"
-                  className="w-full h-14 text-base font-bold rounded-2xl"
-                  disabled={!!belowMin || applyMutation.isPending || !isAuthenticated}
-                  onClick={() => {
-                    if (!isAuthenticated) {
-                      toast.error("Please sign in to apply");
-                      return;
-                    }
-                    applyMutation.mutate({ jobId: job.id, coverNote: coverNote || undefined });
-                  }}
-                >
-                  {applyMutation.isPending ? "Applying..." : "Apply Now"}
-                </Button>
               )}
-
-              {!isAuthenticated && (
-                <p className="text-xs text-muted-foreground text-center">
-                  <a href="/" className="text-primary underline">Sign in</a> to apply
-                </p>
-              )}
-            </div>
-          )}
-
-          {isOwnJob && (
-            <div className="bg-card rounded-2xl p-4 border border-border">
-              <p className="text-sm text-muted-foreground text-center">This is your job posting.</p>
-              <Button
-                variant="outline"
-                className="w-full mt-3"
-                onClick={() => navigate("/applications")}
-              >
-                View Applicants
-              </Button>
             </div>
           )}
         </div>
+
+        {/* ── Sticky CTA ────────────────────────────────────────────────── */}
+        {isWorker && !isOwnJob && !isExpired && (
+          <div
+            className="fixed bottom-0 left-0 right-0 z-50 px-4 py-4 border-t border-border"
+            style={{
+              background: "oklch(0.06 0 0 / 0.97)",
+              backdropFilter: "blur(16px)",
+              paddingBottom: "calc(1rem + var(--sab))",
+            }}
+          >
+            <div className="max-w-lg mx-auto">
+              {!isAuthenticated ? (
+                <Button size="lg" className="w-full h-14 text-base font-bold rounded-2xl btn-glow" onClick={() => navigate("/")}>
+                  Sign In to Apply
+                </Button>
+              ) : applied ? (
+                <Button size="lg" className="w-full h-14 text-base font-bold rounded-2xl" disabled>
+                  <CheckCircle size={18} className="mr-2" /> Applied!
+                </Button>
+              ) : (
+                <Button
+                  size="lg"
+                  className="w-full h-14 text-base font-bold rounded-2xl btn-glow"
+                  disabled={belowMin || applyMutation.isPending}
+                  onClick={() => applyMutation.mutate({ jobId: job.id, coverNote: coverNote || undefined })}
+                >
+                  {applyMutation.isPending ? (
+                    <div className="w-5 h-5 border-2 border-primary-foreground border-t-transparent rounded-full animate-spin" />
+                  ) : belowMin ? (
+                    "Rating Too Low"
+                  ) : (
+                    <>Apply · Earn ${(totalPay * 0.9).toFixed(0)}</>
+                  )}
+                </Button>
+              )}
+            </div>
+          </div>
+        )}
       </div>
     </AppShell>
   );
 }
 
-function InfoCard({ icon, label, children }: { icon: React.ReactNode; label: string; children: React.ReactNode }) {
+function DetailRow({ icon, label, children }: { icon: React.ReactNode; label: string; children: React.ReactNode }) {
   return (
-    <div className="bg-card rounded-xl p-3 border border-border">
-      <div className="flex items-center gap-1.5 mb-1.5">
-        {icon}
-        <span className="text-xs text-muted-foreground font-medium">{label}</span>
+    <div className="flex items-center gap-3">
+      <div className="w-8 h-8 rounded-xl bg-secondary flex items-center justify-center flex-shrink-0">{icon}</div>
+      <div className="flex-1 flex items-center justify-between gap-2">
+        <span className="text-xs text-muted-foreground flex-shrink-0">{label}</span>
+        <span className="text-sm font-semibold text-foreground text-right">{children}</span>
       </div>
-      {children}
     </div>
   );
 }

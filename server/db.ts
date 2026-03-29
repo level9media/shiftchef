@@ -304,3 +304,51 @@ export async function getEmployerPostCredits(employerId: number) {
   if (!db) return [];
   return db.select().from(postCredits).where(eq(postCredits.employerId, employerId)).orderBy(desc(postCredits.createdAt));
 }
+
+// ─── Admin Stats ──────────────────────────────────────────────────────────────
+export async function getAdminStats() {
+  const db = await getDb();
+  if (!db) return null;
+
+  const [totalUsers] = await db.select({ count: sql<number>`count(*)` }).from(users);
+  const [totalJobs] = await db.select({ count: sql<number>`count(*)` }).from(jobs);
+  const [activeJobs] = await db.select({ count: sql<number>`count(*)` }).from(jobs).where(eq(jobs.status, "live"));
+  const [totalPayments] = await db.select({ count: sql<number>`count(*)`, total: sql<number>`sum(amount)` }).from(payments);
+  const [releasedPayments] = await db.select({ total: sql<number>`sum(amount)`, fees: sql<number>`sum(platformFee)` }).from(payments).where(eq(payments.status, "released"));
+  const [totalApplications] = await db.select({ count: sql<number>`count(*)` }).from(applications);
+
+  return {
+    totalUsers: Number(totalUsers?.count ?? 0),
+    totalJobs: Number(totalJobs?.count ?? 0),
+    activeJobs: Number(activeJobs?.count ?? 0),
+    totalPayments: Number(totalPayments?.count ?? 0),
+    totalVolume: Number(totalPayments?.total ?? 0),
+    totalPlatformFees: Number(releasedPayments?.fees ?? 0),
+    totalReleased: Number(releasedPayments?.total ?? 0),
+    totalApplications: Number(totalApplications?.count ?? 0),
+  };
+}
+
+export async function getAdminRecentPayments(limit = 20) {
+  const db = await getDb();
+  if (!db) return [];
+  return db.select().from(payments).orderBy(desc(payments.createdAt)).limit(limit);
+}
+
+export async function getAdminRecentUsers(limit = 20) {
+  const db = await getDb();
+  if (!db) return [];
+  return db.select({
+    id: users.id,
+    name: users.name,
+    email: users.email,
+    role: users.role,
+    createdAt: users.createdAt,
+  }).from(users).orderBy(desc(users.createdAt)).limit(limit);
+}
+
+export async function getAdminRecentJobs(limit = 20) {
+  const db = await getDb();
+  if (!db) return [];
+  return db.select().from(jobs).orderBy(desc(jobs.createdAt)).limit(limit);
+}
