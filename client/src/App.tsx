@@ -22,6 +22,9 @@ import EmployerOnboarding from "./pages/EmployerOnboarding";
 import EmailSequence from "./pages/EmailSequence";
 import RateShift from "./pages/RateShift";
 import ReviewHistory from "./pages/ReviewHistory";
+import Pricing from "./pages/Pricing";
+import HowItWorks from "./pages/HowItWorks";
+import FAQ from "./pages/FAQ";
 
 function Router() {
   return (
@@ -43,6 +46,9 @@ function Router() {
       <Route path="/admin/emails" component={EmailSequence} />
       <Route path="/rate/:jobId" component={RateShift} />
       <Route path="/reviews/:userId" component={ReviewHistory} />
+      <Route path="/pricing" component={Pricing} />
+      <Route path="/how-it-works" component={HowItWorks} />
+      <Route path="/faq" component={FAQ} />
       <Route path="/404" component={NotFound} />
       <Route component={NotFound} />
     </Switch>

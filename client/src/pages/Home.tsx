@@ -157,10 +157,17 @@ export default function Home() {
 
       {/* Footer */}
       <div
-        className="relative z-10 pb-6 text-center text-xs text-muted-foreground"
+        className="relative z-10 pb-6 text-center text-xs text-muted-foreground space-y-2"
         style={{ paddingBottom: "calc(var(--sab) + 1.5rem)" }}
       >
-        Austin, TX · Expanding nationwide
+        <div className="flex items-center justify-center gap-4">
+          <button onClick={() => navigate("/how-it-works")} className="text-primary hover:underline font-semibold">How It Works</button>
+          <span className="opacity-30">|</span>
+          <button onClick={() => navigate("/pricing")} className="text-primary hover:underline font-semibold">Pricing</button>
+          <span className="opacity-30">|</span>
+          <button onClick={() => navigate("/faq")} className="text-primary hover:underline font-semibold">FAQ</button>
+        </div>
+        <p>Austin, TX &middot; Phoenix, AZ &middot; Mesa, AZ</p>
       </div>
     </div>
   );

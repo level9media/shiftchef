@@ -280,3 +280,23 @@
 
 ## Bug Fixes
 - [x] Fix Rules of Hooks violation in JobDetail.tsx (hook called after early return causes crash on /jobs/:id)
+
+## Marketing Pages (v10)
+- [ ] Pricing page at /pricing — employer tiers ($35/$75/$99), worker free tier, Stripe CTAs
+- [ ] How It Works page at /how-it-works — employer flow (post→hire→pay) + worker flow (apply→work→earn)
+- [ ] FAQ page at /faq — top objections for employers and workers
+- [ ] Wire all three routes into App.tsx
+- [ ] Add footer links to Pricing, How It Works, FAQ from Home page
+- [ ] SEOHead on all three new pages
+
+## Marketplace Growth Hacks (v11)
+- [ ] Feed: Live activity header (shifts posted in last 3h + workers available now)
+- [ ] Feed: Backend procedure to count recent activity (last 3h jobs, available workers)
+- [ ] Feed: Urgency tags on job cards (TONIGHT, Expires in Xh, HOT badge)
+- [ ] Feed: Urgency logic (tonight = shift date is today, expires = within 2h of shift start)
+- [ ] DB: Seed 15-20 demo job posts across Austin/Phoenix/Mesa
+- [ ] DB: Seed 10-15 demo worker profiles with availability set
+- [ ] Schema: Add permanentPotential boolean field to jobs table
+- [ ] Feed: Permanent/temp visual tag on job cards (green arrow vs orange flag)
+- [ ] PostJob: Add "Could become permanent" toggle when posting
+- [ ] JobDetail: Show permanent potential badge prominently
