@@ -15,6 +15,19 @@ import {
 import { protectedProcedure, router } from "../_core/trpc";
 import { getStripe, STRIPE_PRODUCTS } from "../stripe";
 
+// Allowlist of trusted origins for Stripe redirect URLs
+const ALLOWED_ORIGINS = [
+  "https://shiftchef.co",
+  "https://www.shiftchef.co",
+  "https://staffuphub-5xtewxhs.manus.space",
+];
+
+function sanitizeOrigin(origin: string): string {
+  const clean = (origin ?? "").replace(/\/$/, "");
+  if (clean.startsWith("http://localhost") || clean.startsWith("http://127.0.0.1")) return clean;
+  return ALLOWED_ORIGINS.includes(clean) ? clean : "https://shiftchef.co";
+}
+
 export const paymentsRouter = router({
   // ── Employer: Create Stripe Checkout session for posting credits ──────────
   purchaseCredits: protectedProcedure
@@ -58,8 +71,8 @@ export const paymentsRouter = router({
               quantity: 1,
             },
           ],
-          success_url: `${input.origin}/post-job?credits=success&tier=${input.tier}`,
-          cancel_url: `${input.origin}/post-job?credits=cancelled`,
+          success_url: `${sanitizeOrigin(input.origin)}/post-job?credits=success&tier=${input.tier}`,
+          cancel_url: `${sanitizeOrigin(input.origin)}/post-job?credits=cancelled`,
           client_reference_id: String(ctx.user.id),
           metadata: {
             userId: String(ctx.user.id),
@@ -89,8 +102,8 @@ export const paymentsRouter = router({
               quantity: 1,
             },
           ],
-          success_url: `${input.origin}/post-job?credits=success&tier=${input.tier}`,
-          cancel_url: `${input.origin}/post-job?credits=cancelled`,
+          success_url: `${sanitizeOrigin(input.origin)}/post-job?credits=success&tier=${input.tier}`,
+          cancel_url: `${sanitizeOrigin(input.origin)}/post-job?credits=cancelled`,
           client_reference_id: String(ctx.user.id),
           metadata: {
             userId: String(ctx.user.id),
@@ -167,8 +180,8 @@ export const paymentsRouter = router({
             quantity: 1,
           },
         ],
-        success_url: `${input.origin}/applications?payment=success&jobId=${input.jobId}`,
-        cancel_url: `${input.origin}/applications?payment=cancelled`,
+        success_url: `${sanitizeOrigin(input.origin)}/applications?payment=success&jobId=${input.jobId}`,
+        cancel_url: `${sanitizeOrigin(input.origin)}/applications?payment=cancelled`,
         client_reference_id: String(ctx.user.id),
         metadata: {
           jobId: String(input.jobId),
@@ -294,8 +307,8 @@ export const paymentsRouter = router({
       // Generate onboarding link
       const link = await stripe.accountLinks.create({
         account: accountId,
-        refresh_url: `${input.origin}/earnings?stripe=refresh`,
-        return_url: `${input.origin}/earnings?stripe=connected`,
+        refresh_url: `${sanitizeOrigin(input.origin)}/earnings?stripe=refresh`,
+        return_url: `${sanitizeOrigin(input.origin)}/earnings?stripe=connected`,
         type: "account_onboarding",
       });
 

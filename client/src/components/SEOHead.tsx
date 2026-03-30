@@ -5,7 +5,7 @@ const SITE_NAME = "ShiftChef";
 const DEFAULT_TITLE = "ShiftChef — Find Shifts. Hire Fast.";
 const DEFAULT_DESCRIPTION =
   "ShiftChef is Austin's on-demand hospitality staffing marketplace. Restaurants post shifts, verified kitchen workers apply in minutes. Real-time job feed, secure payments, and 1099 contractor agreements.";
-const DEFAULT_OG_IMAGE = `${SITE_URL}/og-image.png`;
+const DEFAULT_OG_IMAGE = "https://d2xsxph8kpxj0f.cloudfront.net/310519663450394445/5XtEwxhSav9aHUudDTD5pa/og-image-eFyYHYLVAGr6SD6jT92hzB.png";
 
 interface SEOHeadProps {
   title?: string;
@@ -71,7 +71,7 @@ export function buildOrganizationSchema() {
     "@type": "Organization",
     name: "ShiftChef",
     url: SITE_URL,
-    logo: `${SITE_URL}/logo.png`,
+    logo: DEFAULT_OG_IMAGE,
     description: DEFAULT_DESCRIPTION,
     address: {
       "@type": "PostalAddress",

@@ -213,3 +213,15 @@
 - [x] Frontend: /reviews/:userId public review history page
 - [x] Frontend: Admin dashboard — ratings overview (total ratings, avg platform score, recent reviews)
 - [x] Frontend: App navigation — add Ratings tab to bottom nav (already exists at /ratings)
+
+## Production Launch — shiftchef.co (v9)
+- [x] Update index.html: all canonical/OG/Twitter/JSON-LD URLs to https://shiftchef.co
+- [x] Update SEOHead component: default canonicalBase to https://shiftchef.co
+- [x] Update sitemap.xml: all URLs to https://shiftchef.co
+- [x] Update robots.txt: sitemap URL to https://shiftchef.co/sitemap.xml
+- [x] Update JSON-LD Organization/LocalBusiness: url, sameAs, contactPoint to shiftchef.co
+- [x] Update JSON-LD WebSite SearchAction target to shiftchef.co
+- [ ] Add shiftchef.co custom domain via Manus Settings → Domains (requires user action in Management UI)
+- [ ] Verify HTTPS and domain binding is active (requires user action after domain binding)
+- [x] Confirm Stripe success_url/cancel_url work on shiftchef.co (dynamic origin-based, works on any domain)
+- [x] Final test run (pnpm test) before publish — 15/15 passing
