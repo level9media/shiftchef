@@ -3,6 +3,7 @@ import { drizzle } from "drizzle-orm/mysql2";
 import {
   applications,
   availability,
+  coupons,
   InsertUser,
   jobs,
   payments,
@@ -361,6 +362,32 @@ export async function getAdminRecentJobs(limit = 20) {
   const db = await getDb();
   if (!db) return [];
   return db.select().from(jobs).orderBy(desc(jobs.createdAt)).limit(limit);
+}
+
+// ─── Coupons ──────────────────────────────────────────────────────────────────
+export async function createCoupon(data: typeof coupons.$inferInsert) {
+  const db = await getDb();
+  if (!db) return;
+  await db.insert(coupons).values(data);
+}
+
+export async function getCouponByCode(code: string) {
+  const db = await getDb();
+  if (!db) return undefined;
+  const [row] = await db.select().from(coupons).where(eq(coupons.code, code.toUpperCase())).limit(1);
+  return row;
+}
+
+export async function getAllCoupons(limit = 500) {
+  const db = await getDb();
+  if (!db) return [];
+  return db.select().from(coupons).orderBy(desc(coupons.createdAt)).limit(limit);
+}
+
+export async function updateCoupon(id: number, data: Partial<typeof coupons.$inferInsert>) {
+  const db = await getDb();
+  if (!db) return;
+  await db.update(coupons).set(data).where(eq(coupons.id, id));
 }
 
 export async function getAdminRecentRatings(limit = 10) {

@@ -1,0 +1,100 @@
+{
+  "query": "SELECT id, role, status, city, startTime, endTime, employerId FROM jobs ORDER BY id DESC LIMIT 10;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway05.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 3kQsL8UrXdZdNR1.f78a5b86a85c --database 5XtEwxhSav9aHUudDTD5pa --execute SELECT id, role, status, city, startTime, endTime, employerId FROM jobs ORDER BY id DESC LIMIT 10;",
+  "rows": [
+    {
+      "id": "31",
+      "role": "server",
+      "status": "live",
+      "city": "Austin, TX",
+      "startTime": "1774919280000",
+      "endTime": "1774932300000",
+      "employerId": "1"
+    },
+    {
+      "id": "30",
+      "role": "prep",
+      "status": "live",
+      "city": "Austin, TX",
+      "startTime": "1775007911786",
+      "endTime": "1775036711786",
+      "employerId": "90203"
+    },
+    {
+      "id": "29",
+      "role": "server",
+      "status": "live",
+      "city": "Austin, TX",
+      "startTime": "1775115911786",
+      "endTime": "1775144711786",
+      "employerId": "90202"
+    },
+    {
+      "id": "28",
+      "role": "cleaner",
+      "status": "live",
+      "city": "Austin, TX",
+      "startTime": "1774921511786",
+      "endTime": "1774943111786",
+      "employerId": "90201"
+    },
+    {
+      "id": "27",
+      "role": "sous_chef",
+      "status": "live",
+      "city": "Austin, TX",
+      "startTime": "1775159111786",
+      "endTime": "1775195111786",
+      "employerId": "90200"
+    },
+    {
+      "id": "26",
+      "role": "cook",
+      "status": "live",
+      "city": "Austin, TX",
+      "startTime": "1774971911786",
+      "endTime": "1775000711786",
+      "employerId": "90199"
+    },
+    {
+      "id": "25",
+      "role": "server",
+      "status": "live",
+      "city": "Austin, TX",
+      "startTime": "1775072711786",
+      "endTime": "1775101511786",
+      "employerId": "90198"
+    },
+    {
+      "id": "24",
+      "role": "dishwasher",
+      "status": "live",
+      "city": "Austin, TX",
+      "startTime": "1774943111786",
+      "endTime": "1774971911786",
+      "employerId": "90197"
+    },
+    {
+      "id": "23",
+      "role": "cook",
+      "status": "live",
+      "city": "Austin, TX",
+      "startTime": "1775029511786",
+      "endTime": "1775058311786",
+      "employerId": "90196"
+    },
+    {
+      "id": "22",
+      "role": "prep",
+      "status": "live",
+      "city": "Austin, TX",
+      "startTime": "1774928711786",
+      "endTime": "1774957511786",
+      "employerId": "90195"
+    }
+  ],
+  "messages": [],
+  "stdout": "id\trole\tstatus\tcity\tstartTime\tendTime\temployerId\n31\tserver\tlive\tAustin, TX\t1774919280000\t1774932300000\t1\n30\tprep\tlive\tAustin, TX\t1775007911786\t1775036711786\t90203\n29\tserver\tlive\tAustin, TX\t1775115911786\t1775144711786\t90202\n28\tcleaner\tlive\tAustin, TX\t1774921511786\t1774943111786\t90201\n27\tsous_chef\tlive\tAustin, TX\t1775159111786\t1775195111786\t90200\n26\tcook\tlive\tAustin, TX\t1774971911786\t1775000711786\t90199\n25\tserver\tlive\tAustin, TX\t1775072711786\t1775101511786\t90198\n24\tdishwasher\tlive\tAustin, TX\t1774943111786\t1774971911786\t90197\n23\tcook\tlive\tAustin, TX\t1775029511786\t1775058311786\t90196\n22\tprep\tlive\tAustin, TX\t1774928711786\t1774957511786\t90195\n",
+  "stderr": "",
+  "execution_time_ms": 53
+}

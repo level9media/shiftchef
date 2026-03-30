@@ -376,7 +376,7 @@ function RecentReviews({ userId, onViewAll }: { userId: number; onViewAll: () =>
             <div className="flex items-center justify-between mb-1">
               <p className="text-xs font-semibold text-foreground">{r.raterName ?? "User"}</p>
               <p className={cn("text-xs font-black", RATING_COLORS_PROFILE[r.score as number])}>
-                {r.score}/5 — {RATING_LABELS_PROFILE[r.score as number]}
+                {r.score}/5 - {RATING_LABELS_PROFILE[r.score as number]}
               </p>
             </div>
             {r.comment && <p className="text-xs text-muted-foreground italic line-clamp-2">"{r.comment}"</p>}

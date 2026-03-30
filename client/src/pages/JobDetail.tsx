@@ -49,6 +49,8 @@ export default function JobDetail() {
   const { data: profile } = trpc.profile.get.useQuery(undefined, { enabled: isAuthenticated, retry: false });
   const utils = trpc.useUtils();
 
+  const { data: verificationStatus } = trpc.verification.myStatus.useQuery(undefined, { enabled: isAuthenticated, retry: false });
+
   const applyMutation = trpc.applications.applyToJob.useMutation({
     onSuccess: () => {
       setApplied(true);
@@ -89,7 +91,6 @@ export default function JobDetail() {
   const isWorker = !profile?.userType || profile.userType === "worker" || profile.userType === "both";
   const isOwnJob = profile?.id === job.employerId;
   const isExpired = job.status !== "live";
-  const { data: verificationStatus } = trpc.verification.myStatus.useQuery(undefined, { enabled: isAuthenticated && isWorker, retry: false });
   const isVerified = verificationStatus?.verificationStatus === "verified";
   const isPendingVerification = verificationStatus?.verificationStatus === "pending";
   const needsVerification = isAuthenticated && isWorker && !isVerified;

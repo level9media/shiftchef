@@ -61,6 +61,15 @@ export const users = mysqlTable("users", {
   contractSignedAt: timestamp("contractSignedAt"),
   contractIp: varchar("contractIp", { length: 64 }),
 
+  // Worker payout info (encrypted at app layer)
+  bankRoutingNumber: varchar("bankRoutingNumber", { length: 256 }), // stored encrypted
+  bankAccountNumber: varchar("bankAccountNumber", { length: 256 }), // stored encrypted
+  bankAccountType: mysqlEnum("bankAccountType", ["checking", "savings"]),
+  bankAccountName: varchar("bankAccountName", { length: 256 }),
+  // Preferred contact method for employers
+  contactPreference: mysqlEnum("contactPreference", ["email", "phone"]).default("email"),
+  phone: varchar("phone", { length: 32 }),
+
   // Employer Onboarding
   onboardingEmailSent: boolean("onboardingEmailSent").default(false),
   onboardingStep: int("onboardingStep").default(0),
@@ -133,6 +142,17 @@ export const applications = mysqlTable("applications", {
 
   status: mysqlEnum("status", ["pending", "accepted", "rejected", "completed", "cancelled"]).default("pending"),
   coverNote: text("coverNote"),
+
+  // Shift tracking
+  checkInAt: bigint("checkInAt", { mode: "number" }),      // worker checks in (UTC ms)
+  checkOutAt: bigint("checkOutAt", { mode: "number" }),     // worker clocks out (UTC ms)
+  shiftStartedAt: bigint("shiftStartedAt", { mode: "number" }), // employer marks started
+  shiftEndedAt: bigint("shiftEndedAt", { mode: "number" }),     // employer marks ended
+  hoursWorked: decimal("hoursWorked", { precision: 6, scale: 2 }), // computed
+  totalWagesOwed: decimal("totalWagesOwed", { precision: 10, scale: 2 }), // computed
+  payoutStatus: mysqlEnum("payoutStatus", ["unpaid", "processing", "paid", "failed"]).default("unpaid"),
+  payoutMethod: mysqlEnum("payoutMethod", ["stripe_bank", "stripe_instant", "cash_app", "square"]),
+  payoutAt: bigint("payoutAt", { mode: "number" }),
 
   createdAt: timestamp("createdAt").defaultNow().notNull(),
   updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
@@ -254,3 +274,22 @@ export const emailLogs = mysqlTable("emailLogs", {
 
 export type EmailLog = typeof emailLogs.$inferSelect;
 export type InsertEmailLog = typeof emailLogs.$inferInsert;
+
+// ─── Coupons ──────────────────────────────────────────────────────────────────
+export const coupons = mysqlTable("coupons", {
+  id: int("id").autoincrement().primaryKey(),
+  code: varchar("code", { length: 32 }).notNull().unique(),
+  type: mysqlEnum("type", ["free_post", "discount_percent", "discount_fixed"]).default("free_post"),
+  value: int("value").default(1), // number of free posts, or % / cents off
+  maxUses: int("maxUses").default(1),
+  usedCount: int("usedCount").default(0),
+  usedBy: int("usedBy"),       // userId of redeemer (for single-use)
+  usedAt: timestamp("usedAt"),
+  expiresAt: timestamp("expiresAt"),
+  createdBy: int("createdBy"), // admin userId
+  notes: text("notes"),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+});
+
+export type Coupon = typeof coupons.$inferSelect;
+export type InsertCoupon = typeof coupons.$inferInsert;
