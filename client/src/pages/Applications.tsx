@@ -63,7 +63,10 @@ export default function Applications() {
     onError: (e) => toast.error(e.message),
   });
   const payMutation = trpc.payments.payForJob.useMutation({
-    onSuccess: () => { toast.success("Payment held in escrow! Shift confirmed."); utils.applications.myApplications.invalidate(); },
+    onSuccess: (data) => {
+      toast.info("Redirecting to secure checkout...");
+      window.open(data.url, "_blank");
+    },
     onError: (e) => toast.error(e.message),
   });
   const completeMutation = trpc.jobs.complete.useMutation({
@@ -170,7 +173,7 @@ export default function Applications() {
                           size="sm"
                           className="w-full rounded-xl text-xs font-bold btn-glow"
                           disabled={payMutation.isPending}
-                          onClick={(e) => { e.stopPropagation(); payMutation.mutate({ jobId: app.jobId ?? app.job?.id }); }}
+                          onClick={(e) => { e.stopPropagation(); payMutation.mutate({ jobId: app.jobId ?? app.job?.id, origin: window.location.origin }); }}
                         >
                           {payMutation.isPending ? "Processing..." : `Pay & Confirm Shift`}
                         </Button>

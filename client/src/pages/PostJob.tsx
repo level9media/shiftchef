@@ -34,9 +34,8 @@ export default function PostJob() {
 
   const purchaseMutation = trpc.payments.purchaseCredits.useMutation({
     onSuccess: (data) => {
-      toast.success(`${data.creditsAdded} post credit(s) added!`);
-      utils.profile.get.invalidate();
-      setStep("form");
+      toast.info("Redirecting to secure checkout...");
+      window.open(data.url, "_blank");
     },
     onError: (e) => toast.error(e.message),
   });
@@ -150,7 +149,7 @@ export default function PostJob() {
               price="$35"
               desc="Post one shift to the live feed"
               features={["1 job post", "Instant live feed listing", "Applicant management"]}
-              onClick={() => purchaseMutation.mutate({ tier: "single" })}
+              onClick={() => purchaseMutation.mutate({ tier: "single", origin: window.location.origin })}
               loading={purchaseMutation.isPending}
             />
             <PricingCard
@@ -160,7 +159,7 @@ export default function PostJob() {
               desc="Best value for occasional hiring"
               features={["3 job posts", "Save $30 vs single", "30-day validity"]}
               highlighted
-              onClick={() => purchaseMutation.mutate({ tier: "bundle3" })}
+              onClick={() => purchaseMutation.mutate({ tier: "bundle3", origin: window.location.origin })}
               loading={purchaseMutation.isPending}
             />
             <PricingCard
@@ -169,7 +168,7 @@ export default function PostJob() {
               price="$99/mo"
               desc="For restaurants that hire regularly"
               features={["Unlimited posts", "Priority in feed", "Analytics & insights"]}
-              onClick={() => purchaseMutation.mutate({ tier: "subscription" })}
+              onClick={() => purchaseMutation.mutate({ tier: "subscription", origin: window.location.origin })}
               loading={purchaseMutation.isPending}
             />
           </div>

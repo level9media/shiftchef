@@ -112,3 +112,26 @@
 - [ ] Search and filter by role, pay rate, distance
 - [ ] Swipe-to-dismiss job cards (Tinder-style)
 - [ ] Bottom sheet modals for apply flow
+
+## Real Stripe Integration (v3 — Live)
+- [x] Stripe SDK installed (stripe npm package)
+- [x] Stripe singleton + products config (server/stripe.ts)
+- [x] Stripe Checkout session for $35 single post (purchaseCredits)
+- [x] Stripe Checkout session for $75 bundle (3 posts)
+- [x] Stripe Checkout for $99/month subscription (recurring mode)
+- [x] Webhook at POST /api/stripe/webhook — registered before express.json()
+- [x] Webhook returns { verified: true } for test events and all events
+- [x] Webhook: checkout.session.completed → unlock post credits in DB
+- [x] Webhook: invoice.paid → subscription renewal logged
+- [x] Webhook: payment_intent.amount_capturable_updated → mark shift payment held
+- [x] Webhook: transfer.created → worker payout confirmed
+- [x] Stripe Connect Express account creation for workers (connectStripe)
+- [x] Worker onboarding link (accountLinks.create) in Earnings page
+- [x] stripeAccountId saved to worker profile in DB
+- [x] PaymentIntent with manual capture for shift escrow (payForJob)
+- [x] Stripe Transfer 90% to worker stripeAccountId on release (releasePayment)
+- [x] Frontend: PostJob opens Stripe Checkout in new tab on credit purchase
+- [x] Frontend: Applications opens Stripe Checkout in new tab on shift payment
+- [x] Frontend: Earnings shows Connect onboarding button and status
+- [ ] Live keys: set via Settings → Payment in Management UI
+- [ ] Webhook secret (whsec_...): add after registering endpoint in Stripe Dashboard

@@ -24,6 +24,22 @@ export default function Earnings() {
     onError: (e) => toast.error(e.message),
   });
 
+  const { data: stripeStatusData } = trpc.payments.stripeStatus.useQuery(
+    undefined, { enabled: isAuthenticated }
+  );
+
+  const connectStripeMutation = trpc.payments.connectStripe.useMutation({
+    onSuccess: (data) => {
+      if (data.onboardingUrl) {
+        toast.info("Redirecting to Stripe onboarding...");
+        window.open(data.onboardingUrl, "_blank");
+      } else {
+        toast.success("Stripe account already connected!");
+      }
+    },
+    onError: (e) => toast.error(e.message),
+  });
+
   if (isLoading) {
     return (
       <AppShell>
@@ -38,7 +54,7 @@ export default function Earnings() {
   const totalEarned = earnings?.totalEarned ?? 0;
   const totalFees = earnings?.totalFees ?? 0;
   const history = earnings?.history ?? [];
-  const stripeConnected = earnings?.stripeOnboardingComplete ?? false;
+  const stripeConnected = stripeStatusData?.onboardingComplete ?? earnings?.stripeOnboardingComplete ?? false;
 
   // amounts come in cents from server
   const fmt = (cents: number) => (cents / 100).toFixed(2);
@@ -64,8 +80,13 @@ export default function Earnings() {
               <p className="text-yellow-400 text-xs font-bold flex items-center gap-1.5 mb-2">
                 <AlertCircle size={12} /> Connect Stripe to withdraw
               </p>
-              <Button size="sm" className="w-full rounded-xl text-xs" onClick={() => toast.info("Stripe Connect — add your keys to activate.")}>
-                Connect Bank Account
+              <Button
+                size="sm"
+                className="w-full rounded-xl text-xs"
+                disabled={connectStripeMutation.isPending}
+                onClick={() => connectStripeMutation.mutate({ origin: window.location.origin })}
+              >
+                {connectStripeMutation.isPending ? "Setting up..." : "Connect Bank Account"}
               </Button>
             </div>
           ) : (

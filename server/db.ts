@@ -306,6 +306,13 @@ export async function getEmployerPostCredits(employerId: number) {
 }
 
 // ─── Admin Stats ──────────────────────────────────────────────────────────────
+export async function getUserByStripeCustomerId(customerId: string) {
+  const db = await getDb();
+  if (!db) return undefined;
+  const result = await db.select().from(users).where(eq(users.stripeCustomerId, customerId)).limit(1);
+  return result[0];
+}
+
 export async function getAdminStats() {
   const db = await getDb();
   if (!db) return null;
