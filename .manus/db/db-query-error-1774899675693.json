@@ -1,0 +1,8 @@
+{
+  "query": "\n-- First clear the bad seed data\nDELETE FROM availability WHERE userId IN (SELECT id FROM users WHERE openId LIKE 'seed_%');\nDELETE FROM jobs WHERE employerId IN (SELECT id FROM users WHERE openId LIKE 'seed_%');\nDELETE FROM users WHERE openId LIKE 'seed_%';\n",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway05.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 3kQsL8UrXdZdNR1.f78a5b86a85c --database 5XtEwxhSav9aHUudDTD5pa --execute \n-- First clear the bad seed data\nDELETE FROM availability WHERE userId IN (SELECT id FROM users WHERE openId LIKE 'seed_%');\nDELETE FROM jobs WHERE employerId IN (SELECT id FROM users WHERE openId LIKE 'seed_%');\nDELETE FROM users WHERE openId LIKE 'seed_%';\n",
+  "returncode": 1,
+  "logs": [
+    "ERROR 1054 (42S22) at line 3: Unknown column 'userid' in 'where clause'"
+  ]
+}
