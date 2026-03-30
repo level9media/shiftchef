@@ -7,7 +7,8 @@ import { useLocation } from "wouter";
 import { useState, useEffect } from "react";
 import {
   Star, MapPin, Briefcase, ChefHat, LogOut,
-  Edit3, Check, X, Shield, ChevronRight, Camera
+  Edit3, Check, X, Shield, ChevronRight, Camera,
+  ShieldCheck, FileText
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
@@ -168,6 +169,11 @@ export default function Profile() {
                 <Shield size={10} strokeWidth={2.5} />{reliability.toFixed(0)}% reliable
               </span>
             )}
+            {isWorker && (profile as any)?.verificationStatus === "verified" && (
+              <span className="flex items-center gap-1 text-[10px] font-bold text-blue-400 bg-blue-400/10 px-2.5 py-1 rounded-full">
+                <ShieldCheck size={10} strokeWidth={2.5} />ID Verified
+              </span>
+            )}
           </div>
 
           {!editing && profile?.bio && (
@@ -285,6 +291,40 @@ export default function Profile() {
           </div>
         )}
 
+        {/* ── Worker compliance ───────────────────────────────────── */}
+        {isWorker && (
+          <div className="px-4 mt-3">
+            <div className="bg-card rounded-2xl border border-border overflow-hidden">
+              <p className="text-xs font-bold text-muted-foreground uppercase tracking-wider px-4 pt-4 pb-2">Worker Compliance</p>
+              <button onClick={() => navigate("/verify")}
+                className="w-full flex items-center justify-between px-4 py-3 border-t border-border hover:bg-secondary transition-colors">
+                <div className="flex items-center gap-3">
+                  <ShieldCheck size={16} className={(profile as any)?.verificationStatus === "verified" ? "text-emerald-400" : "text-yellow-400"} />
+                  <div className="text-left">
+                    <p className="text-sm font-medium text-foreground">Identity Verification</p>
+                    <p className="text-xs text-muted-foreground capitalize">
+                      {(profile as any)?.verificationStatus ?? "unverified"}
+                    </p>
+                  </div>
+                </div>
+                <ChevronRight size={14} className="text-muted-foreground" />
+              </button>
+              <button onClick={() => navigate("/contract")}
+                className="w-full flex items-center justify-between px-4 py-3 border-t border-border hover:bg-secondary transition-colors">
+                <div className="flex items-center gap-3">
+                  <FileText size={16} className={(profile as any)?.contractSigned ? "text-emerald-400" : "text-yellow-400"} />
+                  <div className="text-left">
+                    <p className="text-sm font-medium text-foreground">Contractor Agreement (1099)</p>
+                    <p className="text-xs text-muted-foreground">
+                      {(profile as any)?.contractSigned ? "Signed ✓" : "Not signed — required for payouts"}
+                    </p>
+                  </div>
+                </div>
+                <ChevronRight size={14} className="text-muted-foreground" />
+              </button>
+            </div>
+          </div>
+        )}
         {/* ── Logout ────────────────────────────────────────────────────── */}
         <div className="px-4 mt-3 pb-6">
           <button onClick={logout} className="w-full flex items-center justify-center gap-2 h-12 rounded-2xl border border-destructive/30 text-destructive text-sm font-semibold hover:bg-destructive/10 transition-colors">

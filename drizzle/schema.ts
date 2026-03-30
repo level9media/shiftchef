@@ -50,6 +50,21 @@ export const users = mysqlTable("users", {
 
   profileComplete: boolean("profileComplete").default(false),
 
+  // Identity Verification
+  verificationStatus: mysqlEnum("verificationStatus", ["unverified", "pending", "verified", "rejected"]).default("unverified"),
+  verificationIdUrl: text("verificationIdUrl"),
+  verificationNote: text("verificationNote"),
+  verifiedAt: timestamp("verifiedAt"),
+
+  // 1099 Contractor Agreement
+  contractSigned: boolean("contractSigned").default(false),
+  contractSignedAt: timestamp("contractSignedAt"),
+  contractIp: varchar("contractIp", { length: 64 }),
+
+  // Employer Onboarding
+  onboardingEmailSent: boolean("onboardingEmailSent").default(false),
+  onboardingStep: int("onboardingStep").default(0),
+
   createdAt: timestamp("createdAt").defaultNow().notNull(),
   updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
   lastSignedIn: timestamp("lastSignedIn").defaultNow().notNull(),
@@ -201,3 +216,21 @@ export const postCredits = mysqlTable("postCredits", {
 });
 
 export type PostCredit = typeof postCredits.$inferSelect;
+
+// ─── Verification Requests ────────────────────────────────────────────────────
+export const verificationRequests = mysqlTable("verificationRequests", {
+  id: int("id").autoincrement().primaryKey(),
+  workerId: int("workerId").notNull(),
+  idImageUrl: text("idImageUrl").notNull(),
+  selfieUrl: text("selfieUrl"),
+  legalName: varchar("legalName", { length: 256 }).notNull(),
+  status: mysqlEnum("status", ["pending", "approved", "rejected"]).default("pending"),
+  adminNote: text("adminNote"),
+  reviewedBy: int("reviewedBy"),
+  reviewedAt: timestamp("reviewedAt"),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+
+export type VerificationRequest = typeof verificationRequests.$inferSelect;
+export type InsertVerificationRequest = typeof verificationRequests.$inferInsert;

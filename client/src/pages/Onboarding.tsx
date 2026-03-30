@@ -48,9 +48,14 @@ export default function Onboarding() {
   const [selected, setSelected] = useState<UserType | null>(null);
 
   const setRole = trpc.profile.setRole.useMutation({
-    onSuccess: () => {
+    onSuccess: (_data, vars) => {
       toast.success("Welcome to ShiftChef!");
-      navigate("/feed");
+      // Employers get a guided onboarding flow first
+      if (vars.userType === "employer" || vars.userType === "both") {
+        navigate("/employer-onboarding");
+      } else {
+        navigate("/feed");
+      }
     },
     onError: (e) => toast.error(e.message),
   });

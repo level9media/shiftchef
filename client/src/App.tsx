@@ -16,6 +16,9 @@ import Ratings from "./pages/Ratings";
 import Onboarding from "./pages/Onboarding";
 import WorkerAvailability from "./pages/WorkerAvailability";
 import AdminDashboard from "./pages/AdminDashboard";
+import WorkerVerification from "./pages/WorkerVerification";
+import ContractAgreement from "./pages/ContractAgreement";
+import EmployerOnboarding from "./pages/EmployerOnboarding";
 
 function Router() {
   return (
@@ -31,6 +34,9 @@ function Router() {
       <Route path="/ratings" component={Ratings} />
       <Route path="/availability" component={WorkerAvailability} />
       <Route path="/admin" component={AdminDashboard} />
+      <Route path="/verify" component={WorkerVerification} />
+      <Route path="/contract" component={ContractAgreement} />
+      <Route path="/employer-onboarding" component={EmployerOnboarding} />
       <Route path="/404" component={NotFound} />
       <Route component={NotFound} />
     </Switch>

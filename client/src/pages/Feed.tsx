@@ -5,7 +5,7 @@ import { useLocation } from "wouter";
 import { useState } from "react";
 import {
   MapPin, Clock, Star, TrendingUp, Flag,
-  Zap, Plus, RefreshCw, User, ChefHat, ArrowRight
+  Zap, Plus, RefreshCw, User, ChefHat, ArrowRight, ShieldCheck
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
@@ -305,6 +305,11 @@ function WorkerCard({ post, index }: { post: any; index: number }) {
             </div>
           )}
           <div className="absolute -bottom-1 -right-1 w-4 h-4 bg-emerald-500 rounded-full border-2 border-card" />
+          {post.worker?.verificationStatus === "verified" && (
+            <div className="absolute -top-1 -left-1 w-4 h-4 bg-blue-500 rounded-full border-2 border-card flex items-center justify-center">
+              <ShieldCheck size={8} className="text-white" strokeWidth={3} />
+            </div>
+          )}
         </div>
 
         <div className="flex-1 min-w-0">
