@@ -225,3 +225,15 @@
 - [ ] Verify HTTPS and domain binding is active (requires user action after domain binding)
 - [x] Confirm Stripe success_url/cancel_url work on shiftchef.co (dynamic origin-based, works on any domain)
 - [x] Final test run (pnpm test) before publish — 15/15 passing
+
+## City Expansion + Advisor Account (v10)
+- [x] Add Phoenix, AZ and Mesa, AZ to city selector in Feed.tsx
+- [x] Add Phoenix, AZ and Mesa, AZ to city selector in PostJob.tsx
+- [x] Add Phoenix, AZ and Mesa, AZ to shared CITIES constant (Profile.tsx + WorkerAvailability.tsx)
+- [x] Update sitemap.xml with Phoenix and Mesa city landing page URLs
+- [x] Update index.html keywords to include Phoenix and Mesa
+- [x] Create advisor role in schema (freeLifetimeAccess boolean field)
+- [x] Create Josh's account (josh@thelocalcaterer.com) — Option A: Josh signs in via OAuth first, then DB upgrade
+- [x] Add freeLifetimeAccess boolean field to users schema + migration applied
+- [ ] Grant Josh both/all roles and free lifetime access via DB (pending first login)
+- [ ] Ensure Josh bypasses post credit checks and payment gates (pending first login)

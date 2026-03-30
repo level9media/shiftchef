@@ -13,7 +13,7 @@ import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import { formatDistanceToNow } from "date-fns";
 
-const CITIES = ["Austin, TX", "Houston, TX", "Dallas, TX", "San Antonio, TX", "New York, NY", "Chicago, IL"];
+const CITIES = ["Austin, TX", "Phoenix, AZ", "Mesa, AZ", "Houston, TX", "Dallas, TX", "San Antonio, TX", "New York, NY", "Chicago, IL"];
 
 const ROLE_LABELS: Record<string, string> = {
   cook: "Cook", sous_chef: "Sous Chef", prep: "Prep Cook",
@@ -60,6 +60,8 @@ export default function Feed() {
     navigator.geolocation.getCurrentPosition((pos) => {
       const { latitude: lat, longitude: lng } = pos.coords;
       if (lat > 29.5 && lat < 30.8 && lng > -98.2 && lng < -97.2) setCity("Austin, TX");
+      else if (lat > 33.2 && lat < 33.8 && lng > -112.4 && lng < -111.6) setCity("Phoenix, AZ");
+      else if (lat > 33.3 && lat < 33.5 && lng > -111.9 && lng < -111.5) setCity("Mesa, AZ");
       else if (lat > 29.0 && lat < 30.1 && lng > -96.0 && lng < -94.8) setCity("Houston, TX");
       else if (lat > 32.5 && lat < 33.3 && lng > -97.2 && lng < -96.2) setCity("Dallas, TX");
       else if (lat > 29.1 && lat < 29.8 && lng > -98.8 && lng < -98.1) setCity("San Antonio, TX");
@@ -76,6 +78,8 @@ export default function Feed() {
         const { latitude: lat, longitude: lng } = pos.coords;
         let detected = "Austin, TX";
         if (lat > 29.5 && lat < 30.8 && lng > -98.2 && lng < -97.2) detected = "Austin, TX";
+        else if (lat > 33.2 && lat < 33.8 && lng > -112.4 && lng < -111.6) detected = "Phoenix, AZ";
+        else if (lat > 33.3 && lat < 33.5 && lng > -111.9 && lng < -111.5) detected = "Mesa, AZ";
         else if (lat > 29.0 && lat < 30.1 && lng > -96.0 && lng < -94.8) detected = "Houston, TX";
         else if (lat > 32.5 && lat < 33.3 && lng > -97.2 && lng < -96.2) detected = "Dallas, TX";
         else if (lat > 29.1 && lat < 29.8 && lng > -98.8 && lng < -98.1) detected = "San Antonio, TX";
@@ -137,8 +141,8 @@ export default function Feed() {
   return (
     <AppShell>
       <SEOHead
-        title="Live Kitchen Shifts — Austin Hospitality Jobs"
-        description="Browse live kitchen and FOH shifts in Austin. Cook, sous chef, prep, dishwasher, server, bartender jobs available now. Apply in seconds."
+        title="Live Kitchen Shifts — Austin, Phoenix & Mesa Hospitality Jobs"
+        description="Browse live kitchen and FOH shifts in Austin TX, Phoenix AZ, and Mesa AZ. Cook, sous chef, prep, dishwasher, server, bartender jobs available now. Apply in seconds."
         canonicalPath="/feed"
       />
       <div className="max-w-lg mx-auto">

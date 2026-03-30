@@ -68,6 +68,8 @@ export const users = mysqlTable("users", {
   email1SentAt: timestamp("email1SentAt"),
   email2SentAt: timestamp("email2SentAt"),
   email3SentAt: timestamp("email3SentAt"),
+  // Advisor / lifetime access accounts
+  freeLifetimeAccess: boolean("freeLifetimeAccess").default(false),
 
   createdAt: timestamp("createdAt").defaultNow().notNull(),
   updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),

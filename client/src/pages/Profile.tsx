@@ -25,7 +25,7 @@ const SKILLS = [
   { value: "manager", label: "Manager" },
 ];
 
-const CITIES = ["Austin, TX", "Houston, TX", "Dallas, TX", "San Antonio, TX", "New York, NY"];
+const CITIES = ["Austin, TX", "Phoenix, AZ", "Mesa, AZ", "Houston, TX", "Dallas, TX", "San Antonio, TX", "New York, NY"];
 
 export default function Profile() {
   const { isAuthenticated, loading: authLoading, logout } = useAuth();

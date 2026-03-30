@@ -20,7 +20,7 @@ const ROLES = [
   { value: "manager", label: "Manager", emoji: "📋" },
 ] as const;
 
-const CITIES = ["Austin, TX", "Houston, TX", "Dallas, TX", "San Antonio, TX", "New York, NY", "Chicago, IL"];
+const CITIES = ["Austin, TX", "Phoenix, AZ", "Mesa, AZ", "Houston, TX", "Dallas, TX", "San Antonio, TX", "New York, NY", "Chicago, IL"];
 
 type Step = "pricing" | "form";
 
