@@ -139,9 +139,9 @@
 ## Production Readiness & Seed Data
 - [x] Seed 10 employer job posts (real Austin restaurants: Uchi, Franklin BBQ, Odd Duck, Emmer & Rye, Loro, etc.)
 - [x] Seed 10 worker availability posts (real Austin kitchen workers with authentic bios)
-- [ ] In-app notification bell dropdown (header bell icon shows recent alerts)
-- [ ] City geolocation auto-detect on feed load
-- [ ] Search and filter on feed (by role, pay rate)
+- [x] In-app notification bell dropdown (header bell icon shows recent alerts)
+- [x] City geolocation auto-detect on feed load
+- [x] Search and filter on feed (by role, pay rate, role filter)
 - [ ] Production webhook URL updated after publish
 
 ## Conversion Infrastructure (v4)
@@ -154,6 +154,6 @@
 - [x] Frontend: ContractAgreement page (1099 contractor terms, e-sign button)
 - [x] Frontend: Employer onboarding modal (shown on first login as employer)
 - [x] Frontend: Verified badge on feed job cards and worker availability cards
-- [ ] Frontend: Block unverified workers from applying (with CTA to verify)
-- [ ] Frontend: Admin dashboard - verification review queue
-- [ ] Frontend: Email sequence page (3-email drip copy for employer onboarding)
+- [x] Frontend: Block unverified workers from applying (with CTA to verify)
+- [x] Frontend: Admin dashboard - verification review queue (approve/reject with ID image)
+- [x] Frontend: Email sequence page (3-email drip copy for employer onboarding) at /admin/emails

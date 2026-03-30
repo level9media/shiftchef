@@ -31,6 +31,21 @@ export const applicationsRouter = router({
       if (!job) throw new TRPCError({ code: "NOT_FOUND", message: "Job not found" });
       if (job.status !== "live") throw new TRPCError({ code: "BAD_REQUEST", message: "Job is no longer available" });
 
+      // Block if not verified (server-side enforcement — cannot be bypassed by UI)
+      if (worker.verificationStatus && worker.verificationStatus !== "verified") {
+        throw new TRPCError({
+          code: "FORBIDDEN",
+          message: "Your ID must be verified before applying. Complete verification in your profile.",
+        });
+      }
+      // Block if contract not signed
+      if (worker.contractSigned === false) {
+        throw new TRPCError({
+          code: "FORBIDDEN",
+          message: "You must sign the contractor agreement before applying to shifts.",
+        });
+      }
+
       // Block if below min rating
       const workerRating = worker.rating ?? 5;
       if (job.minRating && workerRating < job.minRating) {
