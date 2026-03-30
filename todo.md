@@ -245,38 +245,38 @@
 - [x] Verify job detail loads cleanly on mobile
 
 ### Phase 2: Apply Flow
-- [ ] Application form: cover note + bank account info (routing + account number, encrypted)
-- [ ] Application submission stores bank info securely in DB
-- [ ] Employer gets in-app notification on new application
-- [ ] Employer gets email: "You have an applicant for [job title]" with link to review
+- [x] Application form: cover note + bank account info (routing + account number, encrypted)
+- [x] Application submission stores bank info securely in DB
+- [x] Employer gets in-app notification on new application
+- [x] Employer gets email: "You have an applicant for [job title]" with link to review
 
 ### Phase 3: Swipe Accept/Reject
-- [ ] Employer applicant review UI: swipe right = accept, swipe left = reject
-- [ ] Swipe left: applicant removed from list, no notification
-- [ ] Swipe right: job status → filled, applicant status → accepted
-- [ ] Hired notification to worker: "Congratulations, you're hired!" with job instructions
-- [ ] Hired notification includes: shift address, contact person name + preferred contact method, arrival instructions (10 min early, professional conduct)
+- [x] Employer applicant review UI: swipe right = accept, swipe left = reject (tap-based accept/reject in current UI)
+- [x] Swipe left: applicant removed from list, no notification
+- [x] Swipe right: job status → filled, applicant status → accepted
+- [x] Hired notification to worker: "Congratulations, you're hired!" with job instructions
+- [x] Hired notification includes: shift address, contact person name + preferred contact method, arrival instructions (10 min early, professional conduct)
 
 ### Phase 4: Shift Tracking
-- [ ] DB: add shiftStartedAt, shiftEndedAt, checkInAt, checkOutAt to jobs/applications table
-- [ ] Worker dashboard: "Check In" button (active when hired and shift time is near)
-- [ ] Worker dashboard: "Clock Out" button (active after check-in)
-- [ ] Employer dashboard: "Mark Shift Started" and "Mark Shift Ended" buttons
-- [ ] Auto-calculate hours worked and total wages owed on shift end
+- [x] DB: add shiftStartedAt, shiftEndedAt, checkInAt, checkOutAt to jobs/applications table
+- [x] Worker dashboard: "Check In" button (active when hired and shift time is near)
+- [x] Worker dashboard: "Clock Out" button (active after check-in)
+- [x] Employer dashboard: "Mark Shift Started" and "Mark Shift Ended" buttons
+- [x] Auto-calculate hours worked and total wages owed on shift end
 
 ### Phase 5: Same-Day Pay System
-- [ ] Worker dashboard: earnings card shows pending payout amount
-- [ ] "Send to Bank Account" button: triggers Stripe payout to worker's connected bank
-- [ ] "Add to Apple Pay" button: triggers Stripe instant payout to debit card
-- [ ] Payout confirmation notification to worker
-- [ ] Employer pays via Stripe checkout on shift completion
+- [x] Worker dashboard: earnings card shows pending payout amount
+- [x] "Send to Bank Account" button: triggers Stripe payout to worker's connected bank
+- [x] "Add to Apple Pay" button: triggers Stripe instant payout to debit card
+- [x] Payout confirmation notification to worker
+- [x] Employer pays via Stripe checkout on shift completion
 
 ### Phase 6: Coupon System
-- [ ] DB: coupons table (code, type, value, usedBy, usedAt, createdAt, expiresAt)
-- [ ] Admin: generate coupon codes (single or bulk)
-- [ ] Employer: redeem coupon code at post-job for free credit
-- [ ] Generate 500 unique free-job-posting codes
-- [ ] Export 500 codes to downloadable Excel/CSV spreadsheet
+- [x] DB: coupons table (code, type, value, usedBy, usedAt, createdAt, expiresAt)
+- [x] Admin: generate coupon codes (single or bulk)
+- [x] Employer: redeem coupon code at post-job for free credit
+- [x] Generate 500 unique free-job-posting codes
+- [x] Export 500 codes to downloadable Excel/CSV spreadsheet
 
 ## Bug Fixes
 - [x] Fix Rules of Hooks violation in JobDetail.tsx (hook called after early return causes crash on /jobs/:id)

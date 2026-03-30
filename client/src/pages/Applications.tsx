@@ -322,11 +322,23 @@ function EmployerJobCard({ job, onAccept, onReject, onMarkComplete, onRelease, r
   onRelease: (id: number) => void;
   responding: boolean;
   releasing: boolean;
-}) {
+})  {
   const [expanded, setExpanded] = useState(false);
-  const { data: apps } = trpc.applications.forJob.useQuery({ jobId: job.id }, { enabled: expanded });
+  const { data: apps, refetch: refetchApps } = trpc.applications.forJob.useQuery({ jobId: job.id }, { enabled: expanded });
   const hours = ((job.endTime - job.startTime) / 3600000).toFixed(1);
-  const confirmedApp = apps?.find((a: any) => a.status === "confirmed" || a.status === "completed");
+  const confirmedApp = apps?.find((a: any) => a.status === "confirmed" || a.status === "completed" || a.status === "accepted");
+
+  const markStartedMutation = trpc.shifts.markStarted.useMutation({
+    onSuccess: () => { toast.success("Shift started!"); refetchApps(); },
+    onError: (e) => toast.error(e.message),
+  });
+  const markEndedMutation = trpc.shifts.markEnded.useMutation({
+    onSuccess: (data) => {
+      toast.success(`Shift ended! ${data.hoursWorked}h worked · $${data.totalWagesOwed} total wages`);
+      refetchApps();
+    },
+    onError: (e) => toast.error(e.message),
+  });
 
   return (
     <div className="bg-card rounded-2xl border border-border overflow-hidden">
@@ -413,6 +425,29 @@ function EmployerJobCard({ job, onAccept, onReject, onMarkComplete, onRelease, r
                       {app.status === "confirmed" && (
                         <Button size="sm" className="flex-1 rounded-xl text-xs" onClick={() => onMarkComplete(job.id)}>
                           Mark Complete
+                        </Button>
+                      )}
+                      {(app.status === "accepted" || app.status === "confirmed") && !app.shiftStartedAt && (
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          className="flex-1 rounded-xl text-xs border-blue-500/40 text-blue-400 hover:bg-blue-500/10"
+                          disabled={markStartedMutation.isPending}
+                          onClick={() => markStartedMutation.mutate({ applicationId: app.id })}
+                        >
+                          <Timer size={10} className="mr-1" />
+                          {markStartedMutation.isPending ? "..." : "Mark Started"}
+                        </Button>
+                      )}
+                      {app.shiftStartedAt && !app.shiftEndedAt && (
+                        <Button
+                          size="sm"
+                          className="flex-1 rounded-xl text-xs bg-orange-600 hover:bg-orange-700"
+                          disabled={markEndedMutation.isPending}
+                          onClick={() => markEndedMutation.mutate({ applicationId: app.id })}
+                        >
+                          <LogOut size={10} className="mr-1" />
+                          {markEndedMutation.isPending ? "..." : "Mark Ended"}
                         </Button>
                       )}
                       {app.status === "completed" && app.paymentStatus === "held" && (

@@ -74,6 +74,12 @@ export const applicationsRouter = router({
         status: "pending",
       });
 
+      // Notify owner of new application
+      notifyOwner({
+        title: "ShiftChef: New Applicant",
+        content: `${worker.name ?? "A worker"} applied to ${job.role} at ${job.restaurantName ?? "your restaurant"}. Review in the Jobs tab.`,
+      }).catch(() => {});
+
       return { success: true };
     }),
 
