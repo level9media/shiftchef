@@ -42,6 +42,23 @@ function calcHours(start: number, end: number) {
   return ((end - start) / (1000 * 60 * 60)).toFixed(1);
 }
 
+// Urgency badge helper — module-level so JobCard can access it
+function getUrgencyBadge(job: any): { label: string; color: string } | null {
+  const now = Date.now();
+  const start = job.startTime;
+  const msUntilStart = start - now;
+  const today = new Date();
+  const shiftDay = new Date(start);
+  const isTonight = shiftDay.toDateString() === today.toDateString();
+  if (msUntilStart > 0 && msUntilStart < 2 * 60 * 60 * 1000) {
+    const mins = Math.round(msUntilStart / 60000);
+    return { label: `Expires in ${mins}m`, color: "bg-red-500" };
+  }
+  if (isTonight && msUntilStart > 0) return { label: "TONIGHT", color: "bg-amber-500" };
+  if (parseFloat(job.payRate) >= 35) return { label: "HIGH PAY", color: "bg-emerald-600" };
+  return null;
+}
+
 export default function Feed() {
   const { isAuthenticated } = useAuth();
   const [, navigate] = useLocation();
@@ -94,6 +111,10 @@ export default function Feed() {
   };
 
   const { data: profile } = trpc.profile.get.useQuery(undefined, { enabled: isAuthenticated, retry: false });
+  const { data: activityStats } = trpc.jobs.activityStats.useQuery(
+    { city },
+    { refetchInterval: 60000 }
+  );
   const { data: jobs, isLoading: jobsLoading, refetch: refetchJobs } = trpc.jobs.list.useQuery(
     { city }, { refetchInterval: 30000 }
   );
@@ -267,6 +288,26 @@ export default function Feed() {
             </div>
           </div>
 
+          {/* Live activity banner */}
+          {activityStats && (activityStats.recentJobsCount > 0 || activityStats.availableWorkersCount > 0) && (
+            <div className="flex items-center justify-center gap-4 py-1.5 mb-2 rounded-xl bg-primary/10 border border-primary/20">
+              {activityStats.recentJobsCount > 0 && (
+                <span className="flex items-center gap-1.5 text-[11px] font-bold text-primary">
+                  <Zap size={10} strokeWidth={3} className="text-primary" />
+                  {activityStats.recentJobsCount} shifts posted in last 3h
+                </span>
+              )}
+              {activityStats.recentJobsCount > 0 && activityStats.availableWorkersCount > 0 && (
+                <span className="text-primary/40 text-xs">|</span>
+              )}
+              {activityStats.availableWorkersCount > 0 && (
+                <span className="flex items-center gap-1.5 text-[11px] font-bold text-emerald-400">
+                  <User size={10} strokeWidth={3} />
+                  {activityStats.availableWorkersCount} workers available now
+                </span>
+              )}
+            </div>
+          )}
           {/* Tabs */}
           <div className="flex gap-1 mt-2.5 bg-secondary rounded-xl p-1">
             {(["jobs", "workers"] as const).map((t) => (
@@ -376,7 +417,7 @@ export default function Feed() {
 function JobCard({ job, index, onClick }: { job: any; index: number; onClick: () => void }) {
   const hours = calcHours(job.startTime, job.endTime);
   const totalPay = job.totalPay ? parseFloat(job.totalPay) : parseFloat(job.payRate) * parseFloat(hours);
-
+  const urgency = getUrgencyBadge(job);
   return (
     <div
       onClick={onClick}
@@ -395,7 +436,7 @@ function JobCard({ job, index, onClick }: { job: any; index: number; onClick: ()
         <div className="absolute inset-0 bg-gradient-to-t from-card/90 via-card/20 to-transparent" />
 
         {/* Type badge */}
-        <div className="absolute top-3 left-3">
+        <div className="absolute top-3 left-3 flex flex-col gap-1">
           {job.isPermanent ? (
             <span className="flex items-center gap-1 bg-emerald-500 text-white text-[10px] font-black px-2.5 py-1 rounded-full">
               <TrendingUp size={9} strokeWidth={3} /> Perm Potential
@@ -403,6 +444,11 @@ function JobCard({ job, index, onClick }: { job: any; index: number; onClick: ()
           ) : (
             <span className="flex items-center gap-1 bg-orange-500 text-white text-[10px] font-black px-2.5 py-1 rounded-full">
               <Flag size={9} strokeWidth={3} /> Temp
+            </span>
+          )}
+          {urgency && (
+            <span className={cn("flex items-center gap-1 text-white text-[10px] font-black px-2.5 py-1 rounded-full", urgency.color)}>
+              <Zap size={9} strokeWidth={3} /> {urgency.label}
             </span>
           )}
         </div>

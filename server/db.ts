@@ -415,3 +415,42 @@ export async function getAdminRecentRatings(limit = 10) {
   );
   return enriched;
 }
+
+// ─── Activity Stats ───────────────────────────────────────────────────────────
+export async function getActivityStats(city: string) {
+  const db = await getDb();
+  if (!db) return { recentJobsCount: 0, availableWorkersCount: 0 };
+  const now = Date.now();
+  const nowDate = new Date(now);
+  const threeHoursAgoDate = new Date(now - 3 * 60 * 60 * 1000);
+
+  // Jobs posted in the last 3 hours in this city that are still live
+  const [jobRow] = await db
+    .select({ count: sql<number>`count(*)` })
+    .from(jobs)
+    .where(
+      and(
+        eq(jobs.status, "live"),
+        eq(jobs.city, city),
+        gte(jobs.endTime, now),
+        gte(jobs.createdAt, threeHoursAgoDate)
+      )
+    );
+
+  // Active available workers in this city
+  const [workerRow] = await db
+    .select({ count: sql<number>`count(*)` })
+    .from(availability)
+    .where(
+      and(
+        eq(availability.city, city),
+        eq(availability.isActive, true),
+        or(sql`${availability.expiresAt} IS NULL`, gte(availability.expiresAt, now))
+      )
+    );
+
+  return {
+    recentJobsCount: Number(jobRow?.count ?? 0),
+    availableWorkersCount: Number(workerRow?.count ?? 0),
+  };
+}

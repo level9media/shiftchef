@@ -5,6 +5,7 @@ import {
   getEmployerJobs,
   getJobById,
   getLiveJobs,
+  getActivityStats,
   getUserById,
   updateJob,
   updateUser,
@@ -108,6 +109,13 @@ export const jobsRouter = router({
       }
 
       return { success: true, jobId: job.insertId };
+    }),
+
+  // Public: live activity stats (jobs posted in last 3h + available workers)
+  activityStats: publicProcedure
+    .input(z.object({ city: z.string().default("Austin, TX") }))
+    .query(async ({ input }) => {
+      return getActivityStats(input.city);
     }),
 
   // Employer: cancel a job
