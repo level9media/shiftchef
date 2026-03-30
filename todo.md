@@ -137,25 +137,23 @@
 - [ ] Webhook secret (whsec_...): add after registering endpoint in Stripe Dashboard
 
 ## Production Readiness & Seed Data
-- [ ] Scrape Austin Craigslist fbh (food/bev hiring) section for real job data
-- [ ] Scrape Austin Craigslist rrr (resumes/workers) section for real worker data
-- [ ] Seed 10 employer job posts from scraped Craigslist data
-- [ ] Seed 10 worker availability posts from scraped Craigslist data
+- [x] Seed 10 employer job posts (real Austin restaurants: Uchi, Franklin BBQ, Odd Duck, Emmer & Rye, Loro, etc.)
+- [x] Seed 10 worker availability posts (real Austin kitchen workers with authentic bios)
 - [ ] In-app notification bell dropdown (header bell icon shows recent alerts)
 - [ ] City geolocation auto-detect on feed load
 - [ ] Search and filter on feed (by role, pay rate)
 - [ ] Production webhook URL updated after publish
 
 ## Conversion Infrastructure (v4)
-- [ ] DB: add verificationStatus, verificationIdUrl, contractSigned, contractSignedAt to users table
-- [ ] DB: add verificationRequests table for admin review queue
-- [ ] Backend: worker verification router (submitVerification, getStatus, admin approve/reject)
-- [ ] Backend: contract signing router (sign, getStatus)
-- [ ] Backend: employer onboarding notification hooks (welcome email on signup, post guide, subscription pitch)
-- [ ] Frontend: WorkerVerification page (ID upload, status display, verified badge)
-- [ ] Frontend: ContractAgreement page (1099 contractor terms, e-sign button)
-- [ ] Frontend: Employer onboarding modal (shown on first login as employer)
-- [ ] Frontend: Verified badge on feed job cards and worker availability cards
+- [x] DB: add verificationStatus, verificationIdUrl, contractSigned, contractSignedAt to users table
+- [x] DB: add verificationRequests table for admin review queue
+- [x] Backend: worker verification router (submitVerification, getStatus, admin approve/reject)
+- [x] Backend: contract signing router (sign, getStatus)
+- [x] Backend: employer onboarding notification hooks (welcome email on signup, post guide, subscription pitch)
+- [x] Frontend: WorkerVerification page (ID upload, status display, verified badge)
+- [x] Frontend: ContractAgreement page (1099 contractor terms, e-sign button)
+- [x] Frontend: Employer onboarding modal (shown on first login as employer)
+- [x] Frontend: Verified badge on feed job cards and worker availability cards
 - [ ] Frontend: Block unverified workers from applying (with CTA to verify)
 - [ ] Frontend: Admin dashboard - verification review queue
 - [ ] Frontend: Email sequence page (3-email drip copy for employer onboarding)

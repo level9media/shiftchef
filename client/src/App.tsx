@@ -19,6 +19,7 @@ import AdminDashboard from "./pages/AdminDashboard";
 import WorkerVerification from "./pages/WorkerVerification";
 import ContractAgreement from "./pages/ContractAgreement";
 import EmployerOnboarding from "./pages/EmployerOnboarding";
+import EmailSequence from "./pages/EmailSequence";
 
 function Router() {
   return (
@@ -37,6 +38,7 @@ function Router() {
       <Route path="/verify" component={WorkerVerification} />
       <Route path="/contract" component={ContractAgreement} />
       <Route path="/employer-onboarding" component={EmployerOnboarding} />
+      <Route path="/admin/emails" component={EmailSequence} />
       <Route path="/404" component={NotFound} />
       <Route component={NotFound} />
     </Switch>

@@ -5,7 +5,7 @@ import AppShell from "@/components/AppShell";
 import { useLocation, useParams } from "wouter";
 import {
   ArrowLeft, Clock, MapPin, Star, TrendingUp, Flag,
-  DollarSign, CheckCircle, AlertCircle, Zap, ChevronRight
+  DollarSign, CheckCircle, AlertCircle, Zap, ChevronRight, ShieldCheck, ShieldAlert
 } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
@@ -88,6 +88,10 @@ export default function JobDetail() {
   const isWorker = !profile?.userType || profile.userType === "worker" || profile.userType === "both";
   const isOwnJob = profile?.id === job.employerId;
   const isExpired = job.status !== "live";
+  const { data: verificationStatus } = trpc.verification.myStatus.useQuery(undefined, { enabled: isAuthenticated && isWorker, retry: false });
+  const isVerified = verificationStatus?.verificationStatus === "verified";
+  const isPendingVerification = verificationStatus?.verificationStatus === "pending";
+  const needsVerification = isAuthenticated && isWorker && !isVerified;
 
   return (
     <AppShell>
@@ -195,6 +199,23 @@ export default function JobDetail() {
             </div>
           )}
 
+          {/* Verification banners */}
+          {isWorker && !isOwnJob && !isExpired && needsVerification && !isPendingVerification && (
+            <div className="bg-orange-500/10 border border-orange-500/30 rounded-2xl p-4 flex items-start gap-3">
+              <ShieldAlert size={16} className="text-orange-400 flex-shrink-0 mt-0.5" />
+              <div className="flex-1">
+                <p className="text-sm font-bold text-orange-400 mb-1">ID Verification Required</p>
+                <p className="text-xs text-muted-foreground mb-2">Verify your identity to apply for shifts and receive payments.</p>
+                <button onClick={() => navigate("/verify")} className="text-xs font-bold text-orange-400 hover:underline">Verify Now →</button>
+              </div>
+            </div>
+          )}
+          {isWorker && !isOwnJob && !isExpired && isPendingVerification && (
+            <div className="bg-yellow-500/10 border border-yellow-500/30 rounded-2xl p-4 flex items-start gap-3">
+              <ShieldCheck size={16} className="text-yellow-400 flex-shrink-0 mt-0.5" />
+              <p className="text-sm text-yellow-400">Verification under review — you can still apply. Shift confirms once approved.</p>
+            </div>
+          )}
           {/* Rating warning */}
           {belowMin && (
             <div className="bg-destructive/10 border border-destructive/30 rounded-2xl p-4 flex items-start gap-3">
@@ -258,6 +279,10 @@ export default function JobDetail() {
                 <Button size="lg" className="w-full h-14 text-base font-bold rounded-2xl" disabled>
                   <CheckCircle size={18} className="mr-2" /> Applied!
                 </Button>
+              ) : needsVerification && !isPendingVerification ? (
+                <Button size="lg" className="w-full h-14 text-base font-bold rounded-2xl bg-orange-500 hover:bg-orange-600 text-white" onClick={() => navigate("/verify")}>
+                  <ShieldAlert size={18} className="mr-2" /> Verify ID to Apply
+                </Button>
               ) : (
                 <Button
                   size="lg"
@@ -270,7 +295,7 @@ export default function JobDetail() {
                   ) : belowMin ? (
                     "Rating Too Low"
                   ) : (
-                    <>Apply · Earn ${(totalPay * 0.9).toFixed(0)}</>
+                    <>{isVerified && <ShieldCheck size={16} className="mr-1.5" />}Apply · Earn ${(totalPay * 0.9).toFixed(0)}</>
                   )}
                 </Button>
               )}

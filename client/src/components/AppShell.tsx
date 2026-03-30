@@ -1,9 +1,10 @@
 import { useAuth } from "@/_core/hooks/useAuth";
 import { Link, useLocation } from "wouter";
-import { Zap, Briefcase, User, DollarSign, Star, Bell, ChefHat } from "lucide-react";
+import { Zap, Briefcase, User, DollarSign, Star, Bell, ChefHat, ShieldCheck, CheckCircle, X, BriefcaseBusiness } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { trpc } from "@/lib/trpc";
-import { useState } from "react";
+import { useState, useRef, useEffect } from "react";
+import { formatDistanceToNow } from "date-fns";
 
 interface NavItem {
   href: string;
@@ -14,6 +15,102 @@ interface NavItem {
   employerOnly?: boolean;
 }
 
+// In-app notification store (client-side, session-based)
+// We build notifications from real data: pending applications, pending ratings, verification status
+function useInAppNotifications(isAuthenticated: boolean) {
+  const { data: profile } = trpc.profile.get.useQuery(undefined, { enabled: isAuthenticated, retry: false });
+  const { data: myApps } = trpc.applications.myApplications.useQuery(undefined, { enabled: isAuthenticated, retry: false });
+  const { data: pendingRatings } = trpc.ratings.pendingRatings.useQuery(undefined, { enabled: isAuthenticated, retry: false });
+
+  const notifications: Array<{ id: string; icon: string; title: string; body: string; time: Date; type: string }> = [];
+
+  // Accepted applications
+  if (myApps) {
+    const accepted = myApps.filter((a: any) => a.status === "accepted");
+    accepted.forEach((a: any) => {
+      notifications.push({
+        id: `app-accepted-${a.id}`,
+        icon: "✅",
+        title: "Shift Confirmed!",
+        body: `Your application for ${a.jobRole ?? "a shift"} was accepted. Show up on time and crush it.`,
+        time: new Date(a.updatedAt ?? a.createdAt),
+        type: "success",
+      });
+    });
+    const rejected = myApps.filter((a: any) => a.status === "rejected");
+    rejected.forEach((a: any) => {
+      notifications.push({
+        id: `app-rejected-${a.id}`,
+        icon: "❌",
+        title: "Application Not Selected",
+        body: `You weren't selected for ${a.jobRole ?? "a shift"}. Keep applying — more shifts are live.`,
+        time: new Date(a.updatedAt ?? a.createdAt),
+        type: "info",
+      });
+    });
+  }
+
+  // Pending ratings
+  if (pendingRatings && pendingRatings.length > 0) {
+    notifications.push({
+      id: "pending-ratings",
+      icon: "⭐",
+      title: `${pendingRatings.length} Rating${pendingRatings.length > 1 ? "s" : ""} Waiting`,
+      body: "Rate your recent shifts to build your reputation on ShiftChef.",
+      time: new Date(),
+      type: "action",
+    });
+  }
+
+  // Verification status
+  if (profile?.verificationStatus === "pending") {
+    notifications.push({
+      id: "verif-pending",
+      icon: "🔍",
+      title: "Verification Under Review",
+      body: "Your ID is being reviewed. You'll be notified once approved (usually within 24 hours).",
+      time: new Date(),
+      type: "info",
+    });
+  }
+  if (profile?.verificationStatus === "verified") {
+    notifications.push({
+      id: "verif-approved",
+      icon: "🛡️",
+      title: "Identity Verified!",
+      body: "Your ShiftChef profile is now verified. Employers can see your verified badge.",
+      time: profile.verifiedAt ? new Date(profile.verifiedAt) : new Date(),
+      type: "success",
+    });
+  }
+  if (profile?.verificationStatus === "rejected") {
+    notifications.push({
+      id: "verif-rejected",
+      icon: "⚠️",
+      title: "Verification Needs Attention",
+      body: "Your ID verification was not approved. Please re-submit with a clearer photo.",
+      time: new Date(),
+      type: "warning",
+    });
+  }
+
+  // Contract not signed
+  if (profile?.userType === "worker" && !profile?.contractSigned) {
+    notifications.push({
+      id: "contract-unsigned",
+      icon: "📋",
+      title: "Sign Your Contractor Agreement",
+      body: "Sign your 1099 contractor agreement to start accepting paid shifts.",
+      time: new Date(),
+      type: "action",
+    });
+  }
+
+  // Sort by time descending
+  notifications.sort((a, b) => b.time.getTime() - a.time.getTime());
+  return notifications;
+}
+
 export default function AppShell({ children }: { children: React.ReactNode }) {
   const [location] = useLocation();
   const { isAuthenticated } = useAuth();
@@ -21,6 +118,25 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
     enabled: isAuthenticated,
     retry: false,
   });
+
+  const [bellOpen, setBellOpen] = useState(false);
+  const [dismissed, setDismissed] = useState<Set<string>>(new Set());
+  const bellRef = useRef<HTMLDivElement>(null);
+
+  const allNotifications = useInAppNotifications(isAuthenticated);
+  const visibleNotifications = allNotifications.filter((n) => !dismissed.has(n.id));
+  const unreadCount = visibleNotifications.length;
+
+  // Close bell dropdown on outside click
+  useEffect(() => {
+    function handleClick(e: MouseEvent) {
+      if (bellRef.current && !bellRef.current.contains(e.target as Node)) {
+        setBellOpen(false);
+      }
+    }
+    if (bellOpen) document.addEventListener("mousedown", handleClick);
+    return () => document.removeEventListener("mousedown", handleClick);
+  }, [bellOpen]);
 
   const isWorker = !profile?.userType || profile.userType === "worker" || profile.userType === "both";
   const isEmployer = profile?.userType === "employer" || profile?.userType === "both";
@@ -67,6 +183,13 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
 
   const isAuthPage = location === "/" || location === "/onboarding";
 
+  const notifTypeColor: Record<string, string> = {
+    success: "border-l-emerald-500",
+    info: "border-l-blue-500",
+    action: "border-l-primary",
+    warning: "border-l-yellow-500",
+  };
+
   return (
     <div className="min-h-screen bg-background flex flex-col">
       {/* ── Top header ──────────────────────────────────────────────────── */}
@@ -93,17 +216,82 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
               </div>
             </Link>
 
-            {/* Right: role badge + avatar */}
+            {/* Right: role badge + bell + avatar */}
             <div className="flex items-center gap-2.5">
               {profile && (
                 <span className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground bg-secondary px-2.5 py-1 rounded-full border border-border">
                   {profile.userType ?? "worker"}
                 </span>
               )}
-              {/* Notification bell placeholder */}
-              <button className="relative w-9 h-9 rounded-xl bg-secondary flex items-center justify-center text-muted-foreground hover:text-foreground transition-colors">
-                <Bell size={16} strokeWidth={1.8} />
-              </button>
+
+              {/* Notification bell with dropdown */}
+              <div className="relative" ref={bellRef}>
+                <button
+                  onClick={() => setBellOpen((v) => !v)}
+                  className="relative w-9 h-9 rounded-xl bg-secondary flex items-center justify-center text-muted-foreground hover:text-foreground transition-colors"
+                >
+                  <Bell size={16} strokeWidth={1.8} />
+                  {unreadCount > 0 && (
+                    <span className="absolute -top-1 -right-1 w-4 h-4 rounded-full bg-primary text-primary-foreground text-[9px] font-black flex items-center justify-center">
+                      {unreadCount > 9 ? "9+" : unreadCount}
+                    </span>
+                  )}
+                </button>
+
+                {/* Dropdown panel */}
+                {bellOpen && (
+                  <div
+                    className="absolute right-0 top-11 w-80 max-h-96 overflow-y-auto rounded-2xl border border-border shadow-2xl z-50"
+                    style={{ background: "oklch(0.10 0 0 / 0.98)", backdropFilter: "blur(20px)" }}
+                  >
+                    <div className="flex items-center justify-between px-4 py-3 border-b border-border">
+                      <span className="text-sm font-bold">Notifications</span>
+                      {unreadCount > 0 && (
+                        <button
+                          onClick={() => setDismissed(new Set(allNotifications.map((n) => n.id) as string[]))}
+                          className="text-[10px] text-muted-foreground hover:text-foreground transition-colors"
+                        >
+                          Clear all
+                        </button>
+                      )}
+                    </div>
+                    {visibleNotifications.length === 0 ? (
+                      <div className="flex flex-col items-center justify-center py-10 gap-2 text-muted-foreground">
+                        <CheckCircle size={28} strokeWidth={1.5} />
+                        <p className="text-sm">You're all caught up</p>
+                      </div>
+                    ) : (
+                      <div className="divide-y divide-border">
+                        {visibleNotifications.map((n) => (
+                          <div
+                            key={n.id}
+                            className={cn(
+                              "flex items-start gap-3 px-4 py-3 border-l-2 hover:bg-secondary/40 transition-colors",
+                              notifTypeColor[n.type] ?? "border-l-border"
+                            )}
+                          >
+                            <span className="text-lg mt-0.5 flex-shrink-0">{n.icon}</span>
+                            <div className="flex-1 min-w-0">
+                              <p className="text-xs font-bold text-foreground leading-tight">{n.title}</p>
+                              <p className="text-[11px] text-muted-foreground mt-0.5 leading-relaxed">{n.body}</p>
+                              <p className="text-[10px] text-muted-foreground/60 mt-1">
+                                {formatDistanceToNow(n.time, { addSuffix: true })}
+                              </p>
+                            </div>
+                            <button
+                              onClick={() => setDismissed((prev) => new Set(Array.from(prev).concat(n.id)))}
+                              className="flex-shrink-0 text-muted-foreground hover:text-foreground transition-colors mt-0.5"
+                            >
+                              <X size={12} />
+                            </button>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+
               {/* Avatar */}
               {profile && (
                 <Link href="/profile">

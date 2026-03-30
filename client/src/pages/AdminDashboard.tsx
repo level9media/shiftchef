@@ -4,9 +4,10 @@ import AppShell from "@/components/AppShell";
 import { Link } from "wouter";
 import {
   DollarSign, Users, Briefcase, TrendingUp, ChefHat,
-  Activity, Clock, CheckCircle, AlertCircle, ArrowLeft
+  Activity, Clock, CheckCircle, AlertCircle, ArrowLeft, ShieldCheck, Mail
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { toast } from "sonner";
 
 const ROLE_LABELS: Record<string, string> = {
   cook: "Cook", sous_chef: "Sous Chef", prep: "Prep Cook",
@@ -39,6 +40,17 @@ export default function AdminDashboard() {
   const { data: recentJobs } = trpc.admin.recentJobs.useQuery(
     undefined, { enabled: isAuthenticated && user?.role === "admin" }
   );
+  const utils = trpc.useUtils();
+  const { data: verificationQueue } = trpc.verification.adminQueue.useQuery(
+    undefined, { enabled: isAuthenticated && user?.role === "admin" }
+  );
+  const adminReviewMutation = trpc.verification.adminReview.useMutation({
+    onSuccess: () => {
+      utils.verification.adminQueue.invalidate();
+      toast.success("Verification updated");
+    },
+    onError: (e) => toast.error(e.message),
+  });
 
   if (!isAuthenticated || user?.role !== "admin") {
     return (
@@ -72,7 +84,12 @@ export default function AdminDashboard() {
             <h1 className="text-xl font-black text-foreground">Admin Dashboard</h1>
             <p className="text-xs text-muted-foreground">ShiftChef Platform Overview</p>
           </div>
-          <div className="ml-auto">
+          <div className="ml-auto flex items-center gap-2">
+            <Link href="/admin/emails">
+              <button className="flex items-center gap-1.5 text-[10px] font-black bg-secondary text-muted-foreground px-2 py-1 rounded-full hover:bg-primary/20 hover:text-primary transition-colors">
+                <Mail size={9} /> Emails
+              </button>
+            </Link>
             <span className="text-[10px] font-black bg-primary/20 text-primary px-2 py-1 rounded-full">ADMIN</span>
           </div>
         </div>
@@ -189,7 +206,62 @@ export default function AdminDashboard() {
           </div>
         </div>
 
-        {/* ── Recent Users ──────────────────────────────────────────────── */}
+          {/* ── Verification Queue ────────────────────────────────────── */}
+        <div>
+          <div className="flex items-center justify-between mb-3">
+            <p className="text-xs font-bold text-muted-foreground uppercase tracking-wider">ID Verification Queue</p>
+            {verificationQueue && verificationQueue.length > 0 && (
+              <span className="bg-orange-500 text-white text-[9px] font-black px-2 py-0.5 rounded-full">
+                {verificationQueue.length} pending
+              </span>
+            )}
+          </div>
+          <div className="space-y-2">
+            {!verificationQueue?.length ? (
+              <EmptyCard label="No pending verifications ✔" />
+            ) : (
+              verificationQueue.map((req: any) => (
+                <div key={req.id} className="bg-card rounded-2xl border border-orange-500/30 p-3.5">
+                  <div className="flex items-center gap-3 mb-3">
+                    <div className="w-9 h-9 rounded-xl bg-orange-500/20 flex items-center justify-center flex-shrink-0">
+                      <ShieldCheck size={14} className="text-orange-400" />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="font-bold text-xs text-foreground">{req.userName ?? "Unknown"}</p>
+                      <p className="text-[10px] text-muted-foreground truncate">{req.userEmail ?? "No email"}</p>
+                    </div>
+                    <span className="text-[9px] font-black px-1.5 py-0.5 rounded-full bg-orange-500/20 text-orange-400">PENDING</span>
+                  </div>
+                  {req.idImageUrl && (
+                    <img
+                      src={req.idImageUrl}
+                      alt="Submitted ID"
+                      className="w-full h-28 object-cover rounded-xl mb-3 border border-border"
+                    />
+                  )}
+                  <div className="flex gap-2">
+                    <button
+                      onClick={() => adminReviewMutation.mutate({ requestId: req.id, decision: "approved" })}
+                      disabled={adminReviewMutation.isPending}
+                      className="flex-1 py-2 rounded-xl bg-emerald-500/20 text-emerald-400 text-xs font-bold hover:bg-emerald-500/30 transition-colors disabled:opacity-50"
+                    >
+                      ✓ Approve
+                    </button>
+                    <button
+                      onClick={() => adminReviewMutation.mutate({ requestId: req.id, decision: "rejected", adminNote: "Does not meet requirements" })}
+                      disabled={adminReviewMutation.isPending}
+                      className="flex-1 py-2 rounded-xl bg-destructive/20 text-destructive text-xs font-bold hover:bg-destructive/30 transition-colors disabled:opacity-50"
+                    >
+                      ✗ Reject
+                    </button>
+                  </div>
+                </div>
+              ))
+            )}
+          </div>
+        </div>
+
+        {/* ── Recent Users ──────────────────────────────────────────── */}
         <div>
           <p className="text-xs font-bold text-muted-foreground uppercase tracking-wider mb-3">Recent Users</p>
           <div className="space-y-2">

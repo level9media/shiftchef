@@ -2,10 +2,11 @@ import { useAuth } from "@/_core/hooks/useAuth";
 import { trpc } from "@/lib/trpc";
 import AppShell from "@/components/AppShell";
 import { useLocation } from "wouter";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
   MapPin, Clock, Star, TrendingUp, Flag,
-  Zap, Plus, RefreshCw, User, ChefHat, ArrowRight, ShieldCheck
+  Zap, Plus, RefreshCw, User, ChefHat, ArrowRight, ShieldCheck,
+  Search, SlidersHorizontal, X, Navigation
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
@@ -46,6 +47,46 @@ export default function Feed() {
   const [city, setCity] = useState("Austin, TX");
   const [tab, setTab] = useState<"jobs" | "workers">("jobs");
   const [isRefreshing, setIsRefreshing] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [filterRole, setFilterRole] = useState("");
+  const [filterMinPay, setFilterMinPay] = useState("");
+  const [showFilters, setShowFilters] = useState(false);
+  const [isGeolocating, setIsGeolocating] = useState(false);
+
+  // Auto-detect city on mount
+  useEffect(() => {
+    if (!navigator.geolocation) return;
+    navigator.geolocation.getCurrentPosition((pos) => {
+      const { latitude: lat, longitude: lng } = pos.coords;
+      if (lat > 29.5 && lat < 30.8 && lng > -98.2 && lng < -97.2) setCity("Austin, TX");
+      else if (lat > 29.0 && lat < 30.1 && lng > -96.0 && lng < -94.8) setCity("Houston, TX");
+      else if (lat > 32.5 && lat < 33.3 && lng > -97.2 && lng < -96.2) setCity("Dallas, TX");
+      else if (lat > 29.1 && lat < 29.8 && lng > -98.8 && lng < -98.1) setCity("San Antonio, TX");
+      else if (lat > 40.4 && lat < 40.9 && lng > -74.3 && lng < -73.6) setCity("New York, NY");
+      else if (lat > 41.6 && lat < 42.1 && lng > -88.0 && lng < -87.4) setCity("Chicago, IL");
+    }, () => {});
+  }, []);
+
+  const handleGeolocate = () => {
+    if (!navigator.geolocation) { toast.error("Geolocation not supported"); return; }
+    setIsGeolocating(true);
+    navigator.geolocation.getCurrentPosition(
+      (pos) => {
+        const { latitude: lat, longitude: lng } = pos.coords;
+        let detected = "Austin, TX";
+        if (lat > 29.5 && lat < 30.8 && lng > -98.2 && lng < -97.2) detected = "Austin, TX";
+        else if (lat > 29.0 && lat < 30.1 && lng > -96.0 && lng < -94.8) detected = "Houston, TX";
+        else if (lat > 32.5 && lat < 33.3 && lng > -97.2 && lng < -96.2) detected = "Dallas, TX";
+        else if (lat > 29.1 && lat < 29.8 && lng > -98.8 && lng < -98.1) detected = "San Antonio, TX";
+        else if (lat > 40.4 && lat < 40.9 && lng > -74.3 && lng < -73.6) detected = "New York, NY";
+        else if (lat > 41.6 && lat < 42.1 && lng > -88.0 && lng < -87.4) detected = "Chicago, IL";
+        setCity(detected);
+        setIsGeolocating(false);
+        toast.success(`Showing shifts near you in ${detected}`);
+      },
+      () => { setIsGeolocating(false); toast.error("Could not detect location"); }
+    );
+  };
 
   const { data: profile } = trpc.profile.get.useQuery(undefined, { enabled: isAuthenticated, retry: false });
   const { data: jobs, isLoading: jobsLoading, refetch: refetchJobs } = trpc.jobs.list.useQuery(
@@ -57,6 +98,33 @@ export default function Feed() {
 
   const isEmployer = profile?.userType === "employer" || profile?.userType === "both";
   const isWorker = !profile?.userType || profile.userType === "worker" || profile.userType === "both";
+
+  // Client-side filtering
+  const filteredJobs = (jobs ?? []).filter((job: any) => {
+    if (filterRole && job.role !== filterRole) return false;
+    if (filterMinPay && parseFloat(job.payRate) < parseFloat(filterMinPay)) return false;
+    if (searchQuery) {
+      const q = searchQuery.toLowerCase();
+      const roleLabel = (ROLE_LABELS[job.role] ?? job.role ?? "").toLowerCase();
+      const desc = (job.description ?? "").toLowerCase();
+      const loc = (job.location ?? "").toLowerCase();
+      if (!roleLabel.includes(q) && !desc.includes(q) && !loc.includes(q)) return false;
+    }
+    return true;
+  });
+
+  const filteredWorkers = (availableWorkers ?? []).filter((w: any) => {
+    if (searchQuery) {
+      const q = searchQuery.toLowerCase();
+      const roles = (w.roles ?? "").toLowerCase();
+      const bio = (w.bio ?? "").toLowerCase();
+      const name = (w.workerName ?? "").toLowerCase();
+      if (!roles.includes(q) && !bio.includes(q) && !name.includes(q)) return false;
+    }
+    return true;
+  });
+
+  const activeFilterCount = [filterRole, filterMinPay].filter(Boolean).length;
 
   const handleRefresh = async () => {
     setIsRefreshing(true);
@@ -78,6 +146,95 @@ export default function Feed() {
             WebkitBackdropFilter: "blur(16px)",
           }}
         >
+          {/* Search bar row */}
+          <div className="flex items-center gap-2 mb-2.5">
+            <div className="flex-1 relative">
+              <Search size={13} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
+              <input
+                type="text"
+                placeholder="Search roles, locations..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="w-full pl-8 pr-8 py-2 rounded-xl bg-secondary border border-border text-xs text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-primary transition-colors"
+              />
+              {searchQuery && (
+                <button onClick={() => setSearchQuery("")} className="absolute right-2.5 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground">
+                  <X size={11} />
+                </button>
+              )}
+            </div>
+            {/* Filter toggle */}
+            <button
+              onClick={() => setShowFilters((v) => !v)}
+              className={cn(
+                "relative flex-shrink-0 w-9 h-9 rounded-xl flex items-center justify-center transition-colors",
+                showFilters || activeFilterCount > 0 ? "bg-primary text-primary-foreground" : "bg-secondary text-muted-foreground hover:text-foreground"
+              )}
+            >
+              <SlidersHorizontal size={14} />
+              {activeFilterCount > 0 && (
+                <span className="absolute -top-1 -right-1 w-4 h-4 rounded-full bg-orange-500 text-white text-[9px] font-black flex items-center justify-center">{activeFilterCount}</span>
+              )}
+            </button>
+            {/* Geolocate */}
+            <button
+              onClick={handleGeolocate}
+              className="flex-shrink-0 w-9 h-9 rounded-xl bg-secondary flex items-center justify-center text-muted-foreground hover:text-foreground transition-colors"
+            >
+              <Navigation size={14} className={cn(isGeolocating && "animate-pulse text-primary")} />
+            </button>
+            <button
+              onClick={handleRefresh}
+              className="flex-shrink-0 w-8 h-8 rounded-xl bg-secondary flex items-center justify-center text-muted-foreground hover:text-foreground transition-colors"
+            >
+              <RefreshCw size={13} className={cn(isRefreshing && "animate-spin")} />
+            </button>
+          </div>
+
+          {/* Filter panel */}
+          {showFilters && (
+            <div className="mb-2.5 p-3 bg-secondary/60 rounded-xl border border-border space-y-2">
+              <div className="flex items-center gap-2">
+                <div className="flex-1">
+                  <label className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider mb-1 block">Role</label>
+                  <select
+                    value={filterRole}
+                    onChange={(e) => setFilterRole(e.target.value)}
+                    className="w-full px-2.5 py-1.5 rounded-lg bg-card border border-border text-xs text-foreground focus:outline-none focus:border-primary"
+                  >
+                    <option value="">All Roles</option>
+                    {Object.entries(ROLE_LABELS).map(([val, label]) => (
+                      <option key={val} value={val}>{label}</option>
+                    ))}
+                  </select>
+                </div>
+                <div className="flex-1">
+                  <label className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider mb-1 block">Min Pay</label>
+                  <select
+                    value={filterMinPay}
+                    onChange={(e) => setFilterMinPay(e.target.value)}
+                    className="w-full px-2.5 py-1.5 rounded-lg bg-card border border-border text-xs text-foreground focus:outline-none focus:border-primary"
+                  >
+                    <option value="">Any</option>
+                    <option value="15">$15+/hr</option>
+                    <option value="18">$18+/hr</option>
+                    <option value="20">$20+/hr</option>
+                    <option value="25">$25+/hr</option>
+                    <option value="30">$30+/hr</option>
+                  </select>
+                </div>
+              </div>
+              {activeFilterCount > 0 && (
+                <button
+                  onClick={() => { setFilterRole(""); setFilterMinPay(""); }}
+                  className="text-[10px] text-primary font-bold hover:underline"
+                >
+                  Clear filters
+                </button>
+              )}
+            </div>
+          )}
+
           {/* City chips */}
           <div className="flex items-center gap-2">
             <div className="flex-1 overflow-x-auto scrollbar-none">
@@ -98,12 +255,6 @@ export default function Feed() {
                 ))}
               </div>
             </div>
-            <button
-              onClick={handleRefresh}
-              className="flex-shrink-0 w-8 h-8 rounded-xl bg-secondary flex items-center justify-center text-muted-foreground hover:text-foreground transition-colors"
-            >
-              <RefreshCw size={13} className={cn(isRefreshing && "animate-spin")} />
-            </button>
           </div>
 
           {/* Tabs */}
@@ -119,14 +270,14 @@ export default function Feed() {
               >
                 {t === "jobs" ? <Zap size={11} strokeWidth={2.5} /> : <User size={11} strokeWidth={2.5} />}
                 {t === "jobs" ? "Live Shifts" : "Available Now"}
-                {t === "jobs" && jobs && jobs.length > 0 && (
+                {t === "jobs" && filteredJobs.length > 0 && (
                   <span className="bg-primary text-primary-foreground text-[9px] font-black px-1.5 py-0.5 rounded-full leading-none">
-                    {jobs.length}
+                    {filteredJobs.length}
                   </span>
                 )}
-                {t === "workers" && availableWorkers && availableWorkers.length > 0 && (
+                {t === "workers" && filteredWorkers.length > 0 && (
                   <span className="bg-emerald-500 text-white text-[9px] font-black px-1.5 py-0.5 rounded-full leading-none">
-                    {availableWorkers.length}
+                    {filteredWorkers.length}
                   </span>
                 )}
               </button>
@@ -158,14 +309,14 @@ export default function Feed() {
 
               {jobsLoading ? (
                 <JobSkeletons />
-              ) : !jobs?.length ? (
+              ) : !filteredJobs.length ? (
                 <EmptyState
                   icon={<Zap size={36} className="text-muted-foreground/30" />}
-                  title="No live shifts"
-                  desc={`No shifts posted in ${city.split(",")[0]} right now. Check back soon.`}
+                  title={searchQuery || activeFilterCount > 0 ? "No matches" : "No live shifts"}
+                  desc={searchQuery || activeFilterCount > 0 ? "Try adjusting your search or filters." : `No shifts posted in ${city.split(",")[0]} right now. Check back soon.`}
                 />
               ) : (
-                jobs.map((job: any, i: number) => (
+                filteredJobs.map((job: any, i: number) => (
                   <JobCard key={job.id} job={job} index={i} onClick={() => navigate(`/jobs/${job.id}`)} />
                 ))
               )}
@@ -192,14 +343,14 @@ export default function Feed() {
 
               {workersLoading ? (
                 <WorkerSkeletons />
-              ) : !availableWorkers?.length ? (
+              ) : !filteredWorkers.length ? (
                 <EmptyState
                   icon={<User size={36} className="text-muted-foreground/30" />}
-                  title="No workers available"
-                  desc={`No workers posted availability in ${city.split(",")[0]} right now.`}
+                  title={searchQuery ? "No matches" : "No workers available"}
+                  desc={searchQuery ? "Try a different search term." : `No workers posted availability in ${city.split(",")[0]} right now.`}
                 />
               ) : (
-                availableWorkers.map((post: any, i: number) => (
+                filteredWorkers.map((post: any, i: number) => (
                   <WorkerCard key={post.id} post={post} index={i} />
                 ))
               )}
