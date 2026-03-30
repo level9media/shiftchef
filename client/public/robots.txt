@@ -1,0 +1,22 @@
+User-agent: *
+Allow: /
+Allow: /feed
+Allow: /post-job
+Allow: /contract
+Allow: /verify
+
+# Block admin and private routes
+Disallow: /admin
+Disallow: /admin/
+Disallow: /api/
+Disallow: /dashboard
+Disallow: /my-jobs
+Disallow: /my-applications
+Disallow: /earnings
+Disallow: /payments
+
+# Sitemap
+Sitemap: https://shiftchef.co/sitemap.xml
+
+# Crawl delay (optional, helps with server load)
+Crawl-delay: 1

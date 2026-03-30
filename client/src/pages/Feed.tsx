@@ -1,3 +1,4 @@
+import { SEOHead } from "@/components/SEOHead";
 import { useAuth } from "@/_core/hooks/useAuth";
 import { trpc } from "@/lib/trpc";
 import AppShell from "@/components/AppShell";
@@ -135,6 +136,11 @@ export default function Feed() {
 
   return (
     <AppShell>
+      <SEOHead
+        title="Live Kitchen Shifts — Austin Hospitality Jobs"
+        description="Browse live kitchen and FOH shifts in Austin. Cook, sous chef, prep, dishwasher, server, bartender jobs available now. Apply in seconds."
+        canonicalPath="/feed"
+      />
       <div className="max-w-lg mx-auto">
         {/* ── Sticky sub-header ─────────────────────────────────────────── */}
         <div

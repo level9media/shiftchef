@@ -1,3 +1,4 @@
+import { SEOHead, buildOrganizationSchema, buildWebSiteSchema } from "@/components/SEOHead";
 import { useAuth } from "@/_core/hooks/useAuth";
 import { getLoginUrl } from "@/const";
 import { Button } from "@/components/ui/button";
@@ -28,6 +29,12 @@ export default function Home() {
       className="min-h-screen bg-background flex flex-col overflow-hidden"
       style={{ paddingTop: "var(--sat)" }}
     >
+      <SEOHead
+        title="Find Shifts. Hire Fast. Austin Hospitality Staffing"
+        description="ShiftChef is Austin's on-demand hospitality staffing marketplace. Restaurants post kitchen shifts in 2 minutes, verified workers apply fast. Secure escrow payments, 1099 contracts."
+        canonicalPath="/"
+        jsonLd={buildWebSiteSchema()}
+      />
       {/* Background glow */}
       <div
         className="absolute inset-0 pointer-events-none"

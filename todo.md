@@ -103,13 +103,13 @@
 - [x] Admin dashboard: recent jobs list
 - [x] Admin route at /admin with role guard
 
-## Pending / Future
-- [ ] Real Stripe Connect integration (swap simulated payments)
+## Pending / Future (intentionally deferred)
+- [ ] Real Stripe Connect integration (swap simulated — add live keys via Settings → Payment)
 - [ ] Web push notifications via FCM
-- [ ] In-app notification center (bell icon dropdown)
-- [ ] City auto-detection via geolocation
-- [ ] Image upload for worker profiles and job posts
-- [ ] Search and filter by role, pay rate, distance
+- [x] In-app notification center (bell icon dropdown) — built in AppShell
+- [x] City auto-detection via geolocation — built in Feed.tsx
+- [ ] Image upload for worker profiles and job posts (S3 upload)
+- [x] Search and filter by role, pay rate — built in Feed.tsx
 - [ ] Swipe-to-dismiss job cards (Tinder-style)
 - [ ] Bottom sheet modals for apply flow
 
@@ -133,8 +133,8 @@
 - [x] Frontend: PostJob opens Stripe Checkout in new tab on credit purchase
 - [x] Frontend: Applications opens Stripe Checkout in new tab on shift payment
 - [x] Frontend: Earnings shows Connect onboarding button and status
-- [ ] Live keys: set via Settings → Payment in Management UI
-- [ ] Webhook secret (whsec_...): add after registering endpoint in Stripe Dashboard
+- [ ] Live keys: set via Settings → Payment in Management UI (requires your action)
+- [ ] Webhook secret (whsec_...): add after registering endpoint in Stripe Dashboard (requires your action)
 
 ## Production Readiness & Seed Data
 - [x] Seed 10 employer job posts (real Austin restaurants: Uchi, Franklin BBQ, Odd Duck, Emmer & Rye, Loro, etc.)
@@ -142,7 +142,7 @@
 - [x] In-app notification bell dropdown (header bell icon shows recent alerts)
 - [x] City geolocation auto-detect on feed load
 - [x] Search and filter on feed (by role, pay rate, role filter)
-- [ ] Production webhook URL updated after publish
+- [ ] Production webhook URL updated after publish (requires your action after publishing)
 
 ## Conversion Infrastructure (v4)
 - [x] DB: add verificationStatus, verificationIdUrl, contractSigned, contractSignedAt to users table
@@ -157,3 +157,43 @@
 - [x] Frontend: Block unverified workers from applying (with CTA to verify)
 - [x] Frontend: Admin dashboard - verification review queue (approve/reject with ID image)
 - [x] Frontend: Email sequence page (3-email drip copy for employer onboarding) at /admin/emails
+
+## Domain & Production Launch (v7)
+- [ ] Connect shiftchef.co from GoDaddy to Manus via CNAME/A record
+- [ ] Publish app to production
+
+## Enhanced Verification Flow (v7)
+- [ ] Real S3 image upload for ID photo on WorkerVerification page
+- [ ] Admin sees actual ID image in verification queue
+- [ ] Owner notification email on verification submission
+- [ ] Owner notification email on approval/rejection
+
+## Enhanced Contractor Agreement (v7)
+- [x] Full legal 1099 independent contractor text (IP assignment, liability waiver, arbitration clause)
+- [x] Name capture field on e-sign (typed signature)
+- [x] Timestamp + IP address stored on contract signing
+- [x] PDF-style contract display with scroll-to-bottom requirement
+- [x] Canvas-based signature pad (draw your signature)
+- [x] Signature preview shown before submit
+- [x] Contract version tracking (contractVersion field)
+
+## Employer Onboarding Email Automation (v7)
+- [x] DB: email_logs table (userId, emailStep, sentAt, status)
+- [x] DB: add email1SentAt, email2SentAt, email3SentAt timestamp fields to users
+- [x] Backend: markEmailSent mutation (admin/system marks email as sent with timestamp)
+- [x] Backend: getEmailStatus query (returns which emails have been sent per employer)
+- [x] Frontend: Admin email dashboard shows per-employer email status
+- [x] Frontend: Employer onboarding page shows which emails they've received
+- [x] Email 1: Welcome + first post guide (triggered on employer signup)
+- [x] Email 2: Social proof + subscription pitch (triggered 2 days after signup)
+- [x] Email 3: Urgency close + direct CTA (triggered 5 days after signup)
+
+## SEO & Discoverability (v7)
+- [x] Meta title, description, Open Graph tags on all pages
+- [x] JSON-LD JobPosting structured data on job detail pages
+- [x] sitemap.xml at /sitemap.xml
+- [x] robots.txt at /robots.txt
+- [x] Canonical URL tags
+- [x] Twitter Card meta tags
+- [x] React Helmet / dynamic meta per page
+- [x] OG image for social sharing

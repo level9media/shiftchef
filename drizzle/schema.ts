@@ -64,6 +64,10 @@ export const users = mysqlTable("users", {
   // Employer Onboarding
   onboardingEmailSent: boolean("onboardingEmailSent").default(false),
   onboardingStep: int("onboardingStep").default(0),
+  // Email drip sequence tracking
+  email1SentAt: timestamp("email1SentAt"),
+  email2SentAt: timestamp("email2SentAt"),
+  email3SentAt: timestamp("email3SentAt"),
 
   createdAt: timestamp("createdAt").defaultNow().notNull(),
   updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
@@ -234,3 +238,17 @@ export const verificationRequests = mysqlTable("verificationRequests", {
 
 export type VerificationRequest = typeof verificationRequests.$inferSelect;
 export type InsertVerificationRequest = typeof verificationRequests.$inferInsert;
+
+// ─── Email Logs ───────────────────────────────────────────────────────────────
+export const emailLogs = mysqlTable("emailLogs", {
+  id: int("id").autoincrement().primaryKey(),
+  userId: int("userId").notNull(),
+  emailStep: int("emailStep").notNull(), // 1, 2, or 3
+  subject: varchar("subject", { length: 512 }).notNull(),
+  status: mysqlEnum("status", ["sent", "failed", "scheduled"]).default("sent"),
+  sentAt: timestamp("sentAt").defaultNow().notNull(),
+  notes: text("notes"), // optional admin notes
+});
+
+export type EmailLog = typeof emailLogs.$inferSelect;
+export type InsertEmailLog = typeof emailLogs.$inferInsert;

@@ -1,3 +1,4 @@
+import { SEOHead, buildJobPostingSchema } from "@/components/SEOHead";
 import { useAuth } from "@/_core/hooks/useAuth";
 import { trpc } from "@/lib/trpc";
 import { Button } from "@/components/ui/button";
@@ -95,6 +96,15 @@ export default function JobDetail() {
 
   return (
     <AppShell>
+      {job && (
+        <SEOHead
+          title={`${(job.role || "").replace(/_/g, " ").replace(/\b\w/g, (c: string) => c.toUpperCase())}${job.restaurantName ? ` at ${job.restaurantName}` : ""} — ShiftChef`}
+          description={job.description || `${(job.role || "").replace(/_/g, " ")} shift available in ${job.city || "Austin"}. $${job.payRate}/hr. Apply now on ShiftChef.`}
+          canonicalPath={`/jobs/${job.id}`}
+          ogType="article"
+          jsonLd={buildJobPostingSchema(job)}
+        />
+      )}
       <div className="max-w-lg mx-auto">
         {/* ── Hero ──────────────────────────────────────────────────────── */}
         <div className="relative">

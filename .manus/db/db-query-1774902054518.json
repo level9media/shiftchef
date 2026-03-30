@@ -1,0 +1,9 @@
+{
+  "query": "CREATE TABLE `emailLogs` (\n\t`id` int AUTO_INCREMENT NOT NULL,\n\t`userId` int NOT NULL,\n\t`emailStep` int NOT NULL,\n\t`subject` varchar(512) NOT NULL,\n\t`status` enum('sent','failed','scheduled') DEFAULT 'sent',\n\t`sentAt` timestamp NOT NULL DEFAULT (now()),\n\t`notes` text,\n\tCONSTRAINT `emailLogs_id` PRIMARY KEY(`id`)\n);\nALTER TABLE `users` ADD `email1SentAt` timestamp;\nALTER TABLE `users` ADD `email2SentAt` timestamp;\nALTER TABLE `users` ADD `email3SentAt` timestamp;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway05.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 3kQsL8UrXdZdNR1.f78a5b86a85c --database 5XtEwxhSav9aHUudDTD5pa --execute CREATE TABLE `emailLogs` (\n\t`id` int AUTO_INCREMENT NOT NULL,\n\t`userId` int NOT NULL,\n\t`emailStep` int NOT NULL,\n\t`subject` varchar(512) NOT NULL,\n\t`status` enum('sent','failed','scheduled') DEFAULT 'sent',\n\t`sentAt` timestamp NOT NULL DEFAULT (now()),\n\t`notes` text,\n\tCONSTRAINT `emailLogs_id` PRIMARY KEY(`id`)\n);\nALTER TABLE `users` ADD `email1SentAt` timestamp;\nALTER TABLE `users` ADD `email2SentAt` timestamp;\nALTER TABLE `users` ADD `email3SentAt` timestamp;",
+  "rows": [],
+  "messages": [],
+  "stdout": "",
+  "stderr": "",
+  "execution_time_ms": 1217
+}
