@@ -1,0 +1,63 @@
+{
+  "name": "ShiftChef",
+  "short_name": "ShiftChef",
+  "description": "Hospitality Staffing, On Demand. Find shifts or hire kitchen staff instantly in Austin, Phoenix, and Mesa.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#0A0A0A",
+  "theme_color": "#FF6B00",
+  "orientation": "portrait-primary",
+  "id": "co.shiftchef.app",
+  "scope": "/",
+  "lang": "en",
+  "categories": ["business", "food", "productivity"],
+  "icons": [
+    {
+      "src": "https://d2xsxph8kpxj0f.cloudfront.net/310519663450394445/5XtEwxhSav9aHUudDTD5pa/icon-192_c773814f.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "https://d2xsxph8kpxj0f.cloudfront.net/310519663450394445/5XtEwxhSav9aHUudDTD5pa/icon-512_d6867d62.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ],
+  "screenshots": [
+    {
+      "src": "https://d2xsxph8kpxj0f.cloudfront.net/310519663450394445/5XtEwxhSav9aHUudDTD5pa/og-image-GiNr9VPiUVTUycfYEgpFbW.png",
+      "sizes": "1200x630",
+      "type": "image/png",
+      "form_factor": "wide",
+      "label": "ShiftChef Feed"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "Browse Shifts",
+      "short_name": "Shifts",
+      "description": "Browse available hospitality shifts",
+      "url": "/feed",
+      "icons": [
+        {
+          "src": "https://d2xsxph8kpxj0f.cloudfront.net/310519663450394445/5XtEwxhSav9aHUudDTD5pa/icon-192_c773814f.png",
+          "sizes": "192x192"
+        }
+      ]
+    },
+    {
+      "name": "Post a Shift",
+      "short_name": "Post",
+      "description": "Post a job for your restaurant",
+      "url": "/post-job",
+      "icons": [
+        {
+          "src": "https://d2xsxph8kpxj0f.cloudfront.net/310519663450394445/5XtEwxhSav9aHUudDTD5pa/icon-192_c773814f.png",
+          "sizes": "192x192"
+        }
+      ]
+    }
+  ]
+}

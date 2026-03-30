@@ -1,0 +1,142 @@
+name: iOS Build & Archive
+
+on:
+  push:
+    branches: [main]
+    tags:
+      - 'v*'
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: 'Build environment (staging | production)'
+        required: true
+        default: 'staging'
+
+concurrency:
+  group: ios-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build-ios:
+    name: Build iOS .ipa
+    runs-on: macos-14          # Apple Silicon runner (Xcode 15+)
+    timeout-minutes: 60
+
+    env:
+      XCODE_PROJECT: ios/App/App.xcodeproj
+      XCODE_SCHEME: App
+      EXPORT_METHOD: app-store  # or ad-hoc for TestFlight-less distribution
+
+    steps:
+      # ── 1. Checkout ──────────────────────────────────────────────────────────
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      # ── 2. Node & pnpm ───────────────────────────────────────────────────────
+      - name: Setup Node.js 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'pnpm'
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@v3
+        with:
+          version: 10
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      # ── 3. Build Vite web bundle ─────────────────────────────────────────────
+      - name: Build web bundle
+        run: pnpm run build:client
+        env:
+          VITE_APP_ID: ${{ secrets.VITE_APP_ID }}
+          VITE_OAUTH_PORTAL_URL: ${{ secrets.VITE_OAUTH_PORTAL_URL }}
+          VITE_FRONTEND_FORGE_API_KEY: ${{ secrets.VITE_FRONTEND_FORGE_API_KEY }}
+          VITE_FRONTEND_FORGE_API_URL: ${{ secrets.VITE_FRONTEND_FORGE_API_URL }}
+          VITE_STRIPE_PUBLISHABLE_KEY: ${{ secrets.VITE_STRIPE_PUBLISHABLE_KEY }}
+          VITE_APP_TITLE: ShiftChef
+          VITE_APP_LOGO: https://d2xsxph8kpxj0f.cloudfront.net/310519663450394445/5XtEwxhSav9aHUudDTD5pa/icon-512_d6867d62.png
+
+      # ── 4. Sync Capacitor ─────────────────────────────────────────────────────
+      - name: Sync Capacitor iOS
+        run: npx cap sync ios
+
+      # ── 5. Import Apple signing certs & provisioning profile ─────────────────
+      - name: Import code-signing certificate
+        uses: apple-actions/import-codesign-certs@v3
+        with:
+          p12-file-base64: ${{ secrets.IOS_DISTRIBUTION_CERT_P12_BASE64 }}
+          p12-password: ${{ secrets.IOS_DISTRIBUTION_CERT_P12_PASSWORD }}
+
+      - name: Download provisioning profile
+        uses: apple-actions/download-provisioning-profiles@v3
+        with:
+          bundle-id: co.shiftchef.app
+          issuer-id: ${{ secrets.APPSTORE_ISSUER_ID }}
+          api-key-id: ${{ secrets.APPSTORE_API_KEY_ID }}
+          api-private-key: ${{ secrets.APPSTORE_API_PRIVATE_KEY }}
+
+      # ── 6. Build & Archive ────────────────────────────────────────────────────
+      - name: Build & Archive (Xcode)
+        run: |
+          xcodebuild archive \
+            -project "$XCODE_PROJECT" \
+            -scheme "$XCODE_SCHEME" \
+            -configuration Release \
+            -archivePath "$RUNNER_TEMP/ShiftChef.xcarchive" \
+            -destination "generic/platform=iOS" \
+            CODE_SIGN_STYLE=Automatic \
+            DEVELOPMENT_TEAM=${{ secrets.APPLE_TEAM_ID }} \
+            | xcpretty
+
+      # ── 7. Export .ipa ────────────────────────────────────────────────────────
+      - name: Write ExportOptions.plist
+        run: |
+          cat > "$RUNNER_TEMP/ExportOptions.plist" << PLIST
+          <?xml version="1.0" encoding="UTF-8"?>
+          <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+          <plist version="1.0">
+          <dict>
+            <key>method</key>
+            <string>${{ env.EXPORT_METHOD }}</string>
+            <key>teamID</key>
+            <string>${{ secrets.APPLE_TEAM_ID }}</string>
+            <key>uploadBitcode</key>
+            <false/>
+            <key>compileBitcode</key>
+            <false/>
+            <key>uploadSymbols</key>
+            <true/>
+            <key>signingStyle</key>
+            <string>automatic</string>
+          </dict>
+          </plist>
+          PLIST
+
+      - name: Export .ipa
+        run: |
+          xcodebuild -exportArchive \
+            -archivePath "$RUNNER_TEMP/ShiftChef.xcarchive" \
+            -exportPath "$RUNNER_TEMP/ShiftChef-ipa" \
+            -exportOptionsPlist "$RUNNER_TEMP/ExportOptions.plist" \
+            | xcpretty
+
+      # ── 8. Upload .ipa artifact ───────────────────────────────────────────────
+      - name: Upload .ipa artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ShiftChef-${{ github.sha }}.ipa
+          path: ${{ runner.temp }}/ShiftChef-ipa/*.ipa
+          retention-days: 30
+
+      # ── 9. (Optional) Submit to TestFlight ───────────────────────────────────
+      - name: Submit to TestFlight
+        if: github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/tags/v')
+        run: |
+          xcrun altool --upload-app \
+            --type ios \
+            --file "$RUNNER_TEMP/ShiftChef-ipa/ShiftChef.ipa" \
+            --apiKey ${{ secrets.APPSTORE_API_KEY_ID }} \
+            --apiIssuer ${{ secrets.APPSTORE_ISSUER_ID }}

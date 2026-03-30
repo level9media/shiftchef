@@ -25,6 +25,7 @@ import ReviewHistory from "./pages/ReviewHistory";
 import Pricing from "./pages/Pricing";
 import HowItWorks from "./pages/HowItWorks";
 import FAQ from "./pages/FAQ";
+import { PWAInstallPrompt } from "./components/PWAInstallPrompt";
 
 function Router() {
   return (
@@ -61,6 +62,7 @@ function App() {
       <ThemeProvider defaultTheme="dark">
         <TooltipProvider>
           <Toaster />
+          <PWAInstallPrompt />
           <Router />
         </TooltipProvider>
       </ThemeProvider>
