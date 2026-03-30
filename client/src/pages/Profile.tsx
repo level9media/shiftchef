@@ -8,7 +8,7 @@ import { useState, useEffect } from "react";
 import {
   Star, MapPin, Briefcase, ChefHat, LogOut,
   Edit3, Check, X, Shield, ChevronRight, Camera,
-  ShieldCheck, FileText
+  ShieldCheck, FileText, MessageSquare
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
@@ -254,7 +254,10 @@ export default function Profile() {
           </div>
         )}
 
-        {/* ── Account type ──────────────────────────────────────────────── */}
+          {/* ── Recent Reviews ───────────────────────────────────────── */}
+        {profile?.id && <RecentReviews userId={profile.id} onViewAll={() => navigate("/ratings")} />}
+
+        {/* ── Account type ───────────────────────────────────────────── */}
         <div className="px-4 mt-3">
           <div className="bg-card rounded-2xl border border-border overflow-hidden">
             <p className="text-xs font-bold text-muted-foreground uppercase tracking-wider px-4 pt-4 pb-2">Switch Role</p>
@@ -333,6 +336,54 @@ export default function Profile() {
         </div>
       </div>
     </AppShell>
+  );
+}
+
+const RATING_LABELS_PROFILE: Record<number, string> = {
+  5: "Absolutely", 4: "Sure", 3: "Maybe", 2: "Not really", 1: "Never",
+};
+const RATING_COLORS_PROFILE: Record<number, string> = {
+  5: "text-emerald-400", 4: "text-green-400", 3: "text-yellow-400", 2: "text-orange-400", 1: "text-red-400",
+};
+
+function RecentReviews({ userId, onViewAll }: { userId: number; onViewAll: () => void }) {
+  const { data: reviews, isLoading } = trpc.ratings.forUser.useQuery(
+    { userId },
+    { enabled: !!userId }
+  );
+  const { data: stats } = trpc.ratings.stats.useQuery({ userId }, { enabled: !!userId });
+
+  if (isLoading) return null;
+  if (!reviews || reviews.length === 0) return null;
+
+  const recent = reviews.slice(0, 3);
+
+  return (
+    <div className="px-4 mt-3">
+      <div className="bg-card rounded-2xl border border-border overflow-hidden">
+        <div className="flex items-center justify-between px-4 pt-4 pb-2">
+          <div className="flex items-center gap-2">
+            <MessageSquare size={13} className="text-muted-foreground" />
+            <p className="text-xs font-bold text-muted-foreground uppercase tracking-wider">Reviews</p>
+            {stats && stats.total > 0 && (
+              <span className="text-xs font-black text-primary">{stats.avg.toFixed(1)}/5 avg</span>
+            )}
+          </div>
+          <button onClick={onViewAll} className="text-xs font-bold text-primary hover:underline">View all</button>
+        </div>
+        {recent.map((r: any, i: number) => (
+          <div key={r.id} className={cn("px-4 py-3", i > 0 ? "border-t border-border" : "border-t border-border")}>
+            <div className="flex items-center justify-between mb-1">
+              <p className="text-xs font-semibold text-foreground">{r.raterName ?? "User"}</p>
+              <p className={cn("text-xs font-black", RATING_COLORS_PROFILE[r.score as number])}>
+                {r.score}/5 — {RATING_LABELS_PROFILE[r.score as number]}
+              </p>
+            </div>
+            {r.comment && <p className="text-xs text-muted-foreground italic line-clamp-2">"{r.comment}"</p>}
+          </div>
+        ))}
+      </div>
+    </div>
   );
 }
 

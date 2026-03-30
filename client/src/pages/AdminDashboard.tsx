@@ -4,7 +4,7 @@ import AppShell from "@/components/AppShell";
 import { Link } from "wouter";
 import {
   DollarSign, Users, Briefcase, TrendingUp, ChefHat,
-  Activity, Clock, CheckCircle, AlertCircle, ArrowLeft, ShieldCheck, Mail
+  Activity, Clock, CheckCircle, AlertCircle, ArrowLeft, ShieldCheck, Mail, Star
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
@@ -38,6 +38,9 @@ export default function AdminDashboard() {
     undefined, { enabled: isAuthenticated && user?.role === "admin" }
   );
   const { data: recentJobs } = trpc.admin.recentJobs.useQuery(
+    undefined, { enabled: isAuthenticated && user?.role === "admin" }
+  );
+  const { data: recentRatings } = trpc.admin.recentRatings.useQuery(
     undefined, { enabled: isAuthenticated && user?.role === "admin" }
   );
   const utils = trpc.useUtils();
@@ -289,6 +292,52 @@ export default function AdminDashboard() {
                       {new Date(u.createdAt).toLocaleDateString([], { month: "short", day: "numeric" })}
                     </p>
                   </div>
+                </div>
+              ))
+            )}
+          </div>
+        </div>
+
+        {/* ── Platform Ratings ───────────────────────────────────────── */}
+        <div>
+          <div className="flex items-center justify-between mb-3">
+            <p className="text-xs font-bold text-muted-foreground uppercase tracking-wider">Platform Ratings</p>
+            {stats && (
+              <div className="flex items-center gap-3">
+                <span className="text-xs text-muted-foreground">{stats.totalRatings ?? 0} total</span>
+                {stats.avgPlatformRating && (
+                  <span className="flex items-center gap-1 text-xs font-bold text-yellow-400">
+                    <Star size={10} className="fill-yellow-400" />{stats.avgPlatformRating.toFixed(1)} avg
+                  </span>
+                )}
+              </div>
+            )}
+          </div>
+          <div className="space-y-2">
+            {!recentRatings?.length ? (
+              <EmptyCard label="No ratings yet" />
+            ) : (
+              recentRatings.slice(0, 8).map((r: any) => (
+                <div key={r.id} className="bg-card rounded-2xl border border-border p-3.5 flex items-start gap-3">
+                  <div className={cn(
+                    "w-8 h-8 rounded-xl flex items-center justify-center flex-shrink-0 text-sm font-black",
+                    r.score >= 4 ? "bg-emerald-500/15 text-emerald-400" :
+                    r.score === 3 ? "bg-yellow-500/15 text-yellow-400" :
+                    "bg-red-500/15 text-red-400"
+                  )}>
+                    {r.score}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-xs font-bold text-foreground">
+                      {r.fromName} → {r.toName}
+                    </p>
+                    {r.comment && (
+                      <p className="text-[10px] text-muted-foreground mt-0.5 truncate italic">"{r.comment}"</p>
+                    )}
+                  </div>
+                  <p className="text-[10px] text-muted-foreground flex-shrink-0">
+                    {new Date(r.createdAt).toLocaleDateString([], { month: "short", day: "numeric" })}
+                  </p>
                 </div>
               ))
             )}

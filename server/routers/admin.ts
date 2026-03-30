@@ -5,6 +5,7 @@ import {
   getAdminRecentPayments,
   getAdminRecentUsers,
   getAdminRecentJobs,
+  getAdminRecentRatings,
   getUserById,
   getJobById,
 } from "../db";
@@ -63,5 +64,10 @@ export const adminRouter = router({
       })
     );
     return enriched;
+  }),
+
+  // Recent ratings
+  recentRatings: adminProcedure.query(async () => {
+    return getAdminRecentRatings(10);
   }),
 });

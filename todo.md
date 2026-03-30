@@ -197,3 +197,19 @@
 - [x] Twitter Card meta tags
 - [x] React Helmet / dynamic meta per page
 - [x] OG image for social sharing
+
+## Rating & Review System (v8)
+- [x] Backend: getRatingsGiven query (ratings I submitted)
+- [x] Backend: getPublicReviews query (public profile reviews, no payment gate)
+- [x] Backend: reliabilityScore update on rating submit (based on shift completion rate)
+- [x] Backend: getRatingStats query (avg, count, score breakdown 1-5)
+- [x] Backend: getCompletedShiftsForRating query (employer sees all completable shifts)
+- [x] Frontend: /rate/:jobId dedicated RateShift page (deep-link for post-shift rating)
+- [x] Frontend: Post-shift rating prompt banner in Applications page after shift completes
+- [x] Frontend: Ratings page — add "Given" tab showing ratings I've submitted
+- [x] Frontend: Ratings page — star breakdown chart (5★ 4★ 3★ 2★ 1★ counts)
+- [x] Frontend: Ratings page — avg score hero stat with total count
+- [x] Frontend: Profile page — show avg rating stars + total count + 3 most recent reviews
+- [x] Frontend: /reviews/:userId public review history page
+- [x] Frontend: Admin dashboard — ratings overview (total ratings, avg platform score, recent reviews)
+- [x] Frontend: App navigation — add Ratings tab to bottom nav (already exists at /ratings)

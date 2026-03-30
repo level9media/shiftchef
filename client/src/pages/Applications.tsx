@@ -6,7 +6,7 @@ import { useLocation } from "wouter";
 import { useState } from "react";
 import {
   Clock, CheckCircle, XCircle, ChefHat, Briefcase,
-  DollarSign, Star, Zap, ArrowRight, CheckCircle2
+  DollarSign, Star, Zap, ArrowRight, CheckCircle2, ChevronRight
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
@@ -77,6 +77,9 @@ export default function Applications() {
     onSuccess: () => { toast.success("Payment released to worker!"); utils.jobs.myJobs.invalidate(); },
     onError: (e) => toast.error(e.message),
   });
+  const { data: pendingRatings } = trpc.ratings.pendingRatings.useQuery(
+    undefined, { enabled: isAuthenticated }
+  );
 
   const isWorker = !profile?.userType || profile.userType === "worker" || profile.userType === "both";
   const isEmployer = profile?.userType === "employer" || profile?.userType === "both";
@@ -84,6 +87,27 @@ export default function Applications() {
   return (
     <AppShell>
       <div className="max-w-lg mx-auto">
+        {/* ── Pending Ratings Banner ──────────────────────────────────── */}
+        {pendingRatings && pendingRatings.length > 0 && (
+          <div className="mx-4 mt-3 mb-1">
+            <button
+              onClick={() => navigate("/ratings")}
+              className="w-full flex items-center gap-3 bg-primary/10 border border-primary/30 rounded-2xl p-3.5 hover:bg-primary/15 transition-colors"
+            >
+              <div className="w-9 h-9 rounded-xl bg-primary/20 flex items-center justify-center flex-shrink-0">
+                <Star size={16} className="text-primary fill-primary" />
+              </div>
+              <div className="text-left flex-1">
+                <p className="text-sm font-bold text-foreground">
+                  {pendingRatings.length} shift{pendingRatings.length !== 1 ? "s" : ""} waiting for your rating
+                </p>
+                <p className="text-xs text-muted-foreground">Tap to rate and build your reputation</p>
+              </div>
+              <ChevronRight size={14} className="text-primary flex-shrink-0" />
+            </button>
+          </div>
+        )}
+
         {/* ── Sticky Tabs ───────────────────────────────────────────────── */}
         <div
           className="sticky z-30 border-b border-border px-4 py-3"

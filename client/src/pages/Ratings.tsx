@@ -1,9 +1,11 @@
+import { SEOHead } from "@/components/SEOHead";
 import { useAuth } from "@/_core/hooks/useAuth";
 import { trpc } from "@/lib/trpc";
 import AppShell from "@/components/AppShell";
 import { Button } from "@/components/ui/button";
 import { useState } from "react";
-import { Star, MessageSquare, CheckCircle, Lock, ChefHat } from "lucide-react";
+import { useLocation } from "wouter";
+import { Star, MessageSquare, CheckCircle, ChefHat, ArrowRight } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 
@@ -23,102 +25,130 @@ const RATING_COLORS: Record<number, string> = {
   1: "text-red-400",
 };
 
-export default function Ratings() {
-  const { isAuthenticated, user } = useAuth();
-  const [tab, setTab] = useState<"pending" | "received">("pending");
+const ROLE_LABELS: Record<string, string> = {
+  cook: "Cook", sous_chef: "Sous Chef", prep: "Prep Cook",
+  dishwasher: "Dishwasher", cleaner: "Cleaner", server: "Server",
+  bartender: "Bartender", host: "Host", manager: "Manager",
+};
 
-  const { data: pendingRatings, isLoading: pendingLoading, refetch } = trpc.ratings.pendingRatings.useQuery(
-    undefined, { enabled: isAuthenticated }
-  );
-  const { data: myRatings, isLoading: myLoading } = trpc.ratings.forUser.useQuery(
+export default function Ratings() {
+  const { user } = useAuth();
+  const [, navigate] = useLocation();
+  const [tab, setTab] = useState<"pending" | "received" | "given">("pending");
+
+  const { data: pending, isLoading: pendingLoading } = trpc.ratings.pendingRatings.useQuery();
+  const { data: received, isLoading: receivedLoading } = trpc.ratings.forUser.useQuery(
     { userId: user?.id ?? 0 },
-    { enabled: isAuthenticated && !!user?.id }
+    { enabled: !!user?.id }
   );
+  const { data: given, isLoading: givenLoading } = trpc.ratings.given.useQuery();
+  const { data: stats } = trpc.ratings.stats.useQuery(
+    { userId: user?.id ?? 0 },
+    { enabled: !!user?.id }
+  );
+
+  const pendingCount = pending?.length ?? 0;
+  const receivedCount = received?.length ?? 0;
+  const givenCount = given?.length ?? 0;
 
   return (
     <AppShell>
+      <SEOHead title="Ratings and Reviews - ShiftChef" canonicalPath="/ratings" />
       <div className="max-w-lg mx-auto">
-        {/* ── Sticky Tabs ───────────────────────────────────────────────── */}
-        <div
-          className="sticky z-30 border-b border-border px-4 py-3"
-          style={{
-            top: "calc(3.5rem + var(--sat))",
-            background: "oklch(0.06 0 0 / 0.95)",
-            backdropFilter: "blur(16px)",
-          }}
-        >
-          <div className="flex gap-1 bg-secondary rounded-xl p-1">
-            <button
-              onClick={() => setTab("pending")}
-              className={cn(
-                "flex-1 flex items-center justify-center gap-1.5 py-2 rounded-lg text-xs font-bold transition-all",
-                tab === "pending" ? "bg-card text-foreground shadow-sm" : "text-muted-foreground"
-              )}
-            >
-              <Star size={11} strokeWidth={2.5} /> Rate Now
-              {(pendingRatings?.length ?? 0) > 0 && (
-                <span className="bg-primary text-primary-foreground text-[9px] font-black w-4 h-4 rounded-full flex items-center justify-center">
-                  {pendingRatings!.length}
-                </span>
-              )}
-            </button>
-            <button
-              onClick={() => setTab("received")}
-              className={cn(
-                "flex-1 flex items-center justify-center gap-1.5 py-2 rounded-lg text-xs font-bold transition-all",
-                tab === "received" ? "bg-card text-foreground shadow-sm" : "text-muted-foreground"
-              )}
-            >
-              <MessageSquare size={11} strokeWidth={2.5} /> Received
-            </button>
-          </div>
+        <div className="px-4 pt-4 pb-3">
+          <h1 className="text-2xl font-black text-foreground" style={{ fontFamily: "'Plus Jakarta Sans', sans-serif" }}>
+            Ratings
+          </h1>
+          <p className="text-sm text-muted-foreground mt-0.5">Your shift feedback history</p>
         </div>
 
-        <div className="px-4 py-4 space-y-3">
-          {/* Info banner */}
-          <div className="bg-card rounded-2xl border border-border p-3 flex items-start gap-2">
-            <Lock size={13} className="text-primary mt-0.5 flex-shrink-0" />
-            <p className="text-xs text-muted-foreground">
-              Ratings unlock only after payment is released. Both parties rate each other.
-            </p>
+        {stats && stats.total > 0 && (
+          <div className="mx-4 mb-4 bg-card rounded-2xl border border-border p-4">
+            <div className="flex items-center justify-between mb-3">
+              <div>
+                <div className="flex items-end gap-2">
+                  <span className="text-4xl font-black text-foreground">{stats.avg.toFixed(1)}</span>
+                  <span className="text-primary text-xl font-black mb-1">/ 5</span>
+                </div>
+                <p className="text-xs text-muted-foreground">{stats.total} rating{stats.total !== 1 ? "s" : ""} received</p>
+              </div>
+              <div className="flex gap-0.5">
+                {Array.from({ length: 5 }).map((_, i) => (
+                  <Star key={i} size={14} className={i < Math.round(stats.avg) ? "text-primary fill-primary" : "text-muted-foreground"} />
+                ))}
+              </div>
+            </div>
+            <div className="space-y-1.5">
+              {[5, 4, 3, 2, 1].map((s) => {
+                const count = (stats.breakdown as Record<number, number>)[s] ?? 0;
+                const pct = stats.total > 0 ? (count / stats.total) * 100 : 0;
+                return (
+                  <div key={s} className="flex items-center gap-2">
+                    <span className="text-[10px] font-bold text-muted-foreground w-4 text-right">{s}</span>
+                    <div className="flex-1 h-1.5 bg-secondary rounded-full overflow-hidden">
+                      <div className="h-full rounded-full bg-primary transition-all" style={{ width: `${pct}%` }} />
+                    </div>
+                    <span className="text-[10px] text-muted-foreground w-4">{count}</span>
+                  </div>
+                );
+              })}
+            </div>
           </div>
+        )}
 
-          {/* ── Pending ─────────────────────────────────────────────────── */}
+        <div className="flex gap-1 px-4 mb-4">
+          {(["pending", "received", "given"] as const).map((t) => {
+            const count = t === "pending" ? pendingCount : t === "received" ? receivedCount : givenCount;
+            return (
+              <button
+                key={t}
+                onClick={() => setTab(t)}
+                className={cn(
+                  "flex-1 py-2 rounded-xl text-xs font-bold transition-all capitalize",
+                  tab === t ? "bg-primary text-primary-foreground" : "bg-secondary text-muted-foreground hover:text-foreground"
+                )}
+              >
+                {t}
+                {count > 0 && (
+                  <span className={cn("ml-1.5 px-1.5 py-0.5 rounded-full text-[9px] font-black", tab === t ? "bg-white/20" : "bg-card")}>
+                    {count}
+                  </span>
+                )}
+              </button>
+            );
+          })}
+        </div>
+
+        <div className="px-4 pb-24 space-y-3">
           {tab === "pending" && (
-            <>
-              {pendingLoading ? <Skeletons /> :
-                !pendingRatings?.length ? (
-                  <EmptyState
-                    icon={<Star size={36} className="text-muted-foreground/30" />}
-                    title="No pending ratings"
-                    desc="Complete shifts and release payments to unlock ratings"
-                  />
-                ) : (
-                  pendingRatings.map((item: any) => (
-                    <RatingForm key={`${item.jobId}-${item.rateUserId}`} item={item} onDone={refetch} />
-                  ))
-                )
-              }
-            </>
+            pendingLoading ? <Skeletons /> :
+            pendingCount === 0 ? (
+              <EmptyState icon={<CheckCircle size={32} className="text-emerald-400" />} title="All caught up!" desc="No pending ratings. Complete a shift and release payment to unlock ratings." />
+            ) : (
+              pending!.map((item: any) => (
+                <PendingRatingCard key={item.job.id} item={item} onRate={(jobId) => navigate(`/rate/${jobId}`)} />
+              ))
+            )
           )}
-
-          {/* ── Received ────────────────────────────────────────────────── */}
           {tab === "received" && (
-            <>
-              {myLoading ? <Skeletons /> :
-                !myRatings?.length ? (
-                  <EmptyState
-                    icon={<Star size={36} className="text-muted-foreground/30" />}
-                    title="No ratings yet"
-                    desc="Your ratings will appear here after shifts are completed"
-                  />
-                ) : (
-                  myRatings.map((rating: any) => (
-                    <ReceivedRatingCard key={rating.id} rating={rating} />
-                  ))
-                )
-              }
-            </>
+            receivedLoading ? <Skeletons /> :
+            receivedCount === 0 ? (
+              <EmptyState icon={<Star size={32} className="text-muted-foreground" />} title="No ratings yet" desc="Complete shifts and get rated by employers and workers." />
+            ) : (
+              received!.map((rating: any) => (
+                <ReceivedRatingCard key={rating.id} rating={rating} />
+              ))
+            )
+          )}
+          {tab === "given" && (
+            givenLoading ? <Skeletons /> :
+            givenCount === 0 ? (
+              <EmptyState icon={<MessageSquare size={32} className="text-muted-foreground" />} title="No ratings given yet" desc="After completing a shift, rate the other party to build platform trust." />
+            ) : (
+              given!.map((rating: any) => (
+                <GivenRatingCard key={rating.id} rating={rating} />
+              ))
+            )
           )}
         </div>
       </div>
@@ -126,96 +156,37 @@ export default function Ratings() {
   );
 }
 
-function RatingForm({ item, onDone }: { item: any; onDone: () => void }) {
-  const [score, setScore] = useState<number | null>(null);
-  const [comment, setComment] = useState("");
-  const [submitted, setSubmitted] = useState(false);
-
-  const submitMutation = trpc.ratings.submit.useMutation({
-    onSuccess: () => { setSubmitted(true); toast.success("Rating submitted!"); onDone(); },
-    onError: (e) => toast.error(e.message),
-  });
-
-  if (submitted) {
-    return (
-      <div className="bg-card rounded-2xl border border-emerald-500/30 p-5 flex items-center gap-3">
-        <CheckCircle size={20} className="text-emerald-400" />
-        <p className="font-bold text-sm text-foreground">Rating submitted for {item.rateName ?? "user"}</p>
-      </div>
-    );
-  }
-
+function PendingRatingCard({ item, onRate }: { item: any; onRate: (jobId: number) => void }) {
+  const { job, otherUser } = item;
+  const formatDate = (ms: number) => new Date(ms).toLocaleDateString([], { month: "short", day: "numeric" });
   return (
-    <div className="bg-card rounded-2xl border border-border p-5 space-y-4">
-      {/* Who to rate */}
-      <div className="flex items-center gap-3">
-        <div className="w-12 h-12 rounded-2xl bg-secondary flex items-center justify-center overflow-hidden flex-shrink-0">
-          {item.rateUserImage ? (
-            <img src={item.rateUserImage} alt="" className="w-full h-full object-cover" />
-          ) : (
-            <ChefHat size={18} className="text-muted-foreground" />
-          )}
-        </div>
+    <div className="bg-card rounded-2xl border border-primary/30 p-4 space-y-3">
+      <div className="flex items-start justify-between">
         <div>
-          <p className="font-black text-foreground">{item.rateName ?? "User"}</p>
-          <p className="text-xs text-muted-foreground">
-            {item.jobRole} {item.restaurantName ? `· ${item.restaurantName}` : ""}
+          <p className="font-bold text-sm text-foreground">
+            {ROLE_LABELS[job.role] ?? job.role}{job.restaurantName ? ` at ${job.restaurantName}` : ""}
           </p>
-          {item.shiftDate && <p className="text-[10px] text-muted-foreground">{item.shiftDate}</p>}
+          <p className="text-xs text-muted-foreground mt-0.5">{formatDate(job.startTime)}</p>
         </div>
+        <span className="text-[10px] font-bold text-primary bg-primary/15 px-2 py-1 rounded-full">Rate Now</span>
       </div>
-
-      {/* Question */}
-      <div>
-        <p className="text-xs font-bold text-muted-foreground uppercase tracking-wider mb-3">
-          Would you work with them again?
-        </p>
-        <div className="flex gap-1.5">
-          {[5, 4, 3, 2, 1].map((val) => (
-            <button
-              key={val}
-              onClick={() => setScore(val)}
-              className={cn(
-                "flex-1 py-3 rounded-xl border text-xs font-black transition-all flex flex-col items-center gap-1",
-                score === val
-                  ? `border-primary bg-primary/10 ${RATING_COLORS[val]}`
-                  : "border-border bg-secondary text-muted-foreground"
-              )}
-            >
-              <span className="text-sm">{val}</span>
-              <span className="text-[8px] leading-tight text-center">{RATING_LABELS[val]}</span>
-            </button>
-          ))}
+      {otherUser && (
+        <div className="flex items-center gap-2.5 bg-secondary/60 rounded-xl p-2.5">
+          <div className="w-9 h-9 rounded-xl bg-secondary flex items-center justify-center overflow-hidden flex-shrink-0">
+            {otherUser.profileImage ? (
+              <img src={otherUser.profileImage} alt="" className="w-full h-full object-cover" />
+            ) : (
+              <ChefHat size={14} className="text-muted-foreground" />
+            )}
+          </div>
+          <div>
+            <p className="text-sm font-semibold text-foreground">{otherUser.name}</p>
+            <p className="text-[10px] text-muted-foreground capitalize">{otherUser.userType ?? "user"}</p>
+          </div>
         </div>
-        {score !== null && (
-          <p className={cn("text-center text-sm font-bold mt-2", RATING_COLORS[score])}>
-            {score}★ — {RATING_LABELS[score]}
-          </p>
-        )}
-      </div>
-
-      {/* Feedback */}
-      <div>
-        <p className="text-xs font-bold text-muted-foreground uppercase tracking-wider mb-1.5">Feedback (optional)</p>
-        <textarea
-          value={comment}
-          onChange={(e) => setComment(e.target.value)}
-          placeholder="Share your experience..."
-          className="w-full bg-secondary border border-border rounded-xl p-3 text-sm resize-none h-20 focus:outline-none focus:ring-1 focus:ring-primary text-foreground placeholder:text-muted-foreground"
-          maxLength={500}
-        />
-      </div>
-
-      <Button
-        className="w-full h-12 font-bold rounded-2xl btn-glow"
-        disabled={score === null || submitMutation.isPending}
-        onClick={() => {
-          if (score !== null) submitMutation.mutate({ jobId: item.jobId, score, comment: comment || undefined });
-        }}
-      >
-        {submitMutation.isPending ? (
-          <div className="w-4 h-4 border-2 border-primary-foreground border-t-transparent rounded-full animate-spin" />
-        ) : "Submit Rating"}
+      )}
+      <Button className="w-full h-11 rounded-xl btn-glow font-bold" onClick={() => onRate(job.id)}>
+        Leave Rating <ArrowRight size={14} className="ml-2" />
       </Button>
     </div>
   );
@@ -223,67 +194,47 @@ function RatingForm({ item, onDone }: { item: any; onDone: () => void }) {
 
 function ReceivedRatingCard({ rating }: { rating: any }) {
   const [showReply, setShowReply] = useState(false);
-  const [reply, setReply] = useState(rating.employerResponse ?? "");
+  const [reply, setReply] = useState(rating.response ?? "");
   const [saved, setSaved] = useState(false);
-
+  const utils = trpc.useUtils();
   const respondMutation = trpc.ratings.respond.useMutation({
-    onSuccess: () => { setSaved(true); toast.success("Response saved!"); },
+    onSuccess: () => { setSaved(true); toast.success("Response saved!"); utils.ratings.forUser.invalidate(); },
     onError: (e) => toast.error(e.message),
   });
-
   const color = RATING_COLORS[rating.score as number] ?? "text-muted-foreground";
-
   return (
     <div className="bg-card rounded-2xl border border-border p-4 space-y-3">
       <div className="flex items-start justify-between">
         <div className="flex items-center gap-2.5">
           <div className="w-10 h-10 rounded-xl bg-secondary flex items-center justify-center overflow-hidden flex-shrink-0">
-            {rating.rater?.profileImage ? (
-              <img src={rating.rater.profileImage} alt="" className="w-full h-full object-cover" />
-            ) : (
-              <ChefHat size={14} className="text-muted-foreground" />
-            )}
+            {rating.raterImage ? <img src={rating.raterImage} alt="" className="w-full h-full object-cover" /> : <ChefHat size={14} className="text-muted-foreground" />}
           </div>
           <div>
-            <p className="font-bold text-sm text-foreground">{rating.rater?.name ?? "User"}</p>
-            <p className="text-[10px] text-muted-foreground">
-              {new Date(rating.createdAt).toLocaleDateString([], { month: "short", day: "numeric", year: "numeric" })}
+            <p className="font-bold text-sm text-foreground">{rating.raterName ?? "User"}</p>
+            <p className="text-[10px] text-muted-foreground capitalize">
+              {rating.raterType} · {new Date(rating.createdAt).toLocaleDateString([], { month: "short", day: "numeric", year: "numeric" })}
             </p>
           </div>
         </div>
         <div className="text-right flex-shrink-0 ml-2">
-          <p className={cn("text-2xl font-black", color)}>{rating.score}★</p>
+          <p className={cn("text-2xl font-black", color)}>{rating.score}/5</p>
           <p className={cn("text-[10px] font-bold", color)}>{RATING_LABELS[rating.score as number]}</p>
         </div>
       </div>
-
-      {rating.comment && (
-        <p className="text-sm text-muted-foreground italic border-t border-border pt-2">
-          "{rating.comment}"
-        </p>
-      )}
-
-      {/* Employer response */}
-      {rating.response && !showReply && (
+      {rating.comment && <p className="text-sm text-muted-foreground italic border-t border-border pt-2">"{rating.comment}"</p>}
+      {(rating.response || saved) && !showReply && (
         <div className="bg-secondary rounded-xl p-3">
           <p className="text-[10px] text-muted-foreground font-bold mb-1">YOUR RESPONSE</p>
-          <p className="text-sm text-foreground">{rating.response}</p>
+          <p className="text-sm text-foreground">{rating.response || reply}</p>
         </div>
       )}
       {!rating.response && !showReply && !saved && (
-        <button onClick={() => setShowReply(true)} className="text-xs text-primary font-bold">
-          + Add response
-        </button>
+        <button onClick={() => setShowReply(true)} className="text-xs text-primary font-bold hover:underline">Add response</button>
       )}
       {showReply && !saved && (
         <div className="space-y-2">
-          <textarea
-            value={reply}
-            onChange={(e) => setReply(e.target.value)}
-            placeholder="Respond to this rating..."
-            className="w-full bg-secondary border border-border rounded-xl p-3 text-sm resize-none h-16 focus:outline-none focus:ring-1 focus:ring-primary text-foreground placeholder:text-muted-foreground"
-            maxLength={500}
-          />
+          <textarea value={reply} onChange={(e) => setReply(e.target.value)} placeholder="Respond to this rating..."
+            className="w-full bg-secondary border border-border rounded-xl p-3 text-sm resize-none h-16 focus:outline-none focus:ring-1 focus:ring-primary text-foreground placeholder:text-muted-foreground" maxLength={500} />
           <div className="flex gap-2">
             <Button size="sm" className="flex-1 rounded-xl" disabled={!reply || respondMutation.isPending}
               onClick={() => respondMutation.mutate({ ratingId: rating.id, response: reply })}>
@@ -293,6 +244,37 @@ function ReceivedRatingCard({ rating }: { rating: any }) {
           </div>
         </div>
       )}
+    </div>
+  );
+}
+
+function GivenRatingCard({ rating }: { rating: any }) {
+  const color = RATING_COLORS[rating.score as number] ?? "text-muted-foreground";
+  return (
+    <div className="bg-card rounded-2xl border border-border p-4 space-y-3">
+      <div className="flex items-start justify-between">
+        <div className="flex items-center gap-2.5">
+          <div className="w-10 h-10 rounded-xl bg-secondary flex items-center justify-center overflow-hidden flex-shrink-0">
+            {rating.recipientImage ? <img src={rating.recipientImage} alt="" className="w-full h-full object-cover" /> : <ChefHat size={14} className="text-muted-foreground" />}
+          </div>
+          <div>
+            <p className="font-bold text-sm text-foreground">{rating.recipientName ?? "User"}</p>
+            <p className="text-[10px] text-muted-foreground">
+              {rating.jobRole ? (ROLE_LABELS[rating.jobRole] ?? rating.jobRole) : ""}{rating.jobRestaurant ? ` at ${rating.jobRestaurant}` : ""}
+            </p>
+            <p className="text-[10px] text-muted-foreground">{new Date(rating.createdAt).toLocaleDateString([], { month: "short", day: "numeric", year: "numeric" })}</p>
+          </div>
+        </div>
+        <div className="text-right flex-shrink-0 ml-2">
+          <p className={cn("text-2xl font-black", color)}>{rating.score}/5</p>
+          <p className={cn("text-[10px] font-bold", color)}>{RATING_LABELS[rating.score as number]}</p>
+        </div>
+      </div>
+      {rating.comment && <p className="text-sm text-muted-foreground italic border-t border-border pt-2">"{rating.comment}"</p>}
+      <div className="flex items-center gap-1.5 text-[10px] text-muted-foreground">
+        <CheckCircle size={10} className="text-emerald-400" />
+        <span>Rating submitted</span>
+      </div>
     </div>
   );
 }

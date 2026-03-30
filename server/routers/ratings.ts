@@ -10,8 +10,9 @@ import {
   updateRating,
   updateUser,
   getUserById,
+  getDb,
 } from "../db";
-import { protectedProcedure, router } from "../_core/trpc";
+import { protectedProcedure, publicProcedure, router } from "../_core/trpc";
 
 export const RATING_LABELS: Record<number, string> = {
   5: "Absolutely",
@@ -79,34 +80,49 @@ export const ratingsRouter = router({
       // Recalculate recipient's average rating
       const allRatings = await getRatingsForUser(toUserId);
       const avg = allRatings.reduce((sum, r) => sum + r.score, 0) / allRatings.length;
+
+      // Update reliability score: percentage of shifts rated (engagement metric)
+      const db = await getDb();
+      let reliabilityScore = 100;
+      if (db) {
+        const { jobs: jobsTable } = await import("../../drizzle/schema");
+        const { eq, or, and } = await import("drizzle-orm");
+        const completedJobs = await db
+          .select()
+          .from(jobsTable)
+          .where(
+            and(
+              eq(jobsTable.status, "completed"),
+              or(eq(jobsTable.employerId, toUserId), eq(jobsTable.acceptedWorkerId, toUserId))
+            )
+          );
+        const totalCompleted = completedJobs.length;
+        if (totalCompleted > 0) {
+          const ratingsGiven = allRatings.length;
+          reliabilityScore = Math.min(100, Math.round((ratingsGiven / totalCompleted) * 100));
+        }
+      }
+
       await updateUser(toUserId, {
         rating: Math.round(avg * 10) / 10,
         totalRatings: allRatings.length,
+        reliabilityScore,
       });
 
-      return { success: true };
+      return { success: true, raterType };
     }),
 
-  // Employer: respond to a rating (cannot edit)
+  // Respond to a rating (the person who was rated can respond once)
   respond: protectedProcedure
     .input(z.object({ ratingId: z.number(), response: z.string().max(500) }))
     .mutation(async ({ ctx, input }) => {
-      const { getRatingsByJob: _, ...rest } = await import("../db");
-      const db = await import("../db");
-      const allRatings = await db.getRatingsForUser(ctx.user.id);
-      // Find the rating
-      const rating = allRatings.find((r) => r.id === input.ratingId);
-      // Actually let's query directly
-      const job = await getJobById(0); // placeholder
-      // Use a direct approach
-      const { getDb } = await import("../db");
-      const drizzleDb = await getDb();
-      if (!drizzleDb) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR" });
+      const db = await getDb();
+      if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR" });
 
       const { ratings: ratingsTable } = await import("../../drizzle/schema");
       const { eq } = await import("drizzle-orm");
 
-      const found = await drizzleDb
+      const found = await db
         .select()
         .from(ratingsTable)
         .where(eq(ratingsTable.id, input.ratingId))
@@ -114,7 +130,6 @@ export const ratingsRouter = router({
 
       if (!found[0]) throw new TRPCError({ code: "NOT_FOUND" });
 
-      // Only the person being rated can respond
       if (found[0].toUserId !== ctx.user.id) {
         throw new TRPCError({ code: "FORBIDDEN", message: "You can only respond to ratings about you" });
       }
@@ -136,29 +151,101 @@ export const ratingsRouter = router({
 
       const payment = await getPaymentByJob(input.jobId);
       if (!payment || payment.status !== "released") {
-        return []; // Ratings locked until payment released
+        return [];
       }
 
       return getRatingsByJob(input.jobId);
     }),
 
-  // Get all ratings for a user (public profile)
+  // Get all ratings received by a user (public — no payment gate, for profiles)
   forUser: protectedProcedure
     .input(z.object({ userId: z.number() }))
     .query(async ({ input }) => {
-      return getRatingsForUser(input.userId);
+      const db = await getDb();
+      if (!db) return [];
+      const { ratings: ratingsTable, users } = await import("../../drizzle/schema");
+      const { eq } = await import("drizzle-orm");
+
+      // Join with rater info
+      const rows = await db
+        .select({
+          id: ratingsTable.id,
+          jobId: ratingsTable.jobId,
+          score: ratingsTable.score,
+          comment: ratingsTable.comment,
+          response: ratingsTable.response,
+          raterType: ratingsTable.raterType,
+          createdAt: ratingsTable.createdAt,
+          raterName: users.name,
+          raterImage: users.profileImage,
+          raterRole: users.userType,
+        })
+        .from(ratingsTable)
+        .leftJoin(users, eq(ratingsTable.fromUserId, users.id))
+        .where(eq(ratingsTable.toUserId, input.userId))
+        .orderBy(ratingsTable.createdAt);
+
+      return rows.reverse(); // newest first
+    }),
+
+  // Get ratings I have given
+  given: protectedProcedure.query(async ({ ctx }) => {
+    const db = await getDb();
+    if (!db) return [];
+    const { ratings: ratingsTable, users, jobs: jobsTable } = await import("../../drizzle/schema");
+    const { eq } = await import("drizzle-orm");
+
+    const rows = await db
+      .select({
+        id: ratingsTable.id,
+        jobId: ratingsTable.jobId,
+        score: ratingsTable.score,
+        comment: ratingsTable.comment,
+        raterType: ratingsTable.raterType,
+        createdAt: ratingsTable.createdAt,
+        recipientName: users.name,
+        recipientImage: users.profileImage,
+        recipientType: users.userType,
+        jobRole: jobsTable.role,
+        jobRestaurant: jobsTable.restaurantName,
+      })
+      .from(ratingsTable)
+      .leftJoin(users, eq(ratingsTable.toUserId, users.id))
+      .leftJoin(jobsTable, eq(ratingsTable.jobId, jobsTable.id))
+      .where(eq(ratingsTable.fromUserId, ctx.user.id))
+      .orderBy(ratingsTable.createdAt);
+
+    return rows.reverse();
+  }),
+
+  // Get rating stats for a user (avg, count, score breakdown)
+  stats: protectedProcedure
+    .input(z.object({ userId: z.number() }))
+    .query(async ({ input }) => {
+      const allRatings = await getRatingsForUser(input.userId);
+      if (allRatings.length === 0) {
+        return { avg: 0, total: 0, breakdown: { 5: 0, 4: 0, 3: 0, 2: 0, 1: 0 } };
+      }
+      const avg = allRatings.reduce((s, r) => s + r.score, 0) / allRatings.length;
+      const breakdown: Record<number, number> = { 5: 0, 4: 0, 3: 0, 2: 0, 1: 0 };
+      for (const r of allRatings) {
+        breakdown[r.score] = (breakdown[r.score] ?? 0) + 1;
+      }
+      return {
+        avg: Math.round(avg * 10) / 10,
+        total: allRatings.length,
+        breakdown,
+      };
     }),
 
   // Get my pending ratings (shifts I need to rate)
   pendingRatings: protectedProcedure.query(async ({ ctx }) => {
-    const { getDb } = await import("../db");
     const db = await getDb();
     if (!db) return [];
 
-    const { jobs: jobsTable, payments: paymentsTable, ratings: ratingsTable } = await import("../../drizzle/schema");
-    const { eq, or, and, isNull } = await import("drizzle-orm");
+    const { jobs: jobsTable } = await import("../../drizzle/schema");
+    const { eq, or, and } = await import("drizzle-orm");
 
-    // Find completed jobs where payment is released and I haven't rated yet
     const myCompletedJobs = await db
       .select()
       .from(jobsTable)
@@ -179,12 +266,46 @@ export const ratingsRouter = router({
 
       const myRating = await getRatingByJobAndRater(job.id, ctx.user.id);
       if (!myRating) {
-        pending.push({ job, payment });
+        // Get the other party's info
+        const otherUserId = job.employerId === ctx.user.id
+          ? (job.acceptedWorkerId ?? 0)
+          : job.employerId;
+        const otherUser = otherUserId ? await getUserById(otherUserId) : null;
+        pending.push({ job, payment, otherUser });
       }
     }
 
     return pending;
   }),
+
+  // Get completed shifts for rating context (single job detail)
+  jobRatingContext: protectedProcedure
+    .input(z.object({ jobId: z.number() }))
+    .query(async ({ ctx, input }) => {
+      const job = await getJobById(input.jobId);
+      if (!job) throw new TRPCError({ code: "NOT_FOUND" });
+
+      const isEmployer = job.employerId === ctx.user.id;
+      const isWorker = job.acceptedWorkerId === ctx.user.id;
+      if (!isEmployer && !isWorker) {
+        throw new TRPCError({ code: "FORBIDDEN", message: "You are not part of this shift" });
+      }
+
+      const payment = await getPaymentByJob(input.jobId);
+      const myRating = await getRatingByJobAndRater(input.jobId, ctx.user.id);
+
+      const otherUserId = isEmployer ? (job.acceptedWorkerId ?? 0) : job.employerId;
+      const otherUser = otherUserId ? await getUserById(otherUserId) : null;
+
+      return {
+        job,
+        payment,
+        myRating,
+        otherUser,
+        isEmployer,
+        canRate: job.status === "completed" && payment?.status === "released" && !myRating,
+      };
+    }),
 
   ratingLabels: protectedProcedure.query(() => RATING_LABELS),
 });

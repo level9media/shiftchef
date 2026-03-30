@@ -323,6 +323,7 @@ export async function getAdminStats() {
   const [totalPayments] = await db.select({ count: sql<number>`count(*)`, total: sql<number>`sum(amount)` }).from(payments);
   const [releasedPayments] = await db.select({ total: sql<number>`sum(amount)`, fees: sql<number>`sum(platformFee)` }).from(payments).where(eq(payments.status, "released"));
   const [totalApplications] = await db.select({ count: sql<number>`count(*)` }).from(applications);
+  const [ratingStats] = await db.select({ count: sql<number>`count(*)`, avg: sql<number>`avg(score)` }).from(ratings);
 
   return {
     totalUsers: Number(totalUsers?.count ?? 0),
@@ -333,6 +334,8 @@ export async function getAdminStats() {
     totalPlatformFees: Number(releasedPayments?.fees ?? 0),
     totalReleased: Number(releasedPayments?.total ?? 0),
     totalApplications: Number(totalApplications?.count ?? 0),
+    totalRatings: Number(ratingStats?.count ?? 0),
+    avgPlatformRating: ratingStats?.avg ? parseFloat(Number(ratingStats.avg).toFixed(2)) : null,
   };
 }
 
@@ -358,4 +361,30 @@ export async function getAdminRecentJobs(limit = 20) {
   const db = await getDb();
   if (!db) return [];
   return db.select().from(jobs).orderBy(desc(jobs.createdAt)).limit(limit);
+}
+
+export async function getAdminRecentRatings(limit = 10) {
+  const db = await getDb();
+  if (!db) return [];
+  const rows = await db
+    .select({
+      id: ratings.id,
+      score: ratings.score,
+      comment: ratings.comment,
+      createdAt: ratings.createdAt,
+      fromUserId: ratings.fromUserId,
+      toUserId: ratings.toUserId,
+    })
+    .from(ratings)
+    .orderBy(desc(ratings.createdAt))
+    .limit(limit);
+  // Enrich with user names
+  const enriched = await Promise.all(
+    rows.map(async (r) => {
+      const [from] = await db!.select({ name: users.name }).from(users).where(eq(users.id, r.fromUserId)).limit(1);
+      const [to] = await db!.select({ name: users.name }).from(users).where(eq(users.id, r.toUserId)).limit(1);
+      return { ...r, fromName: from?.name ?? "User", toName: to?.name ?? "User" };
+    })
+  );
+  return enriched;
 }

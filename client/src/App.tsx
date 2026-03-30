@@ -20,6 +20,8 @@ import WorkerVerification from "./pages/WorkerVerification";
 import ContractAgreement from "./pages/ContractAgreement";
 import EmployerOnboarding from "./pages/EmployerOnboarding";
 import EmailSequence from "./pages/EmailSequence";
+import RateShift from "./pages/RateShift";
+import ReviewHistory from "./pages/ReviewHistory";
 
 function Router() {
   return (
@@ -39,6 +41,8 @@ function Router() {
       <Route path="/contract" component={ContractAgreement} />
       <Route path="/employer-onboarding" component={EmployerOnboarding} />
       <Route path="/admin/emails" component={EmailSequence} />
+      <Route path="/rate/:jobId" component={RateShift} />
+      <Route path="/reviews/:userId" component={ReviewHistory} />
       <Route path="/404" component={NotFound} />
       <Route component={NotFound} />
     </Switch>
