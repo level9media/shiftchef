@@ -6,7 +6,8 @@ import { useLocation } from "wouter";
 import { useState } from "react";
 import {
   Clock, CheckCircle, XCircle, ChefHat, Briefcase,
-  DollarSign, Star, Zap, ArrowRight, CheckCircle2, ChevronRight
+  DollarSign, Star, Zap, ArrowRight, CheckCircle2, ChevronRight,
+  LogIn, LogOut, Timer
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
@@ -75,6 +76,17 @@ export default function Applications() {
   });
   const releaseMutation = trpc.payments.releasePayment.useMutation({
     onSuccess: () => { toast.success("Payment released to worker!"); utils.jobs.myJobs.invalidate(); },
+    onError: (e) => toast.error(e.message),
+  });
+  const checkInMutation = trpc.shifts.checkIn.useMutation({
+    onSuccess: () => { toast.success("Checked in! Have a great shift."); utils.applications.myApplications.invalidate(); },
+    onError: (e) => toast.error(e.message),
+  });
+  const clockOutMutation = trpc.shifts.clockOut.useMutation({
+    onSuccess: (data) => {
+      toast.success(`Shift complete! ${data.hoursWorked}h worked · $${data.totalWagesOwed} earned`);
+      utils.applications.myApplications.invalidate();
+    },
     onError: (e) => toast.error(e.message),
   });
   const { data: pendingRatings } = trpc.ratings.pendingRatings.useQuery(
@@ -190,7 +202,7 @@ export default function Applications() {
                       </div>
                     )}
 
-                    {app.status === "accepted" && (
+                    {app.status === "accepted" && !app.checkInAt && (
                       <div className="mt-2 p-3 bg-emerald-500/10 border border-emerald-500/30 rounded-xl">
                         <p className="text-xs text-emerald-400 font-bold mb-2">Accepted! Pay to confirm your shift.</p>
                         <Button
@@ -200,6 +212,41 @@ export default function Applications() {
                           onClick={(e) => { e.stopPropagation(); payMutation.mutate({ jobId: app.jobId ?? app.job?.id, origin: window.location.origin }); }}
                         >
                           {payMutation.isPending ? "Processing..." : `Pay & Confirm Shift`}
+                        </Button>
+                      </div>
+                    )}
+
+                    {app.status === "accepted" && app.checkInAt && !app.checkOutAt && (
+                      <div className="mt-2 p-3 bg-blue-500/10 border border-blue-500/30 rounded-xl">
+                        <div className="flex items-center gap-2 mb-2">
+                          <Timer size={12} className="text-blue-400" />
+                          <p className="text-xs text-blue-400 font-bold">
+                            Checked in at {new Date(Number(app.checkInAt)).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
+                          </p>
+                        </div>
+                        <Button
+                          size="sm"
+                          className="w-full rounded-xl text-xs font-bold bg-blue-600 hover:bg-blue-700"
+                          disabled={clockOutMutation.isPending}
+                          onClick={(e) => { e.stopPropagation(); clockOutMutation.mutate({ applicationId: app.id }); }}
+                        >
+                          <LogOut size={11} className="mr-1.5" />
+                          {clockOutMutation.isPending ? "Clocking out..." : "Clock Out"}
+                        </Button>
+                      </div>
+                    )}
+
+                    {app.status === "accepted" && !app.checkInAt && (
+                      <div className="mt-1">
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          className="w-full rounded-xl text-xs font-bold border-emerald-500/40 text-emerald-400 hover:bg-emerald-500/10"
+                          disabled={checkInMutation.isPending}
+                          onClick={(e) => { e.stopPropagation(); checkInMutation.mutate({ applicationId: app.id }); }}
+                        >
+                          <LogIn size={11} className="mr-1.5" />
+                          {checkInMutation.isPending ? "Checking in..." : "Check In"}
                         </Button>
                       </div>
                     )}

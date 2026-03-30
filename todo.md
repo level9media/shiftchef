@@ -241,8 +241,8 @@
 ## Full Hire Flow & Same-Day Pay (v11)
 
 ### Phase 1: Fix Job Detail Crash
-- [ ] Diagnose and fix runtime crash on /jobs/:id page
-- [ ] Verify job detail loads cleanly on mobile
+- [x] Diagnose and fix runtime crash on /jobs/:id page
+- [x] Verify job detail loads cleanly on mobile
 
 ### Phase 2: Apply Flow
 - [ ] Application form: cover note + bank account info (routing + account number, encrypted)
@@ -282,24 +282,24 @@
 - [x] Fix Rules of Hooks violation in JobDetail.tsx (hook called after early return causes crash on /jobs/:id)
 
 ## Marketing Pages (v10)
-- [ ] Pricing page at /pricing — employer tiers ($35/$75/$99), worker free tier, Stripe CTAs
-- [ ] How It Works page at /how-it-works — employer flow (post→hire→pay) + worker flow (apply→work→earn)
-- [ ] FAQ page at /faq — top objections for employers and workers
-- [ ] Wire all three routes into App.tsx
-- [ ] Add footer links to Pricing, How It Works, FAQ from Home page
-- [ ] SEOHead on all three new pages
+- [x] Pricing page at /pricing — employer tiers ($35/$75/$99), worker free tier, Stripe CTAs
+- [x] How It Works page at /how-it-works — employer flow (post→hire→pay) + worker flow (apply→work→earn)
+- [x] FAQ page at /faq — top objections for employers and workers
+- [x] Wire all three routes into App.tsx
+- [x] Add footer links to Pricing, How It Works, FAQ from Home page
+- [x] SEOHead on all three new pages
 
 ## Marketplace Growth Hacks (v11)
-- [ ] Feed: Live activity header (shifts posted in last 3h + workers available now)
-- [ ] Feed: Backend procedure to count recent activity (last 3h jobs, available workers)
-- [ ] Feed: Urgency tags on job cards (TONIGHT, Expires in Xh, HOT badge)
-- [ ] Feed: Urgency logic (tonight = shift date is today, expires = within 2h of shift start)
-- [ ] DB: Seed 15-20 demo job posts across Austin/Phoenix/Mesa
-- [ ] DB: Seed 10-15 demo worker profiles with availability set
-- [ ] Schema: Add permanentPotential boolean field to jobs table
-- [ ] Feed: Permanent/temp visual tag on job cards (green arrow vs orange flag)
-- [ ] PostJob: Add "Could become permanent" toggle when posting
-- [ ] JobDetail: Show permanent potential badge prominently
+- [x] Feed: Live activity header (shifts posted in last 3h + workers available now)
+- [x] Feed: Backend procedure to count recent activity (last 3h jobs, available workers)
+- [x] Feed: Urgency tags on job cards (TONIGHT, Expires in Xh, HOT badge)
+- [x] Feed: Urgency logic (tonight = shift date is today, expires = within 2h of shift start)
+- [x] DB: Seed 15-20 demo job posts across Austin/Phoenix/Mesa
+- [x] DB: Seed 10-15 demo worker profiles with availability set
+- [x] Schema: Add permanentPotential boolean field to jobs table
+- [x] Feed: Permanent/temp visual tag on job cards (green arrow vs orange flag)
+- [x] PostJob: Add "Could become permanent" toggle when posting
+- [x] JobDetail: Show permanent potential badge prominently
 
 ## Stripe Connect Payout Audit Fixes (v11)
 - [x] Fix withdraw procedure: Express accounts auto-payout — replace misleading toast with Stripe Express dashboard link
@@ -309,3 +309,36 @@
 - [x] Add Stripe Connect status banner on worker dashboard: "Connect your bank to receive same-day pay"
 - [x] Fix releasePayment: if transfer fails, store in pendingBalance and flag for retry rather than silently continuing
 - [x] Add admin view: payments stuck in "held" state older than 24h
+
+## PWA & iOS App Store (v12)
+- [x] manifest.json: name, short_name, icons (192/512), theme_color, background_color, shortcuts, screenshots
+- [x] sw.js: network-first for navigation, cache-first for static assets, push notification handler, offline fallback
+- [x] offline.html: branded offline page with retry button
+- [x] index.html: apple-mobile-web-app-capable, apple-mobile-web-app-status-bar-style, apple-touch-icon, apple-touch-startup-image (3 sizes)
+- [x] index.html: service worker auto-registration script
+- [x] PWAInstallPrompt component: Android native install prompt + iOS "Share → Add to Home Screen" instructions
+- [x] PWAInstallPrompt wired into App.tsx (shows after 3s, dismissible, respects standalone mode)
+- [x] Capacitor: @capacitor/core + @capacitor/cli + @capacitor/ios installed
+- [x] capacitor.config.ts: appId=co.shiftchef.app, webDir=dist, dark background, portrait mode, status bar config
+- [x] package.json: build:client script added for Capacitor CI
+- [x] .github/workflows/ios-build.yml: full CI pipeline (build → sync → sign → archive → export → TestFlight)
+- [x] CAPACITOR_IOS_SETUP.md: step-by-step guide for Apple Developer setup, GitHub secrets, one-time ios/ generation
+
+## Hire Flow & Shift Tracking (v13)
+- [x] Worker Check In button on accepted application cards (opens 30 min before shift)
+- [x] Worker Clock Out button with hours worked + wages owed calculation
+- [x] shifts.checkIn tRPC procedure with 30-min early window enforcement
+- [x] shifts.clockOut tRPC procedure with auto hours/wages computation
+- [x] shifts.markStarted / markEnded procedures for employer side
+- [x] shifts.status query for real-time shift state
+
+## Coupon System (v13)
+- [x] coupons.redeem procedure: validates code, applies free post credits, marks used
+- [x] coupons.generate procedure: admin single-code generation
+- [x] coupons.bulkGenerate procedure: up to 500 codes in one call
+- [x] coupons.list procedure: admin view of all codes with status
+- [x] Coupon input field on PostJob pricing step (before purchase CTAs)
+- [x] Admin Coupon Manager page at /admin/coupons
+- [x] Bulk generate form: count, prefix, expiry, notes
+- [x] Copy-all and CSV export for generated codes
+- [x] Coupon link added to Admin Dashboard header

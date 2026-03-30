@@ -26,6 +26,7 @@ import Pricing from "./pages/Pricing";
 import HowItWorks from "./pages/HowItWorks";
 import FAQ from "./pages/FAQ";
 import { PWAInstallPrompt } from "./components/PWAInstallPrompt";
+import AdminCoupons from "./pages/AdminCoupons";
 
 function Router() {
   return (
@@ -45,6 +46,7 @@ function Router() {
       <Route path="/contract" component={ContractAgreement} />
       <Route path="/employer-onboarding" component={EmployerOnboarding} />
       <Route path="/admin/emails" component={EmailSequence} />
+      <Route path="/admin/coupons" component={AdminCoupons} />
       <Route path="/rate/:jobId" component={RateShift} />
       <Route path="/reviews/:userId" component={ReviewHistory} />
       <Route path="/pricing" component={Pricing} />

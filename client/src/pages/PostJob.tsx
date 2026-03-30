@@ -28,9 +28,20 @@ export default function PostJob() {
   const { isAuthenticated } = useAuth();
   const [, navigate] = useLocation();
   const [step, setStep] = useState<Step>("pricing");
+  const [couponCode, setCouponCode] = useState("");
+  const [couponApplied, setCouponApplied] = useState(false);
 
   const { data: profile } = trpc.profile.get.useQuery(undefined, { enabled: isAuthenticated, retry: false });
   const utils = trpc.useUtils();
+
+  const redeemCouponMutation = trpc.coupons.redeem.useMutation({
+    onSuccess: (data) => {
+      toast.success(data.message);
+      setCouponApplied(true);
+      utils.profile.get.invalidate();
+    },
+    onError: (e) => toast.error(e.message),
+  });
 
   const purchaseMutation = trpc.payments.purchaseCredits.useMutation({
     onSuccess: (data) => {
@@ -140,6 +151,37 @@ export default function PostJob() {
                 </Button>
               </div>
             )}
+
+            {/* Coupon Code Input */}
+            <div className="bg-card border border-border rounded-2xl p-4">
+              <p className="text-xs font-bold text-muted-foreground uppercase tracking-wider mb-3">Have a Coupon Code?</p>
+              {couponApplied ? (
+                <div className="flex items-center gap-2 text-emerald-400">
+                  <Check size={14} strokeWidth={2.5} />
+                  <span className="text-sm font-bold">Coupon applied! Credits added.</span>
+                </div>
+              ) : (
+                <div className="flex gap-2">
+                  <input
+                    type="text"
+                    value={couponCode}
+                    onChange={(e) => setCouponCode(e.target.value.toUpperCase())}
+                    placeholder="SHIFT-XXXXXXXX"
+                    className="flex-1 bg-secondary border border-border rounded-xl px-3 py-2 text-sm font-mono text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-primary/50"
+                    maxLength={20}
+                  />
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    className="rounded-xl px-4 flex-shrink-0"
+                    disabled={!couponCode.trim() || redeemCouponMutation.isPending}
+                    onClick={() => redeemCouponMutation.mutate({ code: couponCode.trim() })}
+                  >
+                    {redeemCouponMutation.isPending ? "..." : "Apply"}
+                  </Button>
+                </div>
+              )}
+            </div>
 
             <p className="text-xs font-bold text-muted-foreground uppercase tracking-wider pt-1">Choose a Plan</p>
 

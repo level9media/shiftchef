@@ -4,7 +4,7 @@ import AppShell from "@/components/AppShell";
 import { Link } from "wouter";
 import {
   DollarSign, Users, Briefcase, TrendingUp, ChefHat,
-  Activity, Clock, CheckCircle, AlertCircle, ArrowLeft, ShieldCheck, Mail, Star
+  Activity, Clock, CheckCircle, AlertCircle, ArrowLeft, ShieldCheck, Mail, Star, Tag
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
@@ -91,6 +91,11 @@ export default function AdminDashboard() {
             <Link href="/admin/emails">
               <button className="flex items-center gap-1.5 text-[10px] font-black bg-secondary text-muted-foreground px-2 py-1 rounded-full hover:bg-primary/20 hover:text-primary transition-colors">
                 <Mail size={9} /> Emails
+              </button>
+            </Link>
+            <Link href="/admin/coupons">
+              <button className="flex items-center gap-1.5 text-[10px] font-black bg-secondary text-muted-foreground px-2 py-1 rounded-full hover:bg-primary/20 hover:text-primary transition-colors">
+                <Tag size={9} /> Coupons
               </button>
             </Link>
             <span className="text-[10px] font-black bg-primary/20 text-primary px-2 py-1 rounded-full">ADMIN</span>

@@ -12,6 +12,8 @@ import { adminRouter } from "./routers/admin";
 import { verificationRouter } from "./routers/verification";
 import { contractRouter } from "./routers/contract";
 import { onboardingRouter } from "./routers/onboarding";
+import { couponsRouter } from "./routers/coupons";
+import { shiftsRouter } from "./routers/shifts";
 
 export const appRouter = router({
   system: systemRouter,
@@ -33,6 +35,8 @@ export const appRouter = router({
   verification: verificationRouter,
   contract: contractRouter,
   onboarding: onboardingRouter,
+  coupons: couponsRouter,
+  shifts: shiftsRouter,
 });
 
 export type AppRouter = typeof appRouter;
