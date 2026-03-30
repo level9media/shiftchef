@@ -2,7 +2,11 @@ import { useAuth } from "@/_core/hooks/useAuth";
 import { trpc } from "@/lib/trpc";
 import AppShell from "@/components/AppShell";
 import { Button } from "@/components/ui/button";
-import { DollarSign, TrendingUp, Clock, CheckCircle, Wallet, ArrowDownLeft, ChefHat, AlertCircle } from "lucide-react";
+import {
+  DollarSign, TrendingUp, Clock, CheckCircle, Wallet,
+  ArrowDownLeft, ChefHat, AlertCircle, Banknote, Smartphone,
+  ExternalLink, ShieldCheck, RefreshCw
+} from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 
@@ -19,14 +23,23 @@ export default function Earnings() {
     undefined, { enabled: isAuthenticated }
   );
 
-  const withdrawMutation = trpc.payments.withdraw.useMutation({
-    onSuccess: () => { toast.success("Withdrawal initiated!"); refetch(); },
-    onError: (e) => toast.error(e.message),
-  });
-
-  const { data: stripeStatusData } = trpc.payments.stripeStatus.useQuery(
+  const { data: stripeStatusData, refetch: refetchStatus } = trpc.payments.stripeStatus.useQuery(
     undefined, { enabled: isAuthenticated }
   );
+
+  const withdrawMutation = trpc.payments.withdraw.useMutation({
+    onSuccess: (data) => {
+      const method = (data as any).method;
+      if (method === "stripe_transfer") {
+        toast.success("Transfer initiated! Funds will arrive in 1–2 business days.");
+      } else {
+        toast.success("Payout queued — Stripe Express will deposit automatically.");
+      }
+      refetch();
+      refetchStatus();
+    },
+    onError: (e) => toast.error(e.message),
+  });
 
   const connectStripeMutation = trpc.payments.connectStripe.useMutation({
     onSuccess: (data) => {
@@ -36,6 +49,13 @@ export default function Earnings() {
       } else {
         toast.success("Stripe account already connected!");
       }
+    },
+    onError: (e) => toast.error(e.message),
+  });
+
+  const expressDashboardMutation = trpc.payments.getExpressDashboardLink.useMutation({
+    onSuccess: (data) => {
+      window.open(data.url, "_blank");
     },
     onError: (e) => toast.error(e.message),
   });
@@ -55,6 +75,8 @@ export default function Earnings() {
   const totalFees = earnings?.totalFees ?? 0;
   const history = earnings?.history ?? [];
   const stripeConnected = stripeStatusData?.onboardingComplete ?? earnings?.stripeOnboardingComplete ?? false;
+  const stripeAccountId = earnings?.stripeAccountId;
+  const hasStripeAccount = !!(stripeAccountId && !stripeAccountId.startsWith("acct_sim_"));
 
   // amounts come in cents from server
   const fmt = (cents: number) => (cents / 100).toFixed(2);
@@ -62,6 +84,31 @@ export default function Earnings() {
   return (
     <AppShell>
       <div className="max-w-lg mx-auto px-4 py-4 space-y-4 pb-10">
+
+        {/* ── Connect Banner (not yet connected) ────────────────────────── */}
+        {!stripeConnected && (
+          <div className="bg-yellow-500/10 border border-yellow-500/30 rounded-2xl p-4 flex gap-3 items-start">
+            <AlertCircle size={18} className="text-yellow-400 flex-shrink-0 mt-0.5" />
+            <div className="flex-1">
+              <p className="font-bold text-yellow-300 text-sm">Connect your bank to get paid</p>
+              <p className="text-xs text-yellow-400/80 mt-0.5 mb-3">
+                Same-day pay is waiting. Connect your bank account via Stripe to receive your earnings after each shift.
+              </p>
+              <Button
+                size="sm"
+                className="w-full rounded-xl text-xs font-bold bg-yellow-500 hover:bg-yellow-400 text-black"
+                disabled={connectStripeMutation.isPending}
+                onClick={() => connectStripeMutation.mutate({ origin: window.location.origin })}
+              >
+                {connectStripeMutation.isPending ? (
+                  <><RefreshCw size={12} className="mr-1.5 animate-spin" />Setting up...</>
+                ) : (
+                  <><Banknote size={12} className="mr-1.5" />Connect Bank Account</>
+                )}
+              </Button>
+            </div>
+          </div>
+        )}
 
         {/* ── Balance Hero ──────────────────────────────────────────────── */}
         <div className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-primary/20 via-primary/10 to-transparent border border-primary/30 p-6">
@@ -75,33 +122,96 @@ export default function Earnings() {
             <p className="text-xs text-muted-foreground mt-0.5">After 10% platform fee</p>
           </div>
 
-          {!stripeConnected ? (
-            <div className="mt-4 bg-yellow-500/10 border border-yellow-500/30 rounded-xl p-3 relative z-10">
-              <p className="text-yellow-400 text-xs font-bold flex items-center gap-1.5 mb-2">
-                <AlertCircle size={12} /> Connect Stripe to withdraw
-              </p>
+          {stripeConnected ? (
+            <div className="mt-4 space-y-2 relative z-10">
+              {/* Primary: Send to Bank */}
               <Button
-                size="sm"
-                className="w-full rounded-xl text-xs"
-                disabled={connectStripeMutation.isPending}
-                onClick={() => connectStripeMutation.mutate({ origin: window.location.origin })}
+                className="w-full h-12 font-bold rounded-2xl btn-glow"
+                disabled={available <= 0 || withdrawMutation.isPending}
+                onClick={() => withdrawMutation.mutate()}
               >
-                {connectStripeMutation.isPending ? "Setting up..." : "Connect Bank Account"}
+                {withdrawMutation.isPending ? (
+                  <div className="w-4 h-4 border-2 border-primary-foreground border-t-transparent rounded-full animate-spin" />
+                ) : (
+                  <><Banknote size={16} className="mr-2" />Send to Bank Account</>
+                )}
               </Button>
+
+              {/* Secondary: Add to Apple Pay / Express Dashboard */}
+              <div className="grid grid-cols-2 gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="rounded-xl text-xs font-bold border-border/50 bg-black/20"
+                  disabled={available <= 0 || withdrawMutation.isPending}
+                  onClick={() => {
+                    // Apple Pay / instant payout — routes through same withdraw flow
+                    // Stripe Express supports instant payouts to debit cards
+                    toast.info("Opening Stripe dashboard to set up instant payout...");
+                    if (hasStripeAccount) {
+                      expressDashboardMutation.mutate();
+                    } else {
+                      connectStripeMutation.mutate({ origin: window.location.origin });
+                    }
+                  }}
+                >
+                  <Smartphone size={12} className="mr-1.5" />Add to Apple Pay
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="rounded-xl text-xs font-bold border-border/50 bg-black/20"
+                  disabled={expressDashboardMutation.isPending}
+                  onClick={() => expressDashboardMutation.mutate()}
+                >
+                  {expressDashboardMutation.isPending ? (
+                    <RefreshCw size={12} className="mr-1.5 animate-spin" />
+                  ) : (
+                    <ExternalLink size={12} className="mr-1.5" />
+                  )}
+                  Stripe Dashboard
+                </Button>
+              </div>
+
+              {/* Connected badge */}
+              <div className="flex items-center gap-1.5 justify-center pt-1">
+                <ShieldCheck size={11} className="text-emerald-400" />
+                <p className="text-[10px] text-emerald-400 font-medium">Bank connected via Stripe Express</p>
+              </div>
             </div>
           ) : (
             <Button
-              className="w-full mt-4 h-12 font-bold rounded-2xl btn-glow relative z-10"
-              disabled={available <= 0 || withdrawMutation.isPending}
-              onClick={() => withdrawMutation.mutate()}
+              className="w-full mt-4 h-12 font-bold rounded-2xl relative z-10"
+              variant="outline"
+              disabled={connectStripeMutation.isPending}
+              onClick={() => connectStripeMutation.mutate({ origin: window.location.origin })}
             >
-              {withdrawMutation.isPending ? (
-                <div className="w-4 h-4 border-2 border-primary-foreground border-t-transparent rounded-full animate-spin" />
-              ) : (
-                <><ArrowDownLeft size={16} className="mr-2" />Withdraw ${fmt(available)}</>
-              )}
+              <Banknote size={16} className="mr-2" />Connect Bank to Withdraw
             </Button>
           )}
+        </div>
+
+        {/* ── How Payouts Work ──────────────────────────────────────────── */}
+        <div className="bg-card rounded-2xl border border-border p-4">
+          <p className="text-xs font-bold text-muted-foreground uppercase tracking-wider mb-3">How Same-Day Pay Works</p>
+          <div className="space-y-2.5">
+            {[
+              { icon: CheckCircle, color: "text-emerald-400", label: "Shift completed", sub: "Employer marks shift as ended" },
+              { icon: DollarSign, color: "text-primary", label: "Payment released", sub: "90% goes to you, 10% platform fee" },
+              { icon: Banknote, color: "text-blue-400", label: "Instant transfer", sub: "Stripe sends to your connected bank" },
+              { icon: Smartphone, color: "text-purple-400", label: "Same-day access", sub: "Available via bank or Apple Pay" },
+            ].map(({ icon: Icon, color, label, sub }) => (
+              <div key={label} className="flex items-center gap-3">
+                <div className={cn("w-7 h-7 rounded-lg bg-card border border-border flex items-center justify-center flex-shrink-0", color)}>
+                  <Icon size={13} />
+                </div>
+                <div>
+                  <p className="text-xs font-bold text-foreground">{label}</p>
+                  <p className="text-[10px] text-muted-foreground">{sub}</p>
+                </div>
+              </div>
+            ))}
+          </div>
         </div>
 
         {/* ── Stats ─────────────────────────────────────────────────────── */}

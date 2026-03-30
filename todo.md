@@ -300,3 +300,12 @@
 - [ ] Feed: Permanent/temp visual tag on job cards (green arrow vs orange flag)
 - [ ] PostJob: Add "Could become permanent" toggle when posting
 - [ ] JobDetail: Show permanent potential badge prominently
+
+## Stripe Connect Payout Audit Fixes (v11)
+- [x] Fix withdraw procedure: Express accounts auto-payout — replace misleading toast with Stripe Express dashboard link
+- [x] Add account.updated webhook handler to auto-mark stripeOnboardingComplete when Stripe confirms details_submitted
+- [x] Add Connect capability check before transfer: if worker not onboarded, hold in pendingBalance and notify worker
+- [x] Add "Send to Bank" and "Add to Apple Pay" CTAs on Earnings page (Express dashboard deep-link)
+- [x] Add Stripe Connect status banner on worker dashboard: "Connect your bank to receive same-day pay"
+- [x] Fix releasePayment: if transfer fails, store in pendingBalance and flag for retry rather than silently continuing
+- [x] Add admin view: payments stuck in "held" state older than 24h

@@ -243,7 +243,18 @@ export const paymentsRouter = router({
 
       // Transfer 90% to worker's connected Stripe account
       const worker = await getUserById(payment.workerId);
+      let transferSucceeded = true;
       if (worker?.stripeAccountId && !worker.stripeAccountId.startsWith("acct_sim_")) {
+        // Check worker has completed onboarding before attempting transfer
+        try {
+          const acct = await stripe.accounts.retrieve(worker.stripeAccountId);
+          if (!acct.details_submitted || !acct.charges_enabled) {
+            console.warn(`[Stripe] Worker ${worker.id} Connect not fully onboarded — holding in pendingBalance`);
+            transferSucceeded = false;
+          }
+        } catch { transferSucceeded = false; }
+      }
+      if (transferSucceeded && worker?.stripeAccountId && !worker.stripeAccountId.startsWith("acct_sim_")) {
         try {
           await stripe.transfers.create({
             amount: payment.workerPayout,
@@ -254,7 +265,9 @@ export const paymentsRouter = router({
           });
         } catch (err: any) {
           console.error("[Stripe] Transfer failed:", err.message);
-          // Don't block release — log and continue, handle manually
+          // Transfer failed — hold funds in pendingBalance for manual retry
+          // Worker will see balance in dashboard and can retry via withdraw
+          transferSucceeded = false;
         }
       }
 
@@ -263,6 +276,8 @@ export const paymentsRouter = router({
       await updateJob(input.jobId, { status: "completed" });
 
       if (worker) {
+        // Always credit pendingBalance — if transfer succeeded, Express auto-pays out;
+        // if it failed, balance stays here until worker retries withdraw
         await updateUser(payment.workerId, {
           pendingBalance: (worker.pendingBalance ?? 0) + payment.workerPayout,
           totalEarned: (worker.totalEarned ?? 0) + payment.workerPayout,
@@ -274,7 +289,7 @@ export const paymentsRouter = router({
         content: `$${(payment.workerPayout / 100).toFixed(2)} released for ${job.role} at ${job.restaurantName ?? "venue"}. Platform fee: $${(payment.platformFee / 100).toFixed(2)}.`,
       }).catch(() => {});
 
-      return { success: true, workerPayout: payment.workerPayout, platformFee: payment.platformFee };
+      return { success: true, workerPayout: payment.workerPayout, platformFee: payment.platformFee, transferSucceeded };
     }),
 
   // ── Worker: Connect Stripe Express account ────────────────────────────────
@@ -365,22 +380,50 @@ export const paymentsRouter = router({
   }),
 
   // ── Worker: Withdraw (Stripe payout to connected bank) ───────────────────
+  // For Express accounts: Stripe auto-pays out on a rolling basis.
+  // This procedure handles any held pendingBalance not yet transferred.
   withdraw: protectedProcedure.mutation(async ({ ctx }) => {
     const stripe = getStripe();
     const user = await getUserById(ctx.user.id);
     if (!user) throw new TRPCError({ code: "NOT_FOUND" });
     if (!user.stripeOnboardingComplete) {
-      throw new TRPCError({ code: "BAD_REQUEST", message: "Please connect your Stripe account first" });
+      throw new TRPCError({ code: "BAD_REQUEST", message: "Please connect your Stripe account first to receive payouts" });
     }
     const balance = user.pendingBalance ?? 0;
     if (balance <= 0) throw new TRPCError({ code: "BAD_REQUEST", message: "No balance available to withdraw" });
 
-    // Stripe payouts happen automatically for Express accounts
-    // Manual payout for custom accounts — Express handles it automatically
-    // Just clear the internal pending balance
+    // Attempt transfer for any held balance not yet sent
+    if (user.stripeAccountId && !user.stripeAccountId.startsWith("acct_sim_")) {
+      try {
+        await stripe.transfers.create({
+          amount: balance,
+          currency: "usd",
+          destination: user.stripeAccountId,
+          metadata: { userId: String(ctx.user.id), type: "manual_withdraw" },
+        });
+        await updateUser(ctx.user.id, { pendingBalance: 0 });
+        return { success: true, amount: balance, method: "stripe_transfer" };
+      } catch (err: any) {
+        console.error("[Stripe] Withdraw transfer failed:", err.message);
+        throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Payout failed — please try again or contact support" });
+      }
+    }
+    // Express accounts: payouts are automatic — just clear internal balance
     await updateUser(ctx.user.id, { pendingBalance: 0 });
-    return { success: true, amount: balance };
+    return { success: true, amount: balance, method: "express_auto" };
   }),
+
+  // ── Worker: Get Stripe Express dashboard link ─────────────────────────────
+  getExpressDashboardLink: protectedProcedure
+    .mutation(async ({ ctx }) => {
+      const stripe = getStripe();
+      const user = await getUserById(ctx.user.id);
+      if (!user?.stripeAccountId || user.stripeAccountId.startsWith("acct_sim_")) {
+        throw new TRPCError({ code: "BAD_REQUEST", message: "No connected Stripe account" });
+      }
+      const loginLink = await stripe.accounts.createLoginLink(user.stripeAccountId);
+      return { url: loginLink.url };
+    }),
 
   // ── Pricing tiers ─────────────────────────────────────────────────────────
   pricingTiers: protectedProcedure.query(() => {

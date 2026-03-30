@@ -170,6 +170,27 @@ async function handleStripeEvent(event: any) {
       break;
     }
 
+    // ── Stripe Connect: account onboarding completed ─────────────────────
+    case "account.updated": {
+      const accountId = obj.id as string;
+      if (!accountId) break;
+      // Find user with this stripeAccountId and mark onboarding complete
+      if (obj.details_submitted && obj.charges_enabled) {
+        // Query users table for this stripeAccountId
+        const { getDb } = await import("../db");
+        const { users } = await import("../../drizzle/schema");
+        const { eq } = await import("drizzle-orm");
+        const db = await getDb();
+        if (!db) break;
+        const [user] = await db.select().from(users).where(eq(users.stripeAccountId, accountId)).limit(1);
+        if (user && !user.stripeOnboardingComplete) {
+          await updateUser(user.id, { stripeOnboardingComplete: true });
+          console.log(`[Webhook] ✅ Stripe Connect onboarding complete for user ${user.id} (account: ${accountId})`);
+        }
+      }
+      break;
+    }
+
     // ── Transfer to worker confirmed ──────────────────────────────────────
     case "transfer.created": {
       const jobId = parseInt(obj.metadata?.jobId ?? "0");
