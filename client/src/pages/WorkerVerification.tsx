@@ -1,4 +1,5 @@
 import { useState, useRef } from "react";
+import { SEOHead } from "@/components/SEOHead";
 import { useLocation } from "wouter";
 import { trpc } from "@/lib/trpc";
 import { useAuth } from "@/_core/hooks/useAuth";
@@ -98,6 +99,7 @@ export default function WorkerVerification() {
 
   return (
     <div className="min-h-screen bg-[#0A0A0A] pb-24">
+      <SEOHead title="Worker Verification" description="Verify your identity on ShiftChef to unlock shift applications. Upload your government ID to get verified." canonicalPath="/verify" />
       {/* Header */}
       <div className="sticky top-0 z-40 bg-[#0A0A0A]/95 backdrop-blur-xl border-b border-white/5 px-4 pt-12 pb-4">
         <div className="flex items-center gap-3">

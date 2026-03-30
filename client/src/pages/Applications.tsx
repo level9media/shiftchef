@@ -1,6 +1,7 @@
 import { useAuth } from "@/_core/hooks/useAuth";
 import { trpc } from "@/lib/trpc";
 import AppShell from "@/components/AppShell";
+import { SEOHead } from "@/components/SEOHead";
 import { Button } from "@/components/ui/button";
 import { useLocation } from "wouter";
 import { useState } from "react";
@@ -98,6 +99,7 @@ export default function Applications() {
 
   return (
     <AppShell>
+      <SEOHead title="My Shifts & Applications — ShiftChef" description="Manage your shift applications, track accepted jobs, check in and clock out. ShiftChef hospitality staffing." canonicalPath="/applications" />
       <div className="max-w-lg mx-auto">
         {/* ── Pending Ratings Banner ──────────────────────────────────── */}
         {pendingRatings && pendingRatings.length > 0 && (

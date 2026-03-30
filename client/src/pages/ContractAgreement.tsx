@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect, useCallback } from "react";
+import { SEOHead } from "@/components/SEOHead";
 import { useLocation } from "wouter";
 import { trpc } from "@/lib/trpc";
 import { useAuth } from "@/_core/hooks/useAuth";
@@ -270,7 +271,9 @@ export default function ContractAgreement() {
   const canSign = hasScrolled && agreed && legalName.trim().length >= 3 && !!signatureDataUrl;
 
   return (
-    <div className="min-h-screen bg-[#0A0A0A] pb-32">
+    <>
+      <SEOHead title="Contractor Agreement" description="Review and sign the ShiftChef 1099 independent contractor agreement to start working hospitality shifts." canonicalPath="/contract" />
+      <div className="min-h-screen bg-[#0A0A0A] pb-32">
       {/* Header */}
       <div className="sticky top-0 z-40 bg-[#0A0A0A]/95 backdrop-blur-xl border-b border-white/5 px-4 pt-12 pb-4">
         <div className="flex items-center gap-3">
@@ -508,5 +511,6 @@ export default function ContractAgreement() {
         )}
       </div>
     </div>
+    </>
   );
 }

@@ -1,4 +1,5 @@
 import { useAuth } from "@/_core/hooks/useAuth";
+import { SEOHead } from "@/components/SEOHead";
 import { trpc } from "@/lib/trpc";
 import AppShell from "@/components/AppShell";
 import { Button } from "@/components/ui/button";
@@ -83,6 +84,7 @@ export default function Earnings() {
 
   return (
     <AppShell>
+      <SEOHead title="Earnings & Payouts" description="Track your ShiftChef earnings, pending payouts, and connect your bank for same-day pay." canonicalPath="/earnings" />
       <div className="max-w-lg mx-auto px-4 py-4 space-y-4 pb-10">
 
         {/* ── Connect Banner (not yet connected) ────────────────────────── */}

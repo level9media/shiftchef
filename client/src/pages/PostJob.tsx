@@ -1,4 +1,5 @@
 import { useAuth } from "@/_core/hooks/useAuth";
+import { SEOHead } from "@/components/SEOHead";
 import { trpc } from "@/lib/trpc";
 import { Button } from "@/components/ui/button";
 import AppShell from "@/components/AppShell";
@@ -113,6 +114,7 @@ export default function PostJob() {
 
   return (
     <AppShell>
+      <SEOHead title="Post a Shift" description="Post a hospitality shift on ShiftChef. Reach verified Austin cooks, servers, bartenders and kitchen staff fast." canonicalPath="/post-job" />
       <div className="max-w-lg mx-auto px-4 py-4 pb-10">
         {/* Header */}
         <div className="flex items-center gap-3 mb-6">

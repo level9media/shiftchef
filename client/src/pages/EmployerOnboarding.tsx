@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { SEOHead } from "@/components/SEOHead";
 import { useLocation } from "wouter";
 import { trpc } from "@/lib/trpc";
 import { useAuth } from "@/_core/hooks/useAuth";
@@ -152,6 +153,8 @@ export default function EmployerOnboarding() {
   if (dismissed) return null;
 
   return (
+    <>
+      <SEOHead title="Employer Onboarding" description="Welcome to ShiftChef. Set up your employer account and start posting shifts to find verified hospitality staff." canonicalPath="/employer-onboarding" />
     <div className="min-h-screen bg-[#0A0A0A] flex flex-col">
       {/* Header */}
       <div className="px-4 pt-14 pb-4 flex items-center justify-between">
@@ -217,5 +220,6 @@ export default function EmployerOnboarding() {
         )}
       </div>
     </div>
+    </>
   );
 }

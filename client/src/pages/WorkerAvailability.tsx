@@ -1,4 +1,5 @@
 import { useAuth } from "@/_core/hooks/useAuth";
+import { SEOHead } from "@/components/SEOHead";
 import { trpc } from "@/lib/trpc";
 import AppShell from "@/components/AppShell";
 import { Button } from "@/components/ui/button";
@@ -37,6 +38,7 @@ export default function WorkerAvailability() {
 
   return (
     <AppShell>
+      <SEOHead title="Post Availability" description="Let Austin restaurants know you're available for shifts today. Post your availability on ShiftChef." canonicalPath="/availability" />
       <div className="max-w-lg mx-auto px-4 py-4 space-y-4 pb-10">
 
         {/* ── Hero Banner ───────────────────────────────────────────────── */}

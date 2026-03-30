@@ -1,0 +1,22 @@
+{
+  "query": "SELECT id, name, email, role FROM users WHERE email IN ('robertgray@gmail.com', 'levelninewebdesign@gmail.com');",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway05.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 3kQsL8UrXdZdNR1.f78a5b86a85c --database 5XtEwxhSav9aHUudDTD5pa --execute SELECT id, name, email, role FROM users WHERE email IN ('robertgray@gmail.com', 'levelninewebdesign@gmail.com');",
+  "rows": [
+    {
+      "id": "1",
+      "name": "Rob",
+      "email": "robertgray@gmail.com",
+      "role": "admin"
+    },
+    {
+      "id": "30003",
+      "name": "Rob Gray",
+      "email": "levelninewebdesign@gmail.com",
+      "role": "admin"
+    }
+  ],
+  "messages": [],
+  "stdout": "id\tname\temail\trole\n1\tRob\trobertgray@gmail.com\tadmin\n30003\tRob Gray\tlevelninewebdesign@gmail.com\tadmin\n",
+  "stderr": "",
+  "execution_time_ms": 52
+}

@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { SEOHead } from "@/components/SEOHead";
 import { trpc } from "@/lib/trpc";
 import { useAuth } from "@/_core/hooks/useAuth";
 import AppShell from "@/components/AppShell";
@@ -88,6 +89,7 @@ export default function AdminCoupons() {
 
   return (
     <AppShell>
+      <SEOHead title="Coupon Manager" description="Generate and manage ShiftChef employer promo codes and free posting credits." canonicalPath="/admin/coupons" />
       <div className="max-w-lg mx-auto px-4 py-4 pb-10">
         {/* Header */}
         <div className="flex items-center gap-3 mb-6">

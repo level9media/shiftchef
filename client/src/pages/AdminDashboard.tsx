@@ -1,4 +1,5 @@
 import { useAuth } from "@/_core/hooks/useAuth";
+import { SEOHead } from "@/components/SEOHead";
 import { trpc } from "@/lib/trpc";
 import AppShell from "@/components/AppShell";
 import { Link } from "wouter";
@@ -74,6 +75,7 @@ export default function AdminDashboard() {
 
   return (
     <AppShell>
+      <SEOHead title="Admin Dashboard" description="ShiftChef platform admin: revenue, users, jobs, verifications, and payments." canonicalPath="/admin" />
       <div className="max-w-lg mx-auto px-4 py-4 space-y-5 pb-10">
 
         {/* ── Header ────────────────────────────────────────────────────── */}

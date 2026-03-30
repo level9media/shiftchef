@@ -1,0 +1,130 @@
+{
+  "query": "SELECT id, name, email, role FROM users ORDER BY id ASC LIMIT 20;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway05.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 3kQsL8UrXdZdNR1.f78a5b86a85c --database 5XtEwxhSav9aHUudDTD5pa --execute SELECT id, name, email, role FROM users ORDER BY id ASC LIMIT 20;",
+  "rows": [
+    {
+      "id": "1",
+      "name": "Rob",
+      "email": "robertgray@gmail.com",
+      "role": "admin"
+    },
+    {
+      "id": "30003",
+      "name": "Rob Gray",
+      "email": "levelninewebdesign@gmail.com",
+      "role": "user"
+    },
+    {
+      "id": "90194",
+      "name": "Uchi Austin",
+      "email": "jobs@uchiaustin.com",
+      "role": "user"
+    },
+    {
+      "id": "90195",
+      "name": "Franklin Barbecue",
+      "email": "hiring@franklinbbq.com",
+      "role": "user"
+    },
+    {
+      "id": "90196",
+      "name": "Launderette",
+      "email": "jobs@launderette.com",
+      "role": "user"
+    },
+    {
+      "id": "90197",
+      "name": "Odd Duck",
+      "email": "hiring@oddduck.com",
+      "role": "user"
+    },
+    {
+      "id": "90198",
+      "name": "Contigo Austin",
+      "email": "jobs@contigoaustin.com",
+      "role": "user"
+    },
+    {
+      "id": "90199",
+      "name": "Loro Asian Smokehouse",
+      "email": "hiring@loroaustin.com",
+      "role": "user"
+    },
+    {
+      "id": "90200",
+      "name": "Emmer & Rye",
+      "email": "jobs@emmerandrye.com",
+      "role": "user"
+    },
+    {
+      "id": "90201",
+      "name": "Fresa's Chicken",
+      "email": "hiring@fresasaustin.com",
+      "role": "user"
+    },
+    {
+      "id": "90202",
+      "name": "Justine's Brasserie",
+      "email": "jobs@justines.com",
+      "role": "user"
+    },
+    {
+      "id": "90203",
+      "name": "Bufalina Pizza",
+      "email": "hiring@bufalina.com",
+      "role": "user"
+    },
+    {
+      "id": "90204",
+      "name": "Marcus T.",
+      "email": "NULL",
+      "role": "user"
+    },
+    {
+      "id": "90205",
+      "name": "Daniela R.",
+      "email": "NULL",
+      "role": "user"
+    },
+    {
+      "id": "90206",
+      "name": "Jamal W.",
+      "email": "NULL",
+      "role": "user"
+    },
+    {
+      "id": "90207",
+      "name": "Sofia M.",
+      "email": "NULL",
+      "role": "user"
+    },
+    {
+      "id": "90208",
+      "name": "Carlos V.",
+      "email": "NULL",
+      "role": "user"
+    },
+    {
+      "id": "90209",
+      "name": "Aisha K.",
+      "email": "NULL",
+      "role": "user"
+    },
+    {
+      "id": "90210",
+      "name": "Tyler B.",
+      "email": "NULL",
+      "role": "user"
+    },
+    {
+      "id": "90211",
+      "name": "Priya S.",
+      "email": "NULL",
+      "role": "user"
+    }
+  ],
+  "messages": [],
+  "stdout": "id\tname\temail\trole\n1\tRob\trobertgray@gmail.com\tadmin\n30003\tRob Gray\tlevelninewebdesign@gmail.com\tuser\n90194\tUchi Austin\tjobs@uchiaustin.com\tuser\n90195\tFranklin Barbecue\thiring@franklinbbq.com\tuser\n90196\tLaunderette\tjobs@launderette.com\tuser\n90197\tOdd Duck\thiring@oddduck.com\tuser\n90198\tContigo Austin\tjobs@contigoaustin.com\tuser\n90199\tLoro Asian Smokehouse\thiring@loroaustin.com\tuser\n90200\tEmmer & Rye\tjobs@emmerandrye.com\tuser\n90201\tFresa's Chicken\thiring@fresasaustin.com\tuser\n90202\tJustine's Brasserie\tjobs@justines.com\tuser\n90203\tBufalina Pizza\thiring@bufalina.com\tuser\n90204\tMarcus T.\tNULL\tuser\n90205\tDaniela R.\tNULL\tuser\n90206\tJamal W.\tNULL\tuser\n90207\tSofia M.\tNULL\tuser\n90208\tCarlos V.\tNULL\tuser\n90209\tAisha K.\tNULL\tuser\n90210\tTyler B.\tNULL\tuser\n90211\tPriya S.\tNULL\tuser\n",
+  "stderr": "",
+  "execution_time_ms": 105
+}

@@ -1,4 +1,5 @@
 import { useAuth } from "@/_core/hooks/useAuth";
+import { SEOHead } from "@/components/SEOHead";
 import { trpc } from "@/lib/trpc";
 import { Button } from "@/components/ui/button";
 import { useLocation } from "wouter";
@@ -65,6 +66,8 @@ export default function Onboarding() {
   }, [isAuthenticated, loading]);
 
   return (
+    <>
+      <SEOHead title="Get Started" description="Set up your ShiftChef account as a worker or employer and start finding shifts or hiring staff today." canonicalPath="/onboarding" />
     <div
       className="min-h-screen bg-background flex flex-col"
       style={{ paddingTop: "var(--sat)", paddingBottom: "calc(var(--sab) + 1.5rem)" }}
@@ -150,5 +153,6 @@ export default function Onboarding() {
         </div>
       </div>
     </div>
+    </>
   );
 }

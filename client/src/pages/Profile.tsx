@@ -1,4 +1,5 @@
 import { useAuth } from "@/_core/hooks/useAuth";
+import { SEOHead } from "@/components/SEOHead";
 import { trpc } from "@/lib/trpc";
 import AppShell from "@/components/AppShell";
 import { Button } from "@/components/ui/button";
@@ -109,6 +110,7 @@ export default function Profile() {
 
   return (
     <AppShell>
+      <SEOHead title="My Profile" description="Manage your ShiftChef worker or employer profile, skills, ratings, and verification status." canonicalPath="/profile" />
       <div className="max-w-lg mx-auto">
         {/* ── Hero banner ───────────────────────────────────────────────── */}
         <div className="relative">

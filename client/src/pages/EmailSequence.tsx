@@ -1,4 +1,5 @@
 import AppShell from "@/components/AppShell";
+import { SEOHead } from "@/components/SEOHead";
 import { useAuth } from "@/_core/hooks/useAuth";
 import { Link } from "wouter";
 import { ArrowLeft, Mail, Clock, TrendingUp, Copy, CheckCircle, Users, CheckCircle2, Circle, AlertCircle, ChevronDown, ChevronUp } from "lucide-react";
@@ -144,6 +145,7 @@ function EmployerEmailRow({
 
   return (
     <div className="bg-card rounded-2xl border border-border overflow-hidden">
+      <SEOHead title="Email Sequences" description="ShiftChef employer onboarding email sequences and drip campaign management." canonicalPath="/admin/emails" />
       <button
         className="w-full flex items-center gap-3 p-3.5 text-left"
         onClick={() => setExpanded(!expanded)}
