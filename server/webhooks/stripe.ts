@@ -8,6 +8,10 @@ import {
   updateUser,
   getPaymentByJob,
   updatePayment,
+  getApplicationById,
+  getApplicationsByJob,
+  updateApplication,
+  updateJob,
 } from "../db";
 
 /**
@@ -74,8 +78,37 @@ async function handleStripeEvent(event: any) {
     case "checkout.session.completed": {
       const meta = obj.metadata ?? {};
 
-      if (meta.type === "shift_payment") {
-        // Employer paid for a shift — mark payment as held in escrow
+      if (meta.type === "shift_escrow") {
+        // Employer accepted a worker and paid escrow — accept the application
+        const jobId = parseInt(meta.jobId ?? "0");
+        const applicationId = parseInt(meta.applicationId ?? "0");
+        if (jobId && applicationId) {
+          // Mark payment as held
+          const payment = await getPaymentByJob(jobId);
+          if (payment && payment.status === "pending") {
+            await updatePayment(payment.id, {
+              status: "held",
+              stripePaymentIntentId: obj.payment_intent ?? null,
+            });
+          }
+          // Accept the chosen application
+          const app = await getApplicationById(applicationId);
+          if (app && app.status === "pending") {
+            await updateApplication(applicationId, { status: "accepted" });
+            // Reject all other pending applications for this job
+            const allApps = await getApplicationsByJob(jobId);
+            for (const other of allApps) {
+              if (other.id !== applicationId && other.status === "pending") {
+                await updateApplication(other.id, { status: "rejected" });
+              }
+            }
+            // Mark job as filled
+            await updateJob(jobId, { status: "filled", acceptedWorkerId: app.workerId, paymentStatus: "held" });
+            console.log(`[Webhook] ✅ Shift escrow held & worker accepted | job ${jobId} | app ${applicationId}`);
+          }
+        }
+      } else if (meta.type === "shift_payment") {
+        // Legacy: Employer paid for a shift — mark payment as held in escrow
         const jobId = parseInt(meta.jobId ?? "0");
         if (jobId) {
           const payment = await getPaymentByJob(jobId);

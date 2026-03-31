@@ -217,6 +217,106 @@ export const paymentsRouter = router({
       return { url: session.url!, sessionId: session.id, amount: totalCents };
     }),
 
+  // ── Employer: Accept worker + pay escrow in one step ───────────────────────
+  // Returns a Stripe Checkout URL. On success, the webhook marks payment as held
+  // and the accept mutation fires automatically via the webhook handler.
+  acceptAndPay: protectedProcedure
+    .input(z.object({ applicationId: z.number(), origin: z.string() }))
+    .mutation(async ({ ctx, input }) => {
+      const stripe = getStripe();
+      const { getApplicationById } = await import("../db");
+      const app = await getApplicationById(input.applicationId);
+      if (!app) throw new TRPCError({ code: "NOT_FOUND" });
+      if (app.employerId !== ctx.user.id) throw new TRPCError({ code: "FORBIDDEN" });
+      if (app.status !== "pending") throw new TRPCError({ code: "BAD_REQUEST", message: "Application is no longer pending" });
+
+      const job = await getJobById(app.jobId);
+      if (!job) throw new TRPCError({ code: "NOT_FOUND" });
+      if (job.status !== "live") throw new TRPCError({ code: "BAD_REQUEST", message: "Job is no longer available" });
+
+      const user = await getUserById(ctx.user.id);
+      if (!user) throw new TRPCError({ code: "NOT_FOUND" });
+
+      // Calculate amounts
+      const startMs = Number(job.startTime);
+      const endMs = Number(job.endTime);
+      const hours = Math.max(1, (endMs - startMs) / 3600000);
+      const totalCents = Math.round(Number(job.payRate) * hours * 100);
+      const platformFeeCents = Math.round(totalCents * 0.1);
+      const workerPayoutCents = totalCents - platformFeeCents;
+
+      // Ensure Stripe customer exists
+      let customerId = user.stripeCustomerId ?? undefined;
+      if (!customerId) {
+        const customer = await stripe.customers.create({
+          email: user.email ?? undefined,
+          name: user.name ?? undefined,
+          metadata: { userId: String(ctx.user.id) },
+        });
+        customerId = customer.id;
+        await updateUser(ctx.user.id, { stripeCustomerId: customerId });
+      }
+
+      // Create Checkout session — on success webhook will accept the application
+      const session = await stripe.checkout.sessions.create({
+        mode: "payment",
+        customer: customerId,
+        allow_promotion_codes: false,
+        payment_intent_data: {
+          capture_method: "manual",
+          metadata: {
+            jobId: String(app.jobId),
+            applicationId: String(input.applicationId),
+            employerId: String(ctx.user.id),
+            workerId: String(app.workerId),
+            type: "shift_escrow",
+          },
+        },
+        line_items: [
+          {
+            price_data: {
+              currency: "usd",
+              product_data: {
+                name: `ShiftChef — ${job.role} at ${job.restaurantName ?? "venue"}`,
+                description: `${new Date(job.startTime).toLocaleDateString()} · ${job.city} · Escrow held until shift complete`,
+              },
+              unit_amount: totalCents,
+            },
+            quantity: 1,
+          },
+        ],
+        success_url: `${sanitizeOrigin(input.origin)}/applications?escrow=success&jobId=${app.jobId}&appId=${input.applicationId}`,
+        cancel_url: `${sanitizeOrigin(input.origin)}/applications?escrow=cancelled`,
+        client_reference_id: String(ctx.user.id),
+        metadata: {
+          jobId: String(app.jobId),
+          applicationId: String(input.applicationId),
+          employerId: String(ctx.user.id),
+          workerId: String(app.workerId),
+          type: "shift_escrow",
+          customer_email: user.email ?? "",
+          customer_name: user.name ?? "",
+        },
+      });
+
+      // Create pending payment record
+      const existing = await getPaymentByJob(app.jobId);
+      if (!existing) {
+        await createPayment({
+          jobId: app.jobId,
+          employerId: ctx.user.id,
+          workerId: app.workerId,
+          amount: totalCents,
+          platformFee: platformFeeCents,
+          workerPayout: workerPayoutCents,
+          stripePaymentIntentId: null,
+          status: "pending",
+        });
+      }
+
+      return { url: session.url!, sessionId: session.id, amount: totalCents };
+    }),
+
   // ── Employer: Release payment after shift completion ──────────────────────
   releasePayment: protectedProcedure
     .input(z.object({ jobId: z.number() }))

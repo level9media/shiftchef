@@ -8,8 +8,9 @@ import { useState } from "react";
 import {
   Clock, CheckCircle, XCircle, ChefHat, Briefcase,
   DollarSign, Star, Zap, ArrowRight, CheckCircle2, ChevronRight,
-  LogIn, LogOut, Timer
+  LogIn, LogOut
 } from "lucide-react";
+import { WorkerProfileModal } from "@/components/WorkerProfileModal";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import { formatDistanceToNow } from "date-fns";
@@ -64,6 +65,14 @@ export default function Applications() {
     onSuccess: () => { toast.success("Applicant rejected"); utils.jobs.myJobs.invalidate(); },
     onError: (e) => toast.error(e.message),
   });
+  const acceptAndPayMutation = trpc.payments.acceptAndPay.useMutation({
+    onSuccess: (data) => {
+      toast.info("Redirecting to secure checkout to confirm this worker...");
+      window.open(data.url, "_blank");
+    },
+    onError: (e) => toast.error(e.message),
+  });
+  // Legacy payForJob kept for backward compat with existing held-payment jobs
   const payMutation = trpc.payments.payForJob.useMutation({
     onSuccess: (data) => {
       toast.info("Redirecting to secure checkout...");
@@ -206,22 +215,20 @@ export default function Applications() {
 
                     {app.status === "accepted" && !app.checkInAt && (
                       <div className="mt-2 p-3 bg-emerald-500/10 border border-emerald-500/30 rounded-xl">
-                        <p className="text-xs text-emerald-400 font-bold mb-2">Accepted! Pay to confirm your shift.</p>
-                        <Button
-                          size="sm"
-                          className="w-full rounded-xl text-xs font-bold btn-glow"
-                          disabled={payMutation.isPending}
-                          onClick={(e) => { e.stopPropagation(); payMutation.mutate({ jobId: app.jobId ?? app.job?.id, origin: window.location.origin }); }}
-                        >
-                          {payMutation.isPending ? "Processing..." : `Pay & Confirm Shift`}
-                        </Button>
+                        <div className="flex items-center gap-2 mb-1">
+                          <CheckCircle size={13} className="text-emerald-400 flex-shrink-0" />
+                          <p className="text-xs text-emerald-400 font-black">You got the shift!</p>
+                        </div>
+                        <p className="text-xs text-muted-foreground">
+                          Show up on time and check in when you arrive. Payment is held securely and releases after the shift.
+                        </p>
                       </div>
                     )}
 
                     {app.status === "accepted" && app.checkInAt && !app.checkOutAt && (
                       <div className="mt-2 p-3 bg-blue-500/10 border border-blue-500/30 rounded-xl">
                         <div className="flex items-center gap-2 mb-2">
-                          <Timer size={12} className="text-blue-400" />
+                          <Clock size={12} className="text-blue-400" />
                           <p className="text-xs text-blue-400 font-bold">
                             Checked in at {new Date(Number(app.checkInAt)).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
                           </p>
@@ -301,10 +308,11 @@ export default function Applications() {
                   key={job.id}
                   job={job}
                   onAccept={(appId) => acceptMutation.mutate({ applicationId: appId })}
+                  onAcceptAndPay={(appId) => acceptAndPayMutation.mutate({ applicationId: appId, origin: window.location.origin })}
                   onReject={(appId) => rejectMutation.mutate({ applicationId: appId })}
                   onMarkComplete={(jobId) => completeMutation.mutate({ id: jobId })}
                   onRelease={(jobId) => releaseMutation.mutate({ jobId })}
-                  responding={acceptMutation.isPending || rejectMutation.isPending}
+                  responding={acceptMutation.isPending || rejectMutation.isPending || acceptAndPayMutation.isPending}
                   releasing={releaseMutation.isPending}
                 />
               ))
@@ -316,9 +324,10 @@ export default function Applications() {
   );
 }
 
-function EmployerJobCard({ job, onAccept, onReject, onMarkComplete, onRelease, responding, releasing }: {
+function EmployerJobCard({ job, onAccept, onAcceptAndPay, onReject, onMarkComplete, onRelease, responding, releasing }: {
   job: any;
   onAccept: (id: number) => void;
+  onAcceptAndPay: (id: number) => void;
   onReject: (id: number) => void;
   onMarkComplete: (id: number) => void;
   onRelease: (id: number) => void;
@@ -326,6 +335,7 @@ function EmployerJobCard({ job, onAccept, onReject, onMarkComplete, onRelease, r
   releasing: boolean;
 })  {
   const [expanded, setExpanded] = useState(false);
+  const [selectedWorker, setSelectedWorker] = useState<any | null>(null);
   const { data: apps, refetch: refetchApps } = trpc.applications.forJob.useQuery({ jobId: job.id }, { enabled: expanded });
   const hours = ((job.endTime - job.startTime) / 3600000).toFixed(1);
   const confirmedApp = apps?.find((a: any) => a.status === "confirmed" || a.status === "completed" || a.status === "accepted");
@@ -386,7 +396,11 @@ function EmployerJobCard({ job, onAccept, onReject, onMarkComplete, onRelease, r
                 return (
                   <div key={app.id} className="p-4">
                     <div className="flex items-center justify-between mb-2">
-                      <div className="flex items-center gap-2">
+                      <button
+                        className="flex items-center gap-2 text-left hover:opacity-75 transition-opacity"
+                        onClick={() => setSelectedWorker(app.worker)}
+                        title="View worker profile"
+                      >
                         {app.worker?.profileImage ? (
                           <img src={app.worker.profileImage} alt="" className="w-9 h-9 rounded-xl object-cover" />
                         ) : (
@@ -395,7 +409,7 @@ function EmployerJobCard({ job, onAccept, onReject, onMarkComplete, onRelease, r
                           </div>
                         )}
                         <div>
-                          <p className="text-sm font-bold text-foreground">{app.worker?.name ?? "Worker"}</p>
+                          <p className="text-sm font-bold text-foreground underline decoration-dotted underline-offset-2">{app.worker?.name ?? "Worker"}</p>
                           {app.worker?.rating && (
                             <span className="flex items-center gap-0.5 text-[10px] text-yellow-400">
                               <Star size={9} strokeWidth={2.5} />
@@ -403,7 +417,7 @@ function EmployerJobCard({ job, onAccept, onReject, onMarkComplete, onRelease, r
                             </span>
                           )}
                         </div>
-                      </div>
+                      </button>
                       <span className={cn("text-[10px] font-black px-2 py-0.5 rounded-full", status.bg, status.color)}>
                         {status.label}
                       </span>
@@ -416,43 +430,27 @@ function EmployerJobCard({ job, onAccept, onReject, onMarkComplete, onRelease, r
                     <div className="flex gap-2">
                       {app.status === "pending" && (
                         <>
-                          <Button size="sm" className="flex-1 rounded-xl text-xs" disabled={responding} onClick={() => onAccept(app.id)}>
-                            <CheckCircle2 size={11} className="mr-1" /> Accept
+                          <Button
+                            size="sm"
+                            className="flex-1 rounded-xl text-xs btn-glow"
+                            disabled={responding}
+                            onClick={() => onAcceptAndPay(app.id)}
+                          >
+                            <CheckCircle2 size={11} className="mr-1" />
+                            {responding ? "Processing..." : "Accept & Pay Escrow"}
                           </Button>
-                          <Button size="sm" variant="outline" className="flex-1 rounded-xl text-xs" disabled={responding} onClick={() => onReject(app.id)}>
-                            <XCircle size={11} className="mr-1" /> Reject
+                          <Button size="sm" variant="outline" className="flex-shrink-0 rounded-xl text-xs" disabled={responding} onClick={() => onReject(app.id)}>
+                            <XCircle size={11} />
                           </Button>
                         </>
                       )}
-                      {app.status === "confirmed" && (
-                        <Button size="sm" className="flex-1 rounded-xl text-xs" onClick={() => onMarkComplete(job.id)}>
-                          Mark Complete
-                        </Button>
+                      {app.status === "accepted" && (
+                        <div className="flex items-center gap-1.5 text-xs text-emerald-400 font-semibold">
+                          <CheckCircle size={12} />
+                          Worker accepted — escrow held
+                        </div>
                       )}
-                      {(app.status === "accepted" || app.status === "confirmed") && !app.shiftStartedAt && (
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          className="flex-1 rounded-xl text-xs border-blue-500/40 text-blue-400 hover:bg-blue-500/10"
-                          disabled={markStartedMutation.isPending}
-                          onClick={() => markStartedMutation.mutate({ applicationId: app.id })}
-                        >
-                          <Timer size={10} className="mr-1" />
-                          {markStartedMutation.isPending ? "..." : "Mark Started"}
-                        </Button>
-                      )}
-                      {app.shiftStartedAt && !app.shiftEndedAt && (
-                        <Button
-                          size="sm"
-                          className="flex-1 rounded-xl text-xs bg-orange-600 hover:bg-orange-700"
-                          disabled={markEndedMutation.isPending}
-                          onClick={() => markEndedMutation.mutate({ applicationId: app.id })}
-                        >
-                          <LogOut size={10} className="mr-1" />
-                          {markEndedMutation.isPending ? "..." : "Mark Ended"}
-                        </Button>
-                      )}
-                      {app.status === "completed" && app.paymentStatus === "held" && (
+                      {app.status === "completed" && (
                         <Button size="sm" className="flex-1 rounded-xl text-xs btn-glow" disabled={releasing} onClick={() => onRelease(app.jobId ?? job.id)}>
                           {releasing ? "Releasing..." : "Release Payment"}
                         </Button>
@@ -465,6 +463,11 @@ function EmployerJobCard({ job, onAccept, onReject, onMarkComplete, onRelease, r
           )}
         </div>
       )}
+      <WorkerProfileModal
+        worker={selectedWorker}
+        open={!!selectedWorker}
+        onClose={() => setSelectedWorker(null)}
+      />
     </div>
   );
 }

@@ -364,3 +364,12 @@
 - [x] Show upsell message after free post is used ("Your free post was used — post more from $35")
 - [x] Worker signup: show $100 gift card entry banner on Onboarding page
 - [x] Employer signup: show "First post FREE" banner on Onboarding page
+
+## Hiring Flow Improvements (v19)
+- [x] Move escrow payment to employer accept step (employer pays when they accept, not worker)
+- [x] Remove worker "Pay to confirm shift" payment screen entirely
+- [x] Update worker UI: accepted state shows "You're hired!" confirmation without payment CTA
+- [x] Update employer accept mutation to trigger Stripe Checkout before confirming acceptance
+- [x] Auto-release payment 24h after worker clock-out (background job runs every 15 min)
+- [x] Add worker mini-profile modal in employer applicant view (bio, skills, experience, total shifts, rating)
+- [x] Remove employer Mark Started / Mark Ended buttons (worker check-in/clock-out is source of truth)
