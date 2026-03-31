@@ -8,8 +8,13 @@ import superjson from "superjson";
 import App from "./App";
 import { getLoginUrl } from "./const";
 import { getApiBase } from "@/lib/platform";
+import { initDeepLinkHandler } from "@/lib/deepLink";
 import { LanguageProvider } from "@/contexts/LanguageContext";
 import "./index.css";
+
+// Initialize deep link handler for Capacitor iOS OAuth flow
+// Must be called before React renders so cold-start URLs are captured
+initDeepLinkHandler();
 
 const queryClient = new QueryClient();
 

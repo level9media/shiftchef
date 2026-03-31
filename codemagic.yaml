@@ -43,6 +43,22 @@ workflows:
           echo "Icon files injected:"
           ls "$ICON_DIR/" | wc -l
 
+      - name: Inject deep link URL scheme into Info.plist
+        script: |
+          set -e
+          INFO_PLIST="ios/App/App/Info.plist"
+          echo "Injecting shiftchef:// URL scheme into $INFO_PLIST"
+          # Remove any existing CFBundleURLTypes entry to avoid duplicates
+          /usr/libexec/PlistBuddy -c "Delete :CFBundleURLTypes" "$INFO_PLIST" 2>/dev/null || true
+          # Add the shiftchef:// URL scheme
+          /usr/libexec/PlistBuddy -c "Add :CFBundleURLTypes array" "$INFO_PLIST"
+          /usr/libexec/PlistBuddy -c "Add :CFBundleURLTypes:0 dict" "$INFO_PLIST"
+          /usr/libexec/PlistBuddy -c "Add :CFBundleURLTypes:0:CFBundleURLName string co.shiftchef.app" "$INFO_PLIST"
+          /usr/libexec/PlistBuddy -c "Add :CFBundleURLTypes:0:CFBundleURLSchemes array" "$INFO_PLIST"
+          /usr/libexec/PlistBuddy -c "Add :CFBundleURLTypes:0:CFBundleURLSchemes:0 string shiftchef" "$INFO_PLIST"
+          echo "URL scheme injected:"
+          /usr/libexec/PlistBuddy -c "Print :CFBundleURLTypes" "$INFO_PLIST"
+
       - name: Setup signing, build and archive
         script: |
           set -e

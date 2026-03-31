@@ -389,3 +389,13 @@
 - [x] Fix OAuth login URL to use absolute production URL in Capacitor context
 - [x] Add CORS middleware to Express server to allow capacitor://localhost origin
 - [x] Install cors + @types/cors packages
+
+## Deep Link OAuth Handler (v22)
+- [x] Install @capacitor/app plugin for deep link interception
+- [x] Add CFBundleURLTypes (shiftchef://) to iOS Info.plist via Codemagic build script step
+- [x] Add NATIVE_OAUTH_REDIRECT_URI and getOAuthRedirectUri() to platform.ts
+- [x] Update const.ts getLoginUrl() to use shiftchef://oauth/callback as redirectUri in native
+- [x] Create client/src/lib/deepLink.ts with App.addListener('appUrlOpen') + getLaunchUrl() handler
+- [x] Initialize deep link handler in main.tsx before React renders
+- [x] Update server OAuth callback to detect native=true in state and redirect to shiftchef://oauth/callback?token=...
+- [x] Deep link handler extracts token, sets session cookie, navigates to /feed
