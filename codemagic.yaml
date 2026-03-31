@@ -34,43 +34,42 @@ workflows:
       - name: Sync Capacitor iOS
         script: npx cap sync ios
 
-      - name: Install signing certificate
+      - name: Setup signing, build and archive
         script: |
-          echo $CERT_P12 | base64 --decode > /tmp/cert.p12
+          set -e
+
+          # ── 1. Install certificate ──────────────────────────────────────────
+          echo "$CERT_P12" | base64 --decode > /tmp/cert.p12
           security create-keychain -p "" build.keychain
           security default-keychain -s build.keychain
           security unlock-keychain -p "" build.keychain
           security set-keychain-settings -t 3600 -u build.keychain
-          security import /tmp/cert.p12 -k build.keychain -P "$CERT_PASSWORD" -T /usr/bin/codesign -T /usr/bin/xcodebuild
+          security import /tmp/cert.p12 -k build.keychain \
+            -P "$CERT_PASSWORD" \
+            -T /usr/bin/codesign \
+            -T /usr/bin/xcodebuild
           security set-key-partition-list -S apple-tool:,apple: -s -k "" build.keychain
-          echo "Installed identities:"
+          echo "Certificate installed:"
           security find-identity -v -p codesigning build.keychain
 
-      - name: Install provisioning profile
-        script: |
+          # ── 2. Install provisioning profile ────────────────────────────────
           mkdir -p ~/Library/MobileDevice/Provisioning\ Profiles
-          echo $PROVISIONING_PROFILE | base64 --decode > /tmp/profile.mobileprovision
-          # Verify the profile decoded correctly
-          echo "Profile file size: $(wc -c < /tmp/profile.mobileprovision) bytes"
-          # Extract UUID using PlistBuddy on the CMS-decoded plist
-          security cms -D -i /tmp/profile.mobileprovision > /tmp/profile.plist 2>/dev/null
+          echo "$PROVISIONING_PROFILE" | base64 --decode > /tmp/profile.mobileprovision
+          echo "Profile size: $(wc -c < /tmp/profile.mobileprovision) bytes"
+
+          security cms -D -i /tmp/profile.mobileprovision > /tmp/profile.plist
           PROFILE_UUID=$(/usr/libexec/PlistBuddy -c "Print :UUID" /tmp/profile.plist)
           TEAM_ID=$(/usr/libexec/PlistBuddy -c "Print :TeamIdentifier:0" /tmp/profile.plist)
           PROFILE_NAME=$(/usr/libexec/PlistBuddy -c "Print :Name" /tmp/profile.plist)
-          echo "UUID: $PROFILE_UUID"
-          echo "Team: $TEAM_ID"
-          echo "Name: $PROFILE_NAME"
-          cp /tmp/profile.mobileprovision ~/Library/MobileDevice/Provisioning\ Profiles/${PROFILE_UUID}.mobileprovision
-          echo "Profile installed successfully"
-          ls -la ~/Library/MobileDevice/Provisioning\ Profiles/
+          echo "UUID:  $PROFILE_UUID"
+          echo "Team:  $TEAM_ID"
+          echo "Name:  $PROFILE_NAME"
 
-      - name: Build & Archive
-        script: |
-          # Re-extract profile info
-          security cms -D -i /tmp/profile.mobileprovision > /tmp/profile.plist 2>/dev/null
-          PROFILE_UUID=$(/usr/libexec/PlistBuddy -c "Print :UUID" /tmp/profile.plist)
-          TEAM_ID=$(/usr/libexec/PlistBuddy -c "Print :TeamIdentifier:0" /tmp/profile.plist)
-          echo "Building with Profile UUID: $PROFILE_UUID, Team: $TEAM_ID"
+          cp /tmp/profile.mobileprovision \
+            ~/Library/MobileDevice/Provisioning\ Profiles/${PROFILE_UUID}.mobileprovision
+          echo "Profile installed ✓"
+
+          # ── 3. Xcode archive ────────────────────────────────────────────────
           xcodebuild \
             -project "$XCODE_PROJECT" \
             -scheme "$XCODE_SCHEME" \
@@ -80,14 +79,17 @@ workflows:
             CODE_SIGN_IDENTITY="Apple Distribution" \
             PROVISIONING_PROFILE="$PROFILE_UUID" \
             DEVELOPMENT_TEAM="$TEAM_ID" \
-            archive \
-            | xcpretty --color && exit ${PIPESTATUS[0]}
+            archive
 
       - name: Export IPA
         script: |
-          security cms -D -i /tmp/profile.mobileprovision > /tmp/profile.plist 2>/dev/null
+          set -e
+          # Re-decode profile to get team/uuid (same step, fresh shell)
+          echo "$PROVISIONING_PROFILE" | base64 --decode > /tmp/profile.mobileprovision
+          security cms -D -i /tmp/profile.mobileprovision > /tmp/profile.plist
           TEAM_ID=$(/usr/libexec/PlistBuddy -c "Print :TeamIdentifier:0" /tmp/profile.plist)
           PROFILE_UUID=$(/usr/libexec/PlistBuddy -c "Print :UUID" /tmp/profile.plist)
+
           cat > /tmp/ExportOptions.plist << EOF
           <?xml version="1.0" encoding="UTF-8"?>
           <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
@@ -107,6 +109,7 @@ workflows:
           </dict>
           </plist>
           EOF
+
           xcodebuild -exportArchive \
             -archivePath /tmp/ShiftChef.xcarchive \
             -exportPath /tmp/ShiftChef-ipa \
