@@ -544,7 +544,7 @@ function EmployerJobCard({ job, onAccept, onAcceptAndPay, onReject, onMarkComple
                     <div className="flex items-center justify-between mb-2">
                       <button
                         className="flex items-center gap-2 text-left hover:opacity-75 transition-opacity"
-                        onClick={() => setSelectedWorker(app.worker)}
+                        onClick={() => setSelectedWorker(app.worker ? { ...app.worker, avatarUrl: app.worker.profileImage } : null)}
                         title="View worker profile"
                       >
                         {app.worker?.profileImage ? (

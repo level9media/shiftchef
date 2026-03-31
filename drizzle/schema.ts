@@ -29,7 +29,9 @@ export const users = mysqlTable("users", {
 
   // Worker fields
   skills: text("skills"), // JSON array of roles
-  experience: text("experience"),
+  experience: text("experience"), // JSON array: [{place: string, role: string}]
+  yearsExperience: int("yearsExperience").default(0),
+  specialty: varchar("specialty", { length: 128 }), // primary role/specialty
   rating: float("rating").default(5.0),
   reliabilityScore: float("reliabilityScore").default(100.0),
   totalRatings: int("totalRatings").default(0),

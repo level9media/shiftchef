@@ -542,8 +542,14 @@ function WorkerCard({ post, index }: { post: any; index: number }) {
             {skills.length > 3 && <span className="text-[10px] text-muted-foreground">+{skills.length - 3}</span>}
           </div>
 
-          <div className="flex items-center gap-2 text-[10px] text-muted-foreground">
+          <div className="flex items-center flex-wrap gap-2 text-[10px] text-muted-foreground">
             <span className="flex items-center gap-0.5"><MapPin size={9} />{post.city?.split(",")[0] ?? "Austin"}</span>
+            {post.worker?.yearsExperience > 0 && (
+              <span className="text-purple-400 font-semibold">{post.worker.yearsExperience}yr exp</span>
+            )}
+            {post.worker?.specialty && (
+              <span className="text-orange-400 font-semibold">{post.worker.specialty}</span>
+            )}
             <span className="flex items-center gap-0.5"><Clock size={9} />{formatDistanceToNow(new Date(post.createdAt), { addSuffix: true })}</span>
           </div>
         </div>

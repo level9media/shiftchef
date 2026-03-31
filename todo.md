@@ -440,3 +440,14 @@
 - [x] Add build:ios script that runs vite build + patch-react-singleton + cap sync
 - [x] Push to GitHub and trigger new Codemagic build
 - [x] Fix codemagic.yaml YAML parse error — moved Python splash generator to scripts/gen-splash.py, removed inline heredoc
+
+## Rich Worker Profile (v28)
+- [x] DB: add yearsExperience (int), specialty (varchar) to users table; experience field repurposed as JSON pastJobs
+- [x] Backend: profile.uploadPhoto mutation — base64 → S3 storagePut → returns CDN url
+- [x] Backend: profile.update mutation updated to accept yearsExperience, specialty, experience (JSON pastJobs)
+- [x] Backend: profile.getPublic returns all new fields
+- [x] Frontend: Profile edit page — photo upload (camera/file), bio, years experience, specialty picker, past jobs builder (add/remove entries)
+- [x] Frontend: Applications page applicant cards — avatarUrl mapped from profileImage, yearsExperience/specialty passed to WorkerProfileModal
+- [x] Frontend: Available Now feed cards — specialty (orange), years exp (purple) badges
+- [x] Frontend: Worker public profile modal — specialty under name, years exp badge, structured past jobs list with role pills
+- [x] Spanish translations for all new profile fields

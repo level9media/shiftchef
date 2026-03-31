@@ -1,4 +1,4 @@
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
 import { Star, ChefHat, Award, Briefcase, MapPin, Clock } from "lucide-react";
 
@@ -10,7 +10,9 @@ interface WorkerProfileModalProps {
     bio?: string | null;
     city?: string | null;
     skills?: string[] | null;
-    experience?: string | null;
+    experience?: string | null;       // JSON array of {place, role}
+    yearsExperience?: number | null;
+    specialty?: string | null;
     rating?: number | null;
     totalShiftsCompleted?: number | null;
     totalEarned?: number | null;
@@ -31,6 +33,12 @@ export function WorkerProfileModal({ worker, open, onClose }: WorkerProfileModal
     : typeof worker.skills === "string"
     ? (worker.skills as string).split(",").map((s: string) => s.trim()).filter(Boolean)
     : [];
+
+  type PastJob = { place: string; role: string };
+  const pastJobs: PastJob[] = (() => {
+    if (!worker.experience) return [];
+    try { return JSON.parse(worker.experience); } catch { return []; }
+  })();
 
   const initials = (worker.name ?? "?")
     .split(" ")
@@ -67,6 +75,12 @@ export function WorkerProfileModal({ worker, open, onClose }: WorkerProfileModal
                 <div className="flex items-center gap-1 text-xs text-muted-foreground mt-0.5">
                   <MapPin size={10} />
                   {worker.city}
+                </div>
+              )}
+              {worker.specialty && (
+                <div className="flex items-center gap-1 text-xs text-orange-400 mt-0.5 font-semibold">
+                  <ChefHat size={10} />
+                  {worker.specialty}
                 </div>
               )}
             </div>
@@ -108,13 +122,30 @@ export function WorkerProfileModal({ worker, open, onClose }: WorkerProfileModal
           )}
 
           {/* Experience */}
-          {worker.experience && (
+          {(worker.yearsExperience || pastJobs.length > 0) && (
             <div className="mb-4">
-              <div className="flex items-center gap-1.5 mb-1.5">
+              <div className="flex items-center gap-1.5 mb-2">
                 <Briefcase size={11} className="text-muted-foreground" />
                 <p className="text-xs font-bold text-muted-foreground uppercase tracking-wide">Experience</p>
+                {worker.yearsExperience ? (
+                  <span className="text-xs font-black text-purple-400">{worker.yearsExperience}yr</span>
+                ) : null}
               </div>
-              <p className="text-sm text-foreground leading-relaxed">{worker.experience}</p>
+              {pastJobs.length > 0 && (
+                <div className="space-y-1.5">
+                  {pastJobs.map((job, i) => (
+                    <div key={i} className="flex items-center gap-2">
+                      <div className="w-1.5 h-1.5 rounded-full bg-orange-400 flex-shrink-0" />
+                      <span className="text-sm text-foreground font-medium">{job.place}</span>
+                      {job.role && (
+                        <span className="text-[10px] text-muted-foreground bg-secondary px-1.5 py-0.5 rounded-full border border-border">
+                          {job.role}
+                        </span>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
           )}
 
@@ -140,7 +171,7 @@ export function WorkerProfileModal({ worker, open, onClose }: WorkerProfileModal
           )}
 
           {/* No bio/skills fallback */}
-          {!worker.bio && !worker.experience && skills.length === 0 && (
+          {!worker.bio && !worker.yearsExperience && pastJobs.length === 0 && skills.length === 0 && (
             <p className="text-xs text-muted-foreground text-center py-2">
               This worker hasn't filled out their profile yet.
             </p>
