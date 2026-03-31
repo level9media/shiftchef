@@ -4,22 +4,21 @@ workflows:
     max_build_duration: 60
     instance_type: mac_mini_m2
 
+    integrations:
+      app_store_connect: Apple API Key
+
     environment:
       node: v22.13.0
       xcode: latest
       cocoapods: default
+      ios_signing:
+        distribution_type: app_store
+        bundle_identifier: co.shiftchef.app
       vars:
         BUNDLE_ID: co.shiftchef.app
         XCODE_SCHEME: App
         XCODE_PROJECT: ios/App/App.xcodeproj
         VITE_APP_TITLE: ShiftChef
-
-    integrations:
-      app_store_connect: Apple API Key
-
-    ios_signing:
-      distribution_type: app_store
-      bundle_identifier: co.shiftchef.app
 
     scripts:
       - name: Install pnpm via npm
