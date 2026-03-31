@@ -103,8 +103,11 @@ export const jobsRouter = router({
 
       // Deduct credit if not subscription
       if (!hasSubscription) {
+        const newRemaining = Math.max(0, (employer.postsRemaining ?? 0) - 1);
+        const wasFreePost = !employer.freePostUsed && (employer.postsRemaining ?? 0) === 1;
         await updateUser(ctx.user.id, {
-          postsRemaining: Math.max(0, (employer.postsRemaining ?? 0) - 1),
+          postsRemaining: newRemaining,
+          ...(wasFreePost ? { freePostUsed: true } : {}),
         });
       }
 

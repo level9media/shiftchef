@@ -356,3 +356,11 @@
 - [x] New app icon: orange background, black line-art chef hat (all iOS sizes generated and injected into build pipeline)
 - [x] Add /privacy route with full Privacy Policy page (https://www.shiftchef.co/privacy)
 - [x] Generate iPad 13-inch screenshot (2048x2732px) for App Store upload
+
+## Free First Post & Worker Giveaway (v18)
+- [x] Auto-grant 1 free post credit to new employers on role selection (setRole mutation)
+- [x] Add freePostUsed boolean to users table to track if free post has been used
+- [x] Show "FREE" badge on first post in PostJob pricing UI
+- [x] Show upsell message after free post is used ("Your free post was used — post more from $35")
+- [x] Worker signup: show $100 gift card entry banner on Onboarding page
+- [x] Employer signup: show "First post FREE" banner on Onboarding page

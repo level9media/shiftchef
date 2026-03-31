@@ -19,7 +19,7 @@ const ROLES = [
     color: "oklch(0.68 0.22 38 / 0.12)",
     borderActive: "oklch(0.68 0.22 38 / 0.5)",
     iconColor: "text-primary",
-    perks: ["Browse live shifts near you", "Apply in one tap", "Get paid after every shift"],
+    perks: ["Browse live shifts near you", "Apply in one tap", "🏆 Enter to win $100 Amazon gift card"],
   },
   {
     value: "employer" as UserType,
@@ -29,7 +29,7 @@ const ROLES = [
     color: "oklch(0.60 0.18 250 / 0.12)",
     borderActive: "oklch(0.60 0.18 250 / 0.5)",
     iconColor: "text-blue-400",
-    perks: ["Post shifts from $35", "Verified worker ratings", "Secure escrow payments"],
+    perks: ["🎁 First shift post is FREE", "Verified worker ratings", "Secure escrow payments"],
   },
   {
     value: "both" as UserType,
@@ -92,7 +92,23 @@ export default function Onboarding() {
         <h1 className="text-3xl font-black mb-1.5" style={{ fontFamily: "'Plus Jakarta Sans', sans-serif" }}>
           How will you use ShiftChef?
         </h1>
-        <p className="text-muted-foreground text-sm mb-7">You can always switch later from your profile.</p>
+        <p className="text-muted-foreground text-sm mb-4">You can always switch later from your profile.</p>
+
+        {/* Promo banners */}
+        <div className="space-y-2 mb-5">
+          <div className="flex items-center gap-2.5 bg-orange-500/10 border border-orange-500/25 rounded-xl px-3.5 py-2.5">
+            <span className="text-lg">🏆</span>
+            <p className="text-xs text-orange-300 font-semibold leading-tight">
+              Workers: Sign up &amp; complete your profile to enter our <span className="font-black text-orange-400">$100 Amazon gift card</span> giveaway!
+            </p>
+          </div>
+          <div className="flex items-center gap-2.5 bg-blue-500/10 border border-blue-500/25 rounded-xl px-3.5 py-2.5">
+            <span className="text-lg">🎁</span>
+            <p className="text-xs text-blue-300 font-semibold leading-tight">
+              Employers: <span className="font-black text-blue-400">First shift post is FREE</span> — no credit card required to get started.
+            </p>
+          </div>
+        </div>
 
         {/* Role cards */}
         <div className="space-y-3 flex-1">

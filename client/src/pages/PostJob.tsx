@@ -141,12 +141,24 @@ export default function PostJob() {
                   <Check size={16} className="text-emerald-400" strokeWidth={2.5} />
                 </div>
                 <div className="flex-1">
-                  <p className="font-bold text-sm text-emerald-400">Credits available</p>
-                  <p className="text-xs text-muted-foreground">
-                    {profile?.subscriptionStatus === "active"
-                      ? "Unlimited posts (subscription active)"
-                      : `${profile?.postsRemaining} post(s) remaining`}
-                  </p>
+                  {profile?.subscriptionStatus !== "active" && (profile?.postsRemaining ?? 0) === 1 && !profile?.freePostUsed ? (
+                    <>
+                      <div className="flex items-center gap-2 mb-0.5">
+                        <p className="font-bold text-sm text-emerald-400">Your first post is FREE</p>
+                        <span className="bg-orange-500 text-white text-[10px] font-black px-2 py-0.5 rounded-full uppercase tracking-wide">FREE</span>
+                      </div>
+                      <p className="text-xs text-muted-foreground">No charge — post your first shift on us</p>
+                    </>
+                  ) : (
+                    <>
+                      <p className="font-bold text-sm text-emerald-400">Credits available</p>
+                      <p className="text-xs text-muted-foreground">
+                        {profile?.subscriptionStatus === "active"
+                          ? "Unlimited posts (subscription active)"
+                          : `${profile?.postsRemaining} post(s) remaining`}
+                      </p>
+                    </>
+                  )}
                 </div>
                 <Button size="sm" className="flex-shrink-0 rounded-xl" onClick={() => setStep("form")}>
                   Continue

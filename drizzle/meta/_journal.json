@@ -43,6 +43,13 @@
       "when": 1774906689345,
       "tag": "0005_lethal_silver_surfer",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "5",
+      "when": 1774983702866,
+      "tag": "0006_special_sinister_six",
+      "breakpoints": true
     }
   ]
 }

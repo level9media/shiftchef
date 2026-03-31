@@ -79,6 +79,7 @@ export const users = mysqlTable("users", {
   email3SentAt: timestamp("email3SentAt"),
   // Advisor / lifetime access accounts
   freeLifetimeAccess: boolean("freeLifetimeAccess").default(false),
+  freePostUsed: boolean("freePostUsed").default(false), // tracks if the free first post has been redeemed
 
   createdAt: timestamp("createdAt").defaultNow().notNull(),
   updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
