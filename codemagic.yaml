@@ -14,6 +14,7 @@ workflows:
         BUNDLE_ID: co.shiftchef.app
         XCODE_SCHEME: App
         XCODE_PROJECT: ios/App/App.xcodeproj
+        VITE_APP_TITLE: ShiftChef
 
     integrations:
       app_store_connect: Apple API Key
@@ -27,9 +28,6 @@ workflows:
 
       - name: Build web bundle
         script: pnpm run build:client
-        environment:
-          VITE_APP_TITLE: ShiftChef
-          VITE_APP_LOGO: https://d2xsxph8kpxj0f.cloudfront.net/310519663450394445/5XtEwxhSav9aHUudDTD5pa/icon-512_d6867d62.png
 
       - name: Add Capacitor iOS platform
         script: npx cap add ios
@@ -38,8 +36,7 @@ workflows:
         script: npx cap sync ios
 
       - name: Set up code signing
-        script: |
-          xcode-project use-profiles
+        script: xcode-project use-profiles
 
       - name: Build & Archive
         script: |
