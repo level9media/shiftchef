@@ -25,7 +25,7 @@ workflows:
       - name: Install dependencies
         script: pnpm install --frozen-lockfile
 
-      - name: Build web bundle
+      - name: Build web bundle (with React singleton patch)
         script: pnpm run build:client
 
       - name: Add Capacitor iOS platform
@@ -48,40 +48,17 @@ workflows:
           set -e
           SPLASH_DIR="ios/App/App/Assets.xcassets/Splash.imageset"
           mkdir -p "$SPLASH_DIR"
-          # Generate a solid orange 2732x2732 PNG as the splash background
-          python3 << 'PYEOF'
-import struct, zlib, os
-W, H = 2732, 2732
-bg = (255, 107, 0, 255)  # #FF6B00 orange
-rows = []
-for y in range(H):
-    row = bytearray([0])  # filter none
-    for x in range(W):
-        row += bytearray(bg)
-    rows.append(bytes(row))
-raw = b''.join(rows)
-compressed = zlib.compress(raw, 1)
-def chunk(tag, data):
-    c = tag + data
-    return struct.pack('>I', len(data)) + c + struct.pack('>I', zlib.crc32(c) & 0xffffffff)
-png = (b'\x89PNG\r\n\x1a\n'
-       + chunk(b'IHDR', struct.pack('>IIBBBBB', W, H, 8, 2, 0, 0, 0))
-       + chunk(b'IDAT', compressed)
-       + chunk(b'IEND', b''))
-with open('ios/App/App/Assets.xcassets/Splash.imageset/splash.png', 'wb') as f:
-    f.write(png)
-print('Splash PNG written:', len(png), 'bytes')
-PYEOF
+          python3 scripts/gen-splash.py
           cat > "$SPLASH_DIR/Contents.json" << 'EOF'
-{
-  "images": [
-    { "idiom": "universal", "filename": "splash.png", "scale": "1x" },
-    { "idiom": "universal", "scale": "2x" },
-    { "idiom": "universal", "scale": "3x" }
-  ],
-  "info": { "author": "xcode", "version": 1 }
-}
-EOF
+          {
+            "images": [
+              { "idiom": "universal", "filename": "splash.png", "scale": "1x" },
+              { "idiom": "universal", "scale": "2x" },
+              { "idiom": "universal", "scale": "3x" }
+            ],
+            "info": { "author": "xcode", "version": 1 }
+          }
+          EOF
           echo "Splash screen injected"
 
       - name: Inject deep link URL scheme into Info.plist
@@ -89,9 +66,7 @@ EOF
           set -e
           INFO_PLIST="ios/App/App/Info.plist"
           echo "Injecting shiftchef:// URL scheme into $INFO_PLIST"
-          # Remove any existing CFBundleURLTypes entry to avoid duplicates
           /usr/libexec/PlistBuddy -c "Delete :CFBundleURLTypes" "$INFO_PLIST" 2>/dev/null || true
-          # Add the shiftchef:// URL scheme
           /usr/libexec/PlistBuddy -c "Add :CFBundleURLTypes array" "$INFO_PLIST"
           /usr/libexec/PlistBuddy -c "Add :CFBundleURLTypes:0 dict" "$INFO_PLIST"
           /usr/libexec/PlistBuddy -c "Add :CFBundleURLTypes:0:CFBundleURLName string co.shiftchef.app" "$INFO_PLIST"
@@ -150,7 +125,6 @@ EOF
       - name: Export IPA
         script: |
           set -e
-          # Re-decode profile to get team/uuid (same step, fresh shell)
           echo "$PROVISIONING_PROFILE" | base64 --decode > /tmp/profile.mobileprovision
           security cms -D -i /tmp/profile.mobileprovision > /tmp/profile.plist
           TEAM_ID=$(/usr/libexec/PlistBuddy -c "Print :TeamIdentifier:0" /tmp/profile.plist)
@@ -184,7 +158,6 @@ EOF
       - name: Upload to TestFlight
         script: |
           set -e
-          # Write the .p8 key file where altool expects it
           mkdir -p ~/.appstoreconnect/private_keys
           echo "$ASC_API_KEY" > ~/.appstoreconnect/private_keys/AuthKey_${ASC_KEY_ID}.p8
           chmod 600 ~/.appstoreconnect/private_keys/AuthKey_${ASC_KEY_ID}.p8
