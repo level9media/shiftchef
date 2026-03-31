@@ -1,0 +1,15 @@
+default_platform(:ios)
+
+platform :ios do
+  desc "Sync distribution certificates and profiles via match"
+  lane :sync_signing do
+    match(
+      type: "appstore",
+      app_identifier: "co.shiftchef.app",
+      git_url: "https://github.com/level9media/shiftchef-match",
+      team_id: "U2PT554FKN",
+      readonly: true,
+      verbose: false
+    )
+  end
+end

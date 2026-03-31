@@ -1,0 +1,6 @@
+git_url("https://github.com/level9media/shiftchef-match")
+storage_mode("git")
+type("appstore")
+app_identifier(["co.shiftchef.app"])
+username("levelninewebdesign@gmail.com")
+team_id("U2PT554FKN")

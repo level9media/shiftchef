@@ -51,19 +51,18 @@ jobs:
       - name: Sync Capacitor iOS
         run: npx cap sync ios
 
-      # ── 5. Import Apple signing certs ────────────────────────────────────────
-      - name: Import code-signing certificate
-        uses: apple-actions/import-codesign-certs@v3
-        with:
-          p12-file-base64: ${{ secrets.APPLE_CERTIFICATE_BASE64 }}
-          p12-password: ${{ secrets.APPLE_CERTIFICATE_PASSWORD }}
+      # ── 5. Install fastlane ───────────────────────────────────────────────────
+      - name: Install fastlane
+        run: gem install fastlane --no-document
 
-      # ── 6. Install provisioning profile ──────────────────────────────────────
-      - name: Install provisioning profile
+      # ── 6. Sync signing via fastlane match ───────────────────────────────────
+      - name: Sync code signing (fastlane match)
+        env:
+          MATCH_PASSWORD: ${{ secrets.MATCH_PASSWORD }}
+          MATCH_GIT_BASIC_AUTHORIZATION: ${{ secrets.MATCH_GIT_BASIC_AUTHORIZATION }}
         run: |
-          mkdir -p ~/Library/MobileDevice/Provisioning\ Profiles
-          echo "${{ secrets.APPLE_PROVISIONING_PROFILE_BASE64 }}" | base64 --decode > ~/Library/MobileDevice/Provisioning\ Profiles/f5330e02-bffe-4c36-8cfd-36e3446214b0.mobileprovision
-          echo "✅ Provisioning profile installed"
+          cd fastlane
+          fastlane sync_signing
 
       # ── 7. Build & Archive ────────────────────────────────────────────────────
       - name: Build & Archive (Xcode)
@@ -74,13 +73,10 @@ jobs:
             -configuration Release \
             -archivePath "$RUNNER_TEMP/ShiftChef.xcarchive" \
             -destination "generic/platform=iOS" \
-            -allowProvisioningUpdates \
             CODE_SIGN_STYLE=Manual \
             DEVELOPMENT_TEAM=${{ secrets.APPLE_TEAM_ID }} \
             CODE_SIGN_IDENTITY="Apple Distribution" \
-            PROVISIONING_PROFILE="f5330e02-bffe-4c36-8cfd-36e3446214b0" \
-            PROVISIONING_PROFILE_SPECIFIER="ShiftChef App Store" \
-            CODE_SIGN_ALLOW_ENTITLEMENTS_MODIFICATION=YES
+            PROVISIONING_PROFILE_SPECIFIER="match AppStore co.shiftchef.app"
 
       # ── 8. Export .ipa ────────────────────────────────────────────────────────
       - name: Write ExportOptions.plist
@@ -105,7 +101,7 @@ jobs:
             <key>provisioningProfiles</key>
             <dict>
               <key>co.shiftchef.app</key>
-              <string>ShiftChef App Store</string>
+              <string>match AppStore co.shiftchef.app</string>
             </dict>
           </dict>
           </plist>
