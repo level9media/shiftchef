@@ -54,9 +54,11 @@ jobs:
       # ── 5. Import code-signing certificate ───────────────────────────────────
       - name: Import code-signing certificate
         run: |
-          # Reassemble p12 from two halves to avoid GitHub secret size limits
-          P12_B64="${{ secrets.APPLE_CERT_P12_PART1 }}${{ secrets.APPLE_CERT_P12_PART2 }}"
-          echo "$P12_B64" | base64 --decode > /tmp/cert.p12
+          # Reassemble p12 from two halves, strip all whitespace before decoding
+          printf '%s%s' '${{ secrets.APPLE_CERT_P12_PART1 }}' '${{ secrets.APPLE_CERT_P12_PART2 }}' \
+            | tr -d '[:space:]' \
+            | base64 --decode > /tmp/cert.p12
+          echo "p12 size: $(wc -c < /tmp/cert.p12) bytes"
 
           # Create temp keychain
           security create-keychain -p "temp_keychain_pass" signing_temp.keychain
