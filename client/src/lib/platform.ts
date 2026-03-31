@@ -3,6 +3,16 @@
  * In Capacitor, window.location.origin is "capacitor://localhost" (iOS)
  * or "http://localhost" (Android), not the real production domain.
  */
+export const isNative = (): boolean => {
+  return (
+    typeof window !== "undefined" &&
+    (window.location.origin.startsWith("capacitor://") ||
+      (window.location.origin === "http://localhost" &&
+        typeof (window as any).Capacitor !== "undefined"))
+  );
+};
+
+/** @deprecated Use isNative() instead */
 export const isCapacitor = (): boolean => {
   return (
     typeof window !== "undefined" &&

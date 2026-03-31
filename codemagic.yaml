@@ -43,6 +43,47 @@ workflows:
           echo "Icon files injected:"
           ls "$ICON_DIR/" | wc -l
 
+      - name: Inject splash screen
+        script: |
+          set -e
+          SPLASH_DIR="ios/App/App/Assets.xcassets/Splash.imageset"
+          mkdir -p "$SPLASH_DIR"
+          # Generate a solid orange 2732x2732 PNG as the splash background
+          python3 << 'PYEOF'
+import struct, zlib, os
+W, H = 2732, 2732
+bg = (255, 107, 0, 255)  # #FF6B00 orange
+rows = []
+for y in range(H):
+    row = bytearray([0])  # filter none
+    for x in range(W):
+        row += bytearray(bg)
+    rows.append(bytes(row))
+raw = b''.join(rows)
+compressed = zlib.compress(raw, 1)
+def chunk(tag, data):
+    c = tag + data
+    return struct.pack('>I', len(data)) + c + struct.pack('>I', zlib.crc32(c) & 0xffffffff)
+png = (b'\x89PNG\r\n\x1a\n'
+       + chunk(b'IHDR', struct.pack('>IIBBBBB', W, H, 8, 2, 0, 0, 0))
+       + chunk(b'IDAT', compressed)
+       + chunk(b'IEND', b''))
+with open('ios/App/App/Assets.xcassets/Splash.imageset/splash.png', 'wb') as f:
+    f.write(png)
+print('Splash PNG written:', len(png), 'bytes')
+PYEOF
+          cat > "$SPLASH_DIR/Contents.json" << 'EOF'
+{
+  "images": [
+    { "idiom": "universal", "filename": "splash.png", "scale": "1x" },
+    { "idiom": "universal", "scale": "2x" },
+    { "idiom": "universal", "scale": "3x" }
+  ],
+  "info": { "author": "xcode", "version": 1 }
+}
+EOF
+          echo "Splash screen injected"
+
       - name: Inject deep link URL scheme into Info.plist
         script: |
           set -e

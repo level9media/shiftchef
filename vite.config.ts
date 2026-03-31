@@ -150,7 +150,91 @@ function vitePluginManusDebugCollector(): Plugin {
   };
 }
 
-const plugins = [react(), tailwindcss(), jsxLocPlugin(), vitePluginManusRuntime(), vitePluginManusDebugCollector()];
+// =============================================================================
+// React Singleton Patch Plugin
+// @trpc/react-query (and @tanstack/react-query) use CJS-to-ESM interop that
+// calls __toESM(require_react(), 1) multiple times, creating separate React
+// namespace objects. When react-dom initializes its dispatcher on one object
+// but TRPCProvider calls useState on another, we get:
+//   "Cannot read properties of null (reading 'useState')"
+// Fix: replace all duplicate React var declarations with references to the first.
+// =============================================================================
+function vitePluginReactSingleton(): Plugin {
+  let projectRoot = '';
+
+  function patchDepsFile(filePath: string) {
+    if (!fs.existsSync(filePath)) return false;
+    const code = fs.readFileSync(filePath, 'utf8');
+    if (!code.includes('__toESM(require_react(), 1)')) return false;
+
+    let patchCount = 0;
+    const patched = code.replace(
+      /var (React[\w$]*) = __toESM\(require_react\(\), 1\);/g,
+      (_match: string, varName: string) => {
+        patchCount++;
+        if (patchCount === 1) {
+          return `var __sharedReact = __toESM(require_react(), 1);\nvar ${varName} = __sharedReact;`;
+        }
+        return `var ${varName} = __sharedReact;`;
+      }
+    );
+
+    if (patchCount > 1) {
+      fs.writeFileSync(filePath, patched, 'utf8');
+      console.log(`[react-singleton] Patched ${path.basename(filePath)}: ${patchCount} React vars -> 1 shared instance`);
+      return true;
+    }
+    return false;
+  }
+
+  return {
+    name: 'react-singleton-patch',
+    enforce: 'post',
+    configResolved(config) {
+      projectRoot = config.root;
+    },
+    configureServer(server) {
+      const depsDir = path.resolve(projectRoot, '..', 'node_modules', '.vite', 'deps');
+      let watcher: ReturnType<typeof fs.watch> | null = null;
+      let reloadTimer: ReturnType<typeof setTimeout> | null = null;
+      let patchedFiles = new Set<string>();
+
+      function startWatcher() {
+        // Ensure deps dir exists before watching
+        if (!fs.existsSync(depsDir)) {
+          fs.mkdirSync(depsDir, { recursive: true });
+        }
+        watcher = fs.watch(depsDir, { persistent: false }, (event, filename) => {
+          if (!filename || !filename.endsWith('.js') || filename.endsWith('.map')) return;
+          const filePath = path.join(depsDir, filename);
+          if (patchedFiles.has(filePath)) return;
+          // Small delay to ensure file write is complete
+          setTimeout(() => {
+            if (patchDepsFile(filePath)) {
+              patchedFiles.add(filePath);
+              // Debounce the reload
+              if (reloadTimer) clearTimeout(reloadTimer);
+              reloadTimer = setTimeout(() => {
+                console.log('[react-singleton] Triggering HMR reload after patching React deps');
+                server.ws.send({ type: 'full-reload' });
+              }, 500);
+            }
+          }, 100);
+        });
+      }
+
+      server.httpServer?.once('listening', () => {
+        startWatcher();
+      });
+
+      server.httpServer?.once('close', () => {
+        watcher?.close();
+      });
+    },
+  };
+}
+
+const plugins = [react(), tailwindcss(), jsxLocPlugin(), vitePluginManusRuntime(), vitePluginManusDebugCollector(), vitePluginReactSingleton()];
 
 export default defineConfig({
   plugins,
@@ -170,14 +254,14 @@ export default defineConfig({
     dedupe: ["react", "react-dom", "react/jsx-runtime", "react/jsx-dev-runtime"],
   },
   optimizeDeps: {
-    include: [
-      "react",
-      "react-dom",
-      "react-dom/client",
-      "@trpc/react-query",
-      "@tanstack/react-query",
-    ],
-    force: false,
+    // Exclude @trpc/react-query and @tanstack/react-query from pre-bundling.
+    // When Vite pre-bundles these CJS packages it emits multiple __toESM(require_react(), 1)
+    // wrappers that are not referentially equal — causing TRPCProvider to call useState on a
+    // different React namespace than the one react-dom initialized its dispatcher on.
+    // Excluding them forces Vite to transform them through the standard ESM pipeline instead,
+    // which shares the same React instance as the rest of the app.
+    exclude: ["@trpc/react-query", "@tanstack/react-query"],
+    include: ["react", "react-dom", "react-dom/client"],
   },
   envDir: path.resolve(import.meta.dirname),
   root: path.resolve(import.meta.dirname, "client"),

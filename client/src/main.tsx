@@ -7,7 +7,7 @@ import { createRoot } from "react-dom/client";
 import superjson from "superjson";
 import App from "./App";
 import { getLoginUrl } from "./const";
-import { getApiBase } from "@/lib/platform";
+import { getApiBase, isNative } from "@/lib/platform";
 import { initDeepLinkHandler } from "@/lib/deepLink";
 import { LanguageProvider } from "@/contexts/LanguageContext";
 import "./index.css";
@@ -15,6 +15,19 @@ import "./index.css";
 // Initialize deep link handler for Capacitor iOS OAuth flow
 // Must be called before React renders so cold-start URLs are captured
 initDeepLinkHandler();
+
+// Hide the native splash screen after the React app has mounted
+// launchAutoHide is false so we control exactly when it disappears
+if (isNative()) {
+  import('@capacitor/splash-screen').then(({ SplashScreen }) => {
+    // Give React 800ms to render the first meaningful frame before hiding
+    setTimeout(() => {
+      SplashScreen.hide({ fadeOutDuration: 400 });
+    }, 800);
+  }).catch(() => {
+    // Silently ignore if plugin not available
+  });
+}
 
 const queryClient = new QueryClient();
 

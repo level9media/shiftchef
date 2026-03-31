@@ -406,3 +406,13 @@
 - [x] Added optimizeDeps.include for react, react-dom, @trpc/react-query, @tanstack/react-query
 - [x] Extended dedupe array to include react/jsx-runtime and react/jsx-dev-runtime
 - [x] Verified fix: browser console shows zero errors after Vite cache rebuild
+
+## Splash Screen & Crash Fix v2 (v24)
+- [x] Permanently fix React duplicate instance crash: use optimizeDeps.exclude for @trpc/react-query and @tanstack/react-query (prevents Vite from pre-bundling them with duplicate React wrappers)
+- [x] Verified production build: zero require_react() calls, zero __toESM(require_react) wrappers
+- [x] Install @capacitor/splash-screen plugin (v8.0.1)
+- [x] Configure SplashScreen in capacitor.config.ts: orange #FF6B00 bg, 2.5s duration, launchAutoHide=false
+- [x] Add isNative() export to platform.ts
+- [x] Add SplashScreen.hide() call in main.tsx (800ms delay + 400ms fade after React mounts)
+- [x] Inject splash screen PNG (2732x2732 orange) into iOS build via Codemagic pipeline step
+- [x] TypeScript: 0 errors
