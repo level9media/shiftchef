@@ -434,3 +434,8 @@
 - [x] Frontend: "Hire" button on employer applicant card (replaces plain accept)
 - [x] Frontend: Hire confirmation modal showing what will be sent to worker
 - [x] Frontend: Post-hire state on applicant card shows "Hired ✓" with worker details
+
+## TestFlight iOS Crash Fix (v27)
+- [ ] Fix Codemagic build:client to run patch-react-singleton.mjs after vite build
+- [ ] Add build:ios script that runs vite build + patch-react-singleton + cap sync
+- [ ] Push to GitHub and trigger new Codemagic build
