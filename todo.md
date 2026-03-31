@@ -382,3 +382,10 @@
 - [x] Frontend: worker ratings given section showing all workers rated with star display
 - [x] Frontend: preferred workers list (workers hired 2+ times)
 - [x] Wire /employer-dashboard route in App.tsx and add nav link in AppShell for employer role
+
+## Capacitor iOS Crash Fix (v21)
+- [x] Fix tRPC client URL to use absolute production URL when running inside Capacitor WebView
+- [x] Add Capacitor platform detection utility (client/src/lib/platform.ts)
+- [x] Fix OAuth login URL to use absolute production URL in Capacitor context
+- [x] Add CORS middleware to Express server to allow capacitor://localhost origin
+- [x] Install cors + @types/cors packages

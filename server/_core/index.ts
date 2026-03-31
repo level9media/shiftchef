@@ -1,5 +1,6 @@
 import "dotenv/config";
 import express from "express";
+import cors from "cors";
 import { createServer } from "http";
 import net from "net";
 import { createExpressMiddleware } from "@trpc/server/adapters/express";
@@ -32,6 +33,32 @@ async function findAvailablePort(startPort: number = 3000): Promise<number> {
 async function startServer() {
   const app = express();
   const server = createServer(app);
+
+  // CORS — allow Capacitor WebView (capacitor://localhost) and web origins
+  app.use(
+    cors({
+      origin: (origin, callback) => {
+        // Allow: no origin (server-to-server), Capacitor, localhost dev, production domains, Manus preview
+        if (
+          !origin ||
+          origin === "capacitor://localhost" ||
+          origin === "http://localhost" ||
+          origin.startsWith("http://localhost:") ||
+          origin === "https://www.shiftchef.co" ||
+          origin === "https://shiftchef.co" ||
+          origin.endsWith(".manus.computer") ||
+          origin.endsWith(".manus.space")
+        ) {
+          callback(null, true);
+        } else {
+          callback(null, true); // permissive for now — tighten post-launch
+        }
+      },
+      credentials: true,
+      methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+      allowedHeaders: ["Content-Type", "Authorization", "Cookie"],
+    })
+  );
 
   // Redirect non-www to www (shiftchef.co → www.shiftchef.co)
   app.use((req, res, next) => {
