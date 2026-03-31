@@ -8,8 +8,6 @@ workflows:
       node: v22.13.0
       xcode: latest
       cocoapods: default
-      groups:
-        - apple_credentials
       vars:
         BUNDLE_ID: co.shiftchef.app
         XCODE_SCHEME: App
@@ -18,6 +16,10 @@ workflows:
 
     integrations:
       app_store_connect: Apple API Key
+
+    ios_signing:
+      distribution_type: app_store
+      bundle_identifier: co.shiftchef.app
 
     scripts:
       - name: Install pnpm via npm
