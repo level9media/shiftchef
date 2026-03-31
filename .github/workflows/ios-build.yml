@@ -62,7 +62,11 @@ jobs:
       - name: Install provisioning profile
         run: |
           mkdir -p ~/Library/MobileDevice/Provisioning\ Profiles
-          echo "${{ secrets.APPLE_PROVISIONING_PROFILE_BASE64 }}" | base64 --decode > ~/Library/MobileDevice/Provisioning\ Profiles/ShiftChef.mobileprovision
+          PROFILE_PATH=$(mktemp /tmp/profile.XXXXXX.mobileprovision)
+          echo "${{ secrets.APPLE_PROVISIONING_PROFILE_BASE64 }}" | base64 --decode > "$PROFILE_PATH"
+          UUID=$(security cms -D -i "$PROFILE_PATH" 2>/dev/null | plutil -extract UUID raw - 2>/dev/null || /usr/libexec/PlistBuddy -c 'Print UUID' /dev/stdin <<< $(security cms -D -i "$PROFILE_PATH"))
+          cp "$PROFILE_PATH" ~/Library/MobileDevice/Provisioning\ Profiles/${UUID}.mobileprovision
+          echo "Installed profile with UUID: $UUID"
 
       # ── 7. Build & Archive ────────────────────────────────────────────────────
       - name: Build & Archive (Xcode)
