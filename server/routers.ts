@@ -14,6 +14,7 @@ import { contractRouter } from "./routers/contract";
 import { onboardingRouter } from "./routers/onboarding";
 import { couponsRouter } from "./routers/coupons";
 import { shiftsRouter } from "./routers/shifts";
+import { employerDashboardRouter } from "./routers/employerDashboard";
 
 export const appRouter = router({
   system: systemRouter,
@@ -37,6 +38,7 @@ export const appRouter = router({
   onboarding: onboardingRouter,
   coupons: couponsRouter,
   shifts: shiftsRouter,
+  employerDashboard: employerDashboardRouter,
 });
 
 export type AppRouter = typeof appRouter;

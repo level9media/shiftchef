@@ -1,6 +1,6 @@
 import { useAuth } from "@/_core/hooks/useAuth";
 import { Link, useLocation } from "wouter";
-import { Zap, Briefcase, User, DollarSign, Star, Bell, ChefHat, ShieldCheck, CheckCircle, X, BriefcaseBusiness, Languages } from "lucide-react";
+import { Zap, Briefcase, User, DollarSign, Star, Bell, ChefHat, ShieldCheck, CheckCircle, X, BriefcaseBusiness, Languages, BarChart3 } from "lucide-react";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { cn } from "@/lib/utils";
 import { trpc } from "@/lib/trpc";
@@ -162,6 +162,13 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
       activeIcon: <DollarSign size={22} strokeWidth={2.5} />,
       label: t("earnings"),
       workerOnly: true,
+    },
+    {
+      href: "/employer-dashboard",
+      icon: <BarChart3 size={22} strokeWidth={1.8} />,
+      activeIcon: <BarChart3 size={22} strokeWidth={2.5} />,
+      label: isSpanish ? "Historial" : "History",
+      employerOnly: true,
     },
     {
       href: "/ratings",

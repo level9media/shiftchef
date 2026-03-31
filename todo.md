@@ -373,3 +373,12 @@
 - [x] Auto-release payment 24h after worker clock-out (background job runs every 15 min)
 - [x] Add worker mini-profile modal in employer applicant view (bio, skills, experience, total shifts, rating)
 - [x] Remove employer Mark Started / Mark Ended buttons (worker check-in/clock-out is source of truth)
+
+## Employer Dashboard (v20)
+- [x] Backend: employer history procedure returning all completed/filled jobs with payment and worker data
+- [x] Backend: spending summary (total spent, platform fees, shifts completed, avg cost per shift)
+- [x] Frontend: /employer-dashboard route with stat cards (total spent, shifts, workers hired, avg rating given)
+- [x] Frontend: shift history table with date, role, worker name, hours, pay, status, rating given
+- [x] Frontend: worker ratings given section showing all workers rated with star display
+- [x] Frontend: preferred workers list (workers hired 2+ times)
+- [x] Wire /employer-dashboard route in App.tsx and add nav link in AppShell for employer role
