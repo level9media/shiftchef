@@ -54,12 +54,10 @@ jobs:
       # ── 5. Import code-signing certificate ───────────────────────────────────
       - name: Import code-signing certificate
         env:
-          CERT_PART1: ${{ secrets.APPLE_CERT_P12_PART1 }}
-          CERT_PART2: ${{ secrets.APPLE_CERT_P12_PART2 }}
+          CERT_P12: ${{ secrets.APPLE_CERT_P12 }}
           CERT_PASSWORD: ${{ secrets.APPLE_CERTIFICATE_PASSWORD }}
         run: |
-          # Reassemble p12 from two halves via env vars (avoids single-quote literal issue)
-          echo "${CERT_PART1}${CERT_PART2}" | tr -d '[:space:]' | base64 --decode > /tmp/cert.p12
+          echo "${CERT_P12}" | tr -d '[:space:]' | base64 --decode > /tmp/cert.p12
           echo "p12 size: $(wc -c < /tmp/cert.p12) bytes"
 
           # Create temp keychain
