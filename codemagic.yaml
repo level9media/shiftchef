@@ -43,28 +43,34 @@ workflows:
           security set-keychain-settings -t 3600 -u build.keychain
           security import /tmp/cert.p12 -k build.keychain -P "$CERT_PASSWORD" -T /usr/bin/codesign -T /usr/bin/xcodebuild
           security set-key-partition-list -S apple-tool:,apple: -s -k "" build.keychain
-          echo "Certificate installed. Identities in keychain:"
+          echo "Installed identities:"
           security find-identity -v -p codesigning build.keychain
 
       - name: Install provisioning profile
         script: |
           mkdir -p ~/Library/MobileDevice/Provisioning\ Profiles
           echo $PROVISIONING_PROFILE | base64 --decode > /tmp/profile.mobileprovision
-          # Extract UUID from the decoded profile
-          PROFILE_UUID=$(security cms -D -i /tmp/profile.mobileprovision 2>/dev/null | plutil -extract UUID raw - 2>/dev/null || \
-            /usr/libexec/PlistBuddy -c 'Print :UUID' /dev/stdin <<< "$(security cms -D -i /tmp/profile.mobileprovision)")
-          echo "Profile UUID: $PROFILE_UUID"
+          # Verify the profile decoded correctly
+          echo "Profile file size: $(wc -c < /tmp/profile.mobileprovision) bytes"
+          # Extract UUID using PlistBuddy on the CMS-decoded plist
+          security cms -D -i /tmp/profile.mobileprovision > /tmp/profile.plist 2>/dev/null
+          PROFILE_UUID=$(/usr/libexec/PlistBuddy -c "Print :UUID" /tmp/profile.plist)
+          TEAM_ID=$(/usr/libexec/PlistBuddy -c "Print :TeamIdentifier:0" /tmp/profile.plist)
+          PROFILE_NAME=$(/usr/libexec/PlistBuddy -c "Print :Name" /tmp/profile.plist)
+          echo "UUID: $PROFILE_UUID"
+          echo "Team: $TEAM_ID"
+          echo "Name: $PROFILE_NAME"
           cp /tmp/profile.mobileprovision ~/Library/MobileDevice/Provisioning\ Profiles/${PROFILE_UUID}.mobileprovision
-          echo "Profile installed at: ~/Library/MobileDevice/Provisioning Profiles/${PROFILE_UUID}.mobileprovision"
+          echo "Profile installed successfully"
           ls -la ~/Library/MobileDevice/Provisioning\ Profiles/
 
       - name: Build & Archive
         script: |
-          # Get the UUID from the installed profile
-          PROFILE_UUID=$(security cms -D -i /tmp/profile.mobileprovision 2>/dev/null | plutil -extract UUID raw -)
-          echo "Using Profile UUID: $PROFILE_UUID"
-          DEVELOPMENT_TEAM=$(security cms -D -i /tmp/profile.mobileprovision 2>/dev/null | plutil -extract TeamIdentifier.0 raw -)
-          echo "Using Team ID: $DEVELOPMENT_TEAM"
+          # Re-extract profile info
+          security cms -D -i /tmp/profile.mobileprovision > /tmp/profile.plist 2>/dev/null
+          PROFILE_UUID=$(/usr/libexec/PlistBuddy -c "Print :UUID" /tmp/profile.plist)
+          TEAM_ID=$(/usr/libexec/PlistBuddy -c "Print :TeamIdentifier:0" /tmp/profile.plist)
+          echo "Building with Profile UUID: $PROFILE_UUID, Team: $TEAM_ID"
           xcodebuild \
             -project "$XCODE_PROJECT" \
             -scheme "$XCODE_SCHEME" \
@@ -73,13 +79,15 @@ workflows:
             CODE_SIGN_STYLE=Manual \
             CODE_SIGN_IDENTITY="Apple Distribution" \
             PROVISIONING_PROFILE="$PROFILE_UUID" \
-            PROVISIONING_PROFILE_SPECIFIER="ShiftChef App Store" \
-            DEVELOPMENT_TEAM="$DEVELOPMENT_TEAM" \
-            archive
+            DEVELOPMENT_TEAM="$TEAM_ID" \
+            archive \
+            | xcpretty --color && exit ${PIPESTATUS[0]}
 
       - name: Export IPA
         script: |
-          DEVELOPMENT_TEAM=$(security cms -D -i /tmp/profile.mobileprovision 2>/dev/null | plutil -extract TeamIdentifier.0 raw -)
+          security cms -D -i /tmp/profile.mobileprovision > /tmp/profile.plist 2>/dev/null
+          TEAM_ID=$(/usr/libexec/PlistBuddy -c "Print :TeamIdentifier:0" /tmp/profile.plist)
+          PROFILE_UUID=$(/usr/libexec/PlistBuddy -c "Print :UUID" /tmp/profile.plist)
           cat > /tmp/ExportOptions.plist << EOF
           <?xml version="1.0" encoding="UTF-8"?>
           <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
@@ -88,17 +96,13 @@ workflows:
             <key>method</key>
             <string>app-store</string>
             <key>teamID</key>
-            <string>${DEVELOPMENT_TEAM}</string>
-            <key>uploadBitcode</key>
-            <false/>
-            <key>uploadSymbols</key>
-            <true/>
+            <string>${TEAM_ID}</string>
             <key>signingStyle</key>
             <string>manual</string>
             <key>provisioningProfiles</key>
             <dict>
               <key>co.shiftchef.app</key>
-              <string>ShiftChef App Store</string>
+              <string>${PROFILE_UUID}</string>
             </dict>
           </dict>
           </plist>
