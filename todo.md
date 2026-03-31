@@ -399,3 +399,10 @@
 - [x] Initialize deep link handler in main.tsx before React renders
 - [x] Update server OAuth callback to detect native=true in state and redirect to shiftchef://oauth/callback?token=...
 - [x] Deep link handler extracts token, sets session cookie, navigates to /feed
+
+## Capacitor Startup Crash Fix v2 (v23)
+- [x] Identified root cause: @trpc/react-query imports React 3x as separate namespaces (React, React$1, React$2) causing duplicate instance crash
+- [x] Fixed by adding explicit React path aliases in vite.config.ts to force single instance
+- [x] Added optimizeDeps.include for react, react-dom, @trpc/react-query, @tanstack/react-query
+- [x] Extended dedupe array to include react/jsx-runtime and react/jsx-dev-runtime
+- [x] Verified fix: browser console shows zero errors after Vite cache rebuild
