@@ -2,11 +2,9 @@ import { SEOHead, buildOrganizationSchema, buildWebSiteSchema } from "@/componen
 import { useAuth } from "@/_core/hooks/useAuth";
 import { getLoginUrl } from "@/const";
 import { Button } from "@/components/ui/button";
-import { useEffect } from "react";
-import { useLocation } from "wouter";
+import { useEffect, useState } from "react";
+import { useLocation, Link } from "wouter";
 import { ChefHat, Zap, Shield, DollarSign, Star, ArrowRight, TrendingUp, Menu, X } from "lucide-react";
-import { useState } from "react";
-import { Link } from "wouter";
 
 export default function Home() {
   const { isAuthenticated, loading } = useAuth();

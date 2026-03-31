@@ -12,6 +12,7 @@ import {
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import { formatDistanceToNow } from "date-fns";
+import { useLanguage } from "@/contexts/LanguageContext";
 
 const CITIES = ["Austin, TX", "Phoenix, AZ", "Mesa, AZ", "Houston, TX", "Dallas, TX", "San Antonio, TX", "New York, NY", "Chicago, IL"];
 
@@ -159,6 +160,8 @@ export default function Feed() {
     toast.success("Feed updated");
   };
 
+  const { t, isSpanish } = useLanguage();
+
   return (
     <AppShell>
       <SEOHead
@@ -183,7 +186,7 @@ export default function Feed() {
               <Search size={13} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
               <input
                 type="text"
-                placeholder="Search roles, locations..."
+                placeholder={isSpanish ? "Buscar roles, ubicaciones..." : "Search roles, locations..."}
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 className="w-full pl-8 pr-8 py-2 rounded-xl bg-secondary border border-border text-xs text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-primary transition-colors"
@@ -227,20 +230,20 @@ export default function Feed() {
             <div className="mb-2.5 p-3 bg-secondary/60 rounded-xl border border-border space-y-2">
               <div className="flex items-center gap-2">
                 <div className="flex-1">
-                  <label className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider mb-1 block">Role</label>
+                  <label className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider mb-1 block">{isSpanish ? "Rol" : "Role"}</label>
                   <select
                     value={filterRole}
                     onChange={(e) => setFilterRole(e.target.value)}
                     className="w-full px-2.5 py-1.5 rounded-lg bg-card border border-border text-xs text-foreground focus:outline-none focus:border-primary"
                   >
-                    <option value="">All Roles</option>
+                    <option value="">{isSpanish ? "Todos los Roles" : "All Roles"}</option>
                     {Object.entries(ROLE_LABELS).map(([val, label]) => (
                       <option key={val} value={val}>{label}</option>
                     ))}
                   </select>
                 </div>
                 <div className="flex-1">
-                  <label className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider mb-1 block">Min Pay</label>
+                  <label className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider mb-1 block">{isSpanish ? "Pago Mínimo" : "Min Pay"}</label>
                   <select
                     value={filterMinPay}
                     onChange={(e) => setFilterMinPay(e.target.value)}
@@ -260,7 +263,7 @@ export default function Feed() {
                   onClick={() => { setFilterRole(""); setFilterMinPay(""); }}
                   className="text-[10px] text-primary font-bold hover:underline"
                 >
-                  Clear filters
+                  {isSpanish ? "Limpiar filtros" : "Clear filters"}
                 </button>
               )}
             </div>
@@ -294,7 +297,7 @@ export default function Feed() {
               {activityStats.recentJobsCount > 0 && (
                 <span className="flex items-center gap-1.5 text-[11px] font-bold text-primary">
                   <Zap size={10} strokeWidth={3} className="text-primary" />
-                  {activityStats.recentJobsCount} shifts posted in last 3h
+                  {activityStats.recentJobsCount} {isSpanish ? "turnos publicados en las últimas 3h" : "shifts posted in last 3h"}
                 </span>
               )}
               {activityStats.recentJobsCount > 0 && activityStats.availableWorkersCount > 0 && (
@@ -303,7 +306,7 @@ export default function Feed() {
               {activityStats.availableWorkersCount > 0 && (
                 <span className="flex items-center gap-1.5 text-[11px] font-bold text-emerald-400">
                   <User size={10} strokeWidth={3} />
-                  {activityStats.availableWorkersCount} workers available now
+                  {activityStats.availableWorkersCount} {isSpanish ? "trabajadores disponibles ahora" : "workers available now"}
                 </span>
               )}
             </div>
@@ -320,7 +323,7 @@ export default function Feed() {
                 )}
               >
                 {t === "jobs" ? <Zap size={11} strokeWidth={2.5} /> : <User size={11} strokeWidth={2.5} />}
-                {t === "jobs" ? "Live Shifts" : "Available Now"}
+                {t === "jobs" ? (isSpanish ? "Turnos en Vivo" : "Live Shifts") : (isSpanish ? "Disponibles Ahora" : "Available Now")}
                 {t === "jobs" && filteredJobs.length > 0 && (
                   <span className="bg-primary text-primary-foreground text-[9px] font-black px-1.5 py-0.5 rounded-full leading-none">
                     {filteredJobs.length}
@@ -350,8 +353,8 @@ export default function Feed() {
                       <Plus size={18} className="text-primary-foreground" strokeWidth={2.5} />
                     </div>
                     <div className="text-left">
-                      <p className="font-bold text-sm text-foreground">Post a Shift</p>
-                      <p className="text-xs text-muted-foreground">From $35 · Get applicants fast</p>
+                      <p className="font-bold text-sm text-foreground">{isSpanish ? "Publicar un Turno" : "Post a Shift"}</p>
+                      <p className="text-xs text-muted-foreground">{isSpanish ? "Desde $35 · Consigue candidatos rápido" : "From $35 · Get applicants fast"}</p>
                     </div>
                   </div>
                   <ArrowRight size={15} className="text-primary" />
@@ -363,8 +366,8 @@ export default function Feed() {
               ) : !filteredJobs.length ? (
                 <EmptyState
                   icon={<Zap size={36} className="text-muted-foreground/30" />}
-                  title={searchQuery || activeFilterCount > 0 ? "No matches" : "No live shifts"}
-                  desc={searchQuery || activeFilterCount > 0 ? "Try adjusting your search or filters." : `No shifts posted in ${city.split(",")[0]} right now. Check back soon.`}
+                  title={searchQuery || activeFilterCount > 0 ? (isSpanish ? "Sin resultados" : "No matches") : (isSpanish ? "Sin turnos en vivo" : "No live shifts")}
+                  desc={searchQuery || activeFilterCount > 0 ? (isSpanish ? "Ajusta tu búsqueda o filtros." : "Try adjusting your search or filters.") : (isSpanish ? `No hay turnos en ${city.split(",")[0]} ahora. Vuelve pronto.` : `No shifts posted in ${city.split(",")[0]} right now. Check back soon.`)}
                 />
               ) : (
                 filteredJobs.map((job: any, i: number) => (
@@ -384,8 +387,8 @@ export default function Feed() {
                       <Zap size={18} className="text-emerald-400" strokeWidth={2.5} />
                     </div>
                     <div className="text-left">
-                      <p className="font-bold text-sm text-foreground">Post Availability</p>
-                      <p className="text-xs text-muted-foreground">Let employers find you now</p>
+                  <p className="font-bold text-sm text-foreground">{isSpanish ? "Publicar Disponibilidad" : "Post Availability"}</p>
+                  <p className="text-xs text-muted-foreground">{isSpanish ? "Deja que los empleadores te encuentren" : "Let employers find you now"}</p>
                     </div>
                   </div>
                   <ArrowRight size={15} className="text-emerald-400" />
@@ -397,8 +400,8 @@ export default function Feed() {
               ) : !filteredWorkers.length ? (
                 <EmptyState
                   icon={<User size={36} className="text-muted-foreground/30" />}
-                  title={searchQuery ? "No matches" : "No workers available"}
-                  desc={searchQuery ? "Try a different search term." : `No workers posted availability in ${city.split(",")[0]} right now.`}
+                  title={searchQuery ? (isSpanish ? "Sin resultados" : "No matches") : (isSpanish ? "Sin trabajadores disponibles" : "No workers available")}
+                  desc={searchQuery ? (isSpanish ? "Prueba otro término de búsqueda." : "Try a different search term.") : (isSpanish ? `No hay trabajadores disponibles en ${city.split(",")[0]} ahora.` : `No workers posted availability in ${city.split(",")[0]} right now.`)}
                 />
               ) : (
                 filteredWorkers.map((post: any, i: number) => (

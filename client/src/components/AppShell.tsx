@@ -121,7 +121,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
   });
 
   const [bellOpen, setBellOpen] = useState(false);
-  const { language, setLanguage } = useLanguage();
+  const { language, setLanguage, t, isSpanish } = useLanguage();
   const [dismissed, setDismissed] = useState<Set<string>>(new Set());
   const bellRef = useRef<HTMLDivElement>(null);
 
@@ -148,32 +148,32 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
       href: "/feed",
       icon: <Zap size={22} strokeWidth={1.8} />,
       activeIcon: <Zap size={22} strokeWidth={2.5} />,
-      label: "Live",
+      label: isSpanish ? "En Vivo" : "Live",
     },
     {
       href: "/applications",
       icon: <Briefcase size={22} strokeWidth={1.8} />,
       activeIcon: <Briefcase size={22} strokeWidth={2.5} />,
-      label: "Jobs",
+      label: isSpanish ? "Trabajos" : "Jobs",
     },
     {
       href: "/earnings",
       icon: <DollarSign size={22} strokeWidth={1.8} />,
       activeIcon: <DollarSign size={22} strokeWidth={2.5} />,
-      label: "Earnings",
+      label: t("earnings"),
       workerOnly: true,
     },
     {
       href: "/ratings",
       icon: <Star size={22} strokeWidth={1.8} />,
       activeIcon: <Star size={22} strokeWidth={2.5} />,
-      label: "Ratings",
+      label: t("ratings"),
     },
     {
       href: "/profile",
       icon: <User size={22} strokeWidth={1.8} />,
       activeIcon: <User size={22} strokeWidth={2.5} />,
-      label: "Profile",
+      label: t("profile"),
     },
   ];
 
@@ -256,20 +256,20 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
                     style={{ background: "oklch(0.10 0 0 / 0.98)", backdropFilter: "blur(20px)" }}
                   >
                     <div className="flex items-center justify-between px-4 py-3 border-b border-border">
-                      <span className="text-sm font-bold">Notifications</span>
+                      <span className="text-sm font-bold">{isSpanish ? "Notificaciones" : "Notifications"}</span>
                       {unreadCount > 0 && (
                         <button
                           onClick={() => setDismissed(new Set(allNotifications.map((n) => n.id) as string[]))}
                           className="text-[10px] text-muted-foreground hover:text-foreground transition-colors"
                         >
-                          Clear all
+                          {isSpanish ? "Limpiar todo" : "Clear all"}
                         </button>
                       )}
                     </div>
                     {visibleNotifications.length === 0 ? (
                       <div className="flex flex-col items-center justify-center py-10 gap-2 text-muted-foreground">
                         <CheckCircle size={28} strokeWidth={1.5} />
-                        <p className="text-sm">You're all caught up</p>
+                        <p className="text-sm">{isSpanish ? "Todo al día" : "You're all caught up"}</p>
                       </div>
                     ) : (
                       <div className="divide-y divide-border">

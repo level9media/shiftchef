@@ -7,6 +7,7 @@ import { createRoot } from "react-dom/client";
 import superjson from "superjson";
 import App from "./App";
 import { getLoginUrl } from "./const";
+import { LanguageProvider } from "@/contexts/LanguageContext";
 import "./index.css";
 
 const queryClient = new QueryClient();
@@ -57,7 +58,9 @@ createRoot(document.getElementById("root")!).render(
   <HelmetProvider>
     <trpc.Provider client={trpcClient} queryClient={queryClient}>
       <QueryClientProvider client={queryClient}>
-        <App />
+        <LanguageProvider>
+          <App />
+        </LanguageProvider>
       </QueryClientProvider>
     </trpc.Provider>
   </HelmetProvider>

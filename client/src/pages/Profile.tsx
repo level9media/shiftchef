@@ -6,8 +6,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useLocation } from "wouter";
 import { useState, useEffect } from "react";
-import {
-  Star, MapPin, Briefcase, ChefHat, LogOut,
+import { useLanguage } from "@/contexts/LanguageContext";
+import { Star, MapPin, Briefcase, ChefHat, LogOut,
   Edit3, Check, X, Shield, ChevronRight, Camera,
   ShieldCheck, FileText, MessageSquare
 } from "lucide-react";
@@ -108,6 +108,8 @@ export default function Profile() {
   const rating = profile?.rating ? parseFloat(String(profile.rating)) : null;
   const reliability = profile?.reliabilityScore ? parseFloat(String(profile.reliabilityScore)) : null;
 
+  const { t, isSpanish } = useLanguage();
+
   return (
     <AppShell>
       <SEOHead title="My Profile" description="Manage your ShiftChef worker or employer profile, skills, ratings, and verification status." canonicalPath="/profile" />
@@ -138,12 +140,12 @@ export default function Profile() {
                   <X size={14} className="text-muted-foreground" />
                 </button>
                 <button onClick={handleSave} disabled={updateMutation.isPending} className="h-9 px-4 rounded-xl bg-primary flex items-center gap-1.5 text-primary-foreground text-xs font-bold">
-                  <Check size={13} strokeWidth={2.5} />Save
+                  <Check size={13} strokeWidth={2.5} />{t("save")}
                 </button>
               </>
             ) : (
               <button onClick={() => setEditing(true)} className="h-9 px-4 rounded-xl bg-secondary border border-border flex items-center gap-1.5 text-foreground text-xs font-bold">
-                <Edit3 size={13} />Edit
+                <Edit3 size={13} />{t("editProfile")}
               </button>
             )}
           </div>
@@ -186,9 +188,9 @@ export default function Profile() {
         {/* ── Stats row ─────────────────────────────────────────────────── */}
         {isWorker && (
           <div className="px-4 mt-4 grid grid-cols-3 gap-2">
-            <StatCard label="Rating" value={rating ? `${rating.toFixed(1)}★` : "—"} color="text-yellow-400" />
-            <StatCard label="Reliable" value={reliability ? `${reliability.toFixed(0)}%` : "—"} color="text-emerald-400" />
-            <StatCard label="Shifts" value={String((profile as any)?.totalShifts ?? 0)} color="text-primary" />
+            <StatCard label={isSpanish ? "Calificación" : "Rating"} value={rating ? `${rating.toFixed(1)}★` : "—"} color="text-yellow-400" />
+            <StatCard label={isSpanish ? "Confiable" : "Reliable"} value={reliability ? `${reliability.toFixed(0)}%` : "—"} color="text-emerald-400" />
+            <StatCard label={isSpanish ? "Turnos" : "Shifts"} value={String((profile as any)?.totalShifts ?? 0)} color="text-primary" />
           </div>
         )}
 
@@ -196,23 +198,23 @@ export default function Profile() {
         {editing && (
           <div className="px-4 mt-4 space-y-3">
             <div className="bg-card rounded-2xl border border-border p-4 space-y-3">
-              <p className="text-xs font-bold text-muted-foreground uppercase tracking-wider">Profile Image URL</p>
+              <p className="text-xs font-bold text-muted-foreground uppercase tracking-wider">{t("profileImage")}</p>
               <Input value={profileImage} onChange={(e) => setProfileImage(e.target.value)} placeholder="https://..." className="bg-secondary border-border text-sm h-9" />
-              <p className="text-xs font-bold text-muted-foreground uppercase tracking-wider mt-2">Bio</p>
-              <textarea value={bio} onChange={(e) => setBio(e.target.value)} className="w-full bg-secondary border border-border rounded-xl px-3 py-2.5 text-sm text-foreground resize-none focus:outline-none focus:ring-1 focus:ring-primary" rows={3} placeholder="Tell employers about yourself..." />
-              <p className="text-xs font-bold text-muted-foreground uppercase tracking-wider mt-2">City</p>
+              <p className="text-xs font-bold text-muted-foreground uppercase tracking-wider mt-2">{t("bio")}</p>
+              <textarea value={bio} onChange={(e) => setBio(e.target.value)} className="w-full bg-secondary border border-border rounded-xl px-3 py-2.5 text-sm text-foreground resize-none focus:outline-none focus:ring-1 focus:ring-primary" rows={3} placeholder={t("bioPlaceholder")} />
+              <p className="text-xs font-bold text-muted-foreground uppercase tracking-wider mt-2">{isSpanish ? "Ciudad" : "City"}</p>
               <select value={city} onChange={(e) => setCity(e.target.value)} className="w-full bg-secondary border border-border rounded-xl px-3 py-2.5 text-sm text-foreground focus:outline-none focus:ring-1 focus:ring-primary">
                 {CITIES.map((c) => <option key={c} value={c}>{c}</option>)}
               </select>
-              <p className="text-xs font-bold text-muted-foreground uppercase tracking-wider mt-2">Neighborhood</p>
+              <p className="text-xs font-bold text-muted-foreground uppercase tracking-wider mt-2">{isSpanish ? "Vecindario" : "Neighborhood"}</p>
               <Input value={location} onChange={(e) => setLocation(e.target.value)} placeholder="East Austin, TX" className="bg-secondary border-border text-sm h-9" />
             </div>
 
             {isWorker && (
               <div className="bg-card rounded-2xl border border-border p-4 space-y-3">
-                <p className="text-xs font-bold text-muted-foreground uppercase tracking-wider">Experience</p>
+                <p className="text-xs font-bold text-muted-foreground uppercase tracking-wider">{t("experience")}</p>
                 <textarea value={experience} onChange={(e) => setExperience(e.target.value)} className="w-full bg-secondary border border-border rounded-xl px-3 py-2.5 text-sm text-foreground resize-none focus:outline-none focus:ring-1 focus:ring-primary" rows={3} placeholder="5 years fine dining, 3 years bar..." />
-                <p className="text-xs font-bold text-muted-foreground uppercase tracking-wider mt-2">Skills & Roles</p>
+                <p className="text-xs font-bold text-muted-foreground uppercase tracking-wider mt-2">{isSpanish ? "Habilidades y Roles" : "Skills & Roles"}</p>
                 <div className="flex flex-wrap gap-2">
                   {SKILLS.map((s) => (
                     <button key={s.value} onClick={() => toggleSkill(s.value)}

@@ -4,7 +4,6 @@ import NotFound from "@/pages/NotFound";
 import { Route, Switch } from "wouter";
 import ErrorBoundary from "./components/ErrorBoundary";
 import { ThemeProvider } from "./contexts/ThemeContext";
-import { LanguageProvider } from "./contexts/LanguageContext";
 import AppShell from "./components/AppShell";
 import Home from "./pages/Home";
 import Feed from "./pages/Feed";
@@ -63,13 +62,11 @@ function App() {
   return (
     <ErrorBoundary>
       <ThemeProvider defaultTheme="dark">
-        <LanguageProvider>
-          <TooltipProvider>
-            <Toaster />
-            <PWAInstallPrompt />
-            <Router />
-          </TooltipProvider>
-        </LanguageProvider>
+        <TooltipProvider>
+          <Toaster />
+          <PWAInstallPrompt />
+          <Router />
+        </TooltipProvider>
       </ThemeProvider>
     </ErrorBoundary>
   );
