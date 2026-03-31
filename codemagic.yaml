@@ -20,9 +20,6 @@ workflows:
       app_store_connect: Apple API Key
 
     scripts:
-      - name: Install pnpm
-        script: npm install -g pnpm
-
       - name: Install dependencies
         script: pnpm install --frozen-lockfile
 
