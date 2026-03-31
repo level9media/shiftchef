@@ -68,17 +68,17 @@ export default function Onboarding() {
   return (
     <>
       <SEOHead title="Get Started" description="Set up your ShiftChef account as a worker or employer and start finding shifts or hiring staff today." canonicalPath="/onboarding" />
-    <div
-      className="min-h-screen bg-background flex flex-col"
-      style={{ paddingTop: "var(--sat)", paddingBottom: "calc(var(--sab) + 1.5rem)" }}
-    >
-      {/* Glow */}
       <div
+        className="min-h-screen bg-background flex flex-col"
+        style={{ paddingTop: "var(--sat)", paddingBottom: "calc(var(--sab) + 1.5rem)" }}
+      >
+        {/* Glow */}
+        <div
         className="absolute inset-0 pointer-events-none"
         style={{ background: "radial-gradient(ellipse 80% 40% at 50% 0%, oklch(0.68 0.22 38 / 0.07), transparent)" }}
-      />
+        />
 
-      <div className="relative z-10 flex flex-col flex-1 px-5 pt-8 max-w-sm mx-auto w-full">
+        <div className="relative z-10 flex flex-col flex-1 px-5 pt-8 max-w-sm mx-auto w-full">
         {/* Logo */}
         <div className="flex items-center gap-2 mb-8">
           <div className="w-9 h-9 rounded-2xl bg-primary flex items-center justify-center">
@@ -151,8 +151,8 @@ export default function Onboarding() {
             )}
           </Button>
         </div>
+        </div>
       </div>
-    </div>
     </>
   );
 }

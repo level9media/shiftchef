@@ -31,6 +31,16 @@ async function findAvailablePort(startPort: number = 3000): Promise<number> {
 async function startServer() {
   const app = express();
   const server = createServer(app);
+
+  // Redirect non-www to www (shiftchef.co → www.shiftchef.co)
+  app.use((req, res, next) => {
+    const host = req.headers.host || "";
+    if (host === "shiftchef.co") {
+      return res.redirect(301, `https://www.shiftchef.co${req.originalUrl}`);
+    }
+    next();
+  });
+
   // Stripe webhook MUST be registered before express.json() to preserve raw body
   registerStripeWebhook(app);
 

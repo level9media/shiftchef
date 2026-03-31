@@ -342,3 +342,6 @@
 - [x] Bulk generate form: count, prefix, expiry, notes
 - [x] Copy-all and CSV export for generated codes
 - [x] Coupon link added to Admin Dashboard header
+
+## v16 — Domain & Redirect Fixes
+- [x] Add non-www to www redirect so shiftchef.co forwards to www.shiftchef.co
