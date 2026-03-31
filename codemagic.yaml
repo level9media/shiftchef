@@ -117,6 +117,12 @@ workflows:
 
       - name: Upload to TestFlight
         script: |
+          set -e
+          # Write the .p8 key file where altool expects it
+          mkdir -p ~/.appstoreconnect/private_keys
+          echo "$ASC_API_KEY" > ~/.appstoreconnect/private_keys/AuthKey_${ASC_KEY_ID}.p8
+          chmod 600 ~/.appstoreconnect/private_keys/AuthKey_${ASC_KEY_ID}.p8
+          echo "AuthKey file written: AuthKey_${ASC_KEY_ID}.p8"
           xcrun altool --upload-app \
             --type ios \
             --file /tmp/ShiftChef-ipa/*.ipa \
