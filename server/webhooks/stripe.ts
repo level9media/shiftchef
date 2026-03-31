@@ -1,6 +1,7 @@
 import type { Express } from "express";
 import express from "express";
 import { getStripe } from "../stripe";
+import { sendHireNotification } from "../_core/hireNotification";
 import {
   addPostCredits,
   getUserById,
@@ -12,6 +13,7 @@ import {
   getApplicationsByJob,
   updateApplication,
   updateJob,
+  getJobById,
 } from "../db";
 
 /**
@@ -105,6 +107,28 @@ async function handleStripeEvent(event: any) {
             // Mark job as filled
             await updateJob(jobId, { status: "filled", acceptedWorkerId: app.workerId, paymentStatus: "held" });
             console.log(`[Webhook] ✅ Shift escrow held & worker accepted | job ${jobId} | app ${applicationId}`);
+            // Send rich hire notification
+            const job = await getJobById(jobId);
+            const worker = await getUserById(app.workerId);
+            const employer = job ? await getUserById(job.employerId) : null;
+            if (job && worker) {
+              sendHireNotification({
+                workerName: worker.name ?? "Worker",
+                workerEmail: worker.email,
+                workerPhone: worker.phone,
+                employerName: employer?.name ?? job.restaurantName ?? "Employer",
+                employerEmail: employer?.email,
+                employerPhone: employer?.phone,
+                restaurantName: job.restaurantName,
+                role: job.role,
+                startTime: job.startTime,
+                endTime: job.endTime,
+                payRate: job.payRate,
+                location: job.location,
+                city: job.city,
+                description: job.description,
+              }).catch(() => {});
+            }
           }
         }
       } else if (meta.type === "shift_payment") {

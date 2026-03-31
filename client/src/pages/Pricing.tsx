@@ -8,6 +8,7 @@ import { toast } from "sonner";
 import { Check, Zap, Star, Crown, ChefHat, ArrowRight, Shield, Clock, DollarSign } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { getLoginUrl } from "@/const";
+import { useLanguage } from "@/contexts/LanguageContext";
 
 const EMPLOYER_TIERS = [
   {
@@ -82,12 +83,14 @@ const WORKER_PERKS = [
 export default function Pricing() {
   const [, navigate] = useLocation();
   const { isAuthenticated } = useAuth();
+  const { isSpanish } = useLanguage();
 
   const purchaseMutation = trpc.payments.purchaseCredits.useMutation({
     onSuccess: (data) => {
       if (data.url) {
         toast.success("Redirecting to checkout...");
-        window.open(data.url, "_blank");
+        // Direct navigation — mobile browsers block window.open popups
+        window.location.href = data.url;
       }
     },
     onError: (e) => toast.error(e.message),
@@ -114,19 +117,19 @@ export default function Pricing() {
         <div className="text-center mb-8">
           <div className="inline-flex items-center gap-2 bg-primary/10 border border-primary/20 rounded-full px-3 py-1 mb-4">
             <Zap size={12} className="text-primary" />
-            <span className="text-xs font-bold text-primary uppercase tracking-wider">Simple Pricing</span>
+            <span className="text-xs font-bold text-primary uppercase tracking-wider">{isSpanish ? "Precios Simples" : "Simple Pricing"}</span>
           </div>
           <h1 className="text-3xl font-black text-foreground mb-2">
-            Hire fast.<br />Pay fair.
+            {isSpanish ? "Contrata rápido." : "Hire fast."}<br />{isSpanish ? "Paga justo." : "Pay fair."}
           </h1>
           <p className="text-muted-foreground text-sm max-w-xs mx-auto">
-            No subscription required to start. Post one shift, see results, scale from there.
+            {isSpanish ? "No se requiere suscripción para comenzar. Publica un turno, ve los resultados, escala desde ahí." : "No subscription required to start. Post one shift, see results, scale from there."}
           </p>
         </div>
 
         {/* Employer Tiers */}
         <div className="mb-3">
-          <p className="text-xs font-bold text-muted-foreground uppercase tracking-wider mb-3 px-1">For Employers</p>
+          <p className="text-xs font-bold text-muted-foreground uppercase tracking-wider mb-3 px-1">{isSpanish ? "Para Empleadores" : "For Employers"}</p>
           <div className="space-y-3">
             {EMPLOYER_TIERS.map((tier) => (
               <div
@@ -187,7 +190,7 @@ export default function Pricing() {
                     <div className="w-4 h-4 border-2 border-current border-t-transparent rounded-full animate-spin" />
                   ) : (
                     <>
-                      Get {tier.name}
+                      {isSpanish ? `Obtener ${tier.name}` : `Get ${tier.name}`}
                       <ArrowRight size={14} className="ml-1.5" />
                     </>
                   )}
@@ -201,7 +204,7 @@ export default function Pricing() {
         <div className="bg-secondary/50 border border-border rounded-xl px-4 py-3 mb-6 flex items-center gap-2">
           <Zap size={14} className="text-primary flex-shrink-0" />
           <p className="text-xs text-muted-foreground">
-            Have a promo code? Enter it at checkout for free post credits.
+            {isSpanish ? "¿Tienes un código promocional? Intróducelo en el pago para créditos de publicación gratuitos." : "Have a promo code? Enter it at checkout for free post credits."}
           </p>
         </div>
 
@@ -209,10 +212,10 @@ export default function Pricing() {
         <div className="rounded-2xl border border-emerald-500/20 bg-emerald-500/5 p-5 mb-6">
           <div className="flex items-center gap-2 mb-3">
             <ChefHat size={18} className="text-emerald-400" />
-            <p className="font-black text-foreground">For Workers — Always Free</p>
+            <p className="font-black text-foreground">{isSpanish ? "Para Trabajadores — Siempre Gratis" : "For Workers — Always Free"}</p>
           </div>
           <p className="text-xs text-muted-foreground mb-4">
-            Applying for shifts, getting hired, and receiving same-day pay is 100% free for workers. ShiftChef takes a 10% platform fee from the employer-funded escrow — you keep 90% of every shift.
+            {isSpanish ? "Solicitar turnos, ser contratado y recibir pago el mismo día es 100% gratis para los trabajadores. ShiftChef toma una tarifa de plataforma del 10% del depósito del empleador: tú te quedas el 90% de cada turno." : "Applying for shifts, getting hired, and receiving same-day pay is 100% free for workers. ShiftChef takes a 10% platform fee from the employer-funded escrow — you keep 90% of every shift."}
           </p>
           <ul className="space-y-2 mb-4">
             {WORKER_PERKS.map((p, i) => (
@@ -226,19 +229,19 @@ export default function Pricing() {
             className="w-full h-11 font-bold rounded-xl text-sm bg-emerald-500 hover:bg-emerald-600 text-white border-0"
             onClick={() => isAuthenticated ? navigate("/feed") : window.location.href = getLoginUrl()}
           >
-            Browse Open Shifts
+            {isSpanish ? "Ver Turnos Disponibles" : "Browse Open Shifts"}
             <ArrowRight size={14} className="ml-1.5" />
           </Button>
         </div>
 
         {/* FAQ teaser */}
         <div className="text-center">
-          <p className="text-xs text-muted-foreground mb-2">Have questions?</p>
+          <p className="text-xs text-muted-foreground mb-2">{isSpanish ? "¿Tienes preguntas?" : "Have questions?"}</p>
           <button
             onClick={() => navigate("/faq")}
             className="text-primary text-sm font-bold hover:underline"
           >
-            Read the FAQ →
+            {isSpanish ? "Leer el FAQ →" : "Read the FAQ →"}
           </button>
         </div>
       </div>

@@ -5,13 +5,14 @@ import { useLocation } from "wouter";
 import { useState } from "react";
 import { ChevronDown, Building2, ChefHat, ArrowRight } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { useLanguage } from "@/contexts/LanguageContext";
 
 interface FAQItem {
   q: string;
   a: string;
 }
 
-const EMPLOYER_FAQS: FAQItem[] = [
+const EMPLOYER_FAQS_EN: FAQItem[] = [
   {
     q: "How fast can I get staff for a shift?",
     a: "Most employers receive their first applicants within 15–30 minutes of posting. For same-day shifts, we recommend posting at least 2–3 hours in advance. For weekend events, posting 24–48 hours ahead gives you the best selection of qualified workers.",
@@ -46,7 +47,18 @@ const EMPLOYER_FAQS: FAQItem[] = [
   },
 ];
 
-const WORKER_FAQS: FAQItem[] = [
+const EMPLOYER_FAQS_ES: FAQItem[] = [
+  { q: "¿Qué tan rápido puedo conseguir personal para un turno?", a: "La mayoría de los empleadores reciben sus primeras solicitudes en 15–30 minutos de publicar. Para turnos del mismo día, recomendamos publicar con al menos 2–3 horas de anticipación. Para eventos de fin de semana, publicar 24–48 horas antes te da la mejor selección de trabajadores calificados." },
+  { q: "¿Cuánto cuesta publicar un turno?", a: "Una publicación de turno individual cuesta $35. Un paquete de 3 publicaciones es $75 (ahorra $30). Publicación ilimitada mensual es $99/mes. No hay cargos ocultos: pagas por la publicación y luego fondeas el depósito del trabajador cuando lo contratas. ShiftChef toma una tarifa de plataforma del 10% del depósito, no de ti." },
+  { q: "¿Cómo le pago al trabajador?", a: "Cuando contratas a un trabajador, fondeas un depósito Stripe igual al pago total del turno. Después de que termina el turno y confirmas la finalización, los fondos se liberan automáticamente a la cuenta del trabajador. Nunca manejas efectivo ni Venmo." },
+  { q: "¿Los trabajadores son empleados o contratistas?", a: "Todos los trabajadores de ShiftChef son contratistas independientes 1099. Firman un acuerdo de contratista antes de su primer turno. No eres responsable de impuestos de nómina, beneficios ni compensación laboral." },
+  { q: "¿Qué pasa si un trabajador no se presenta?", a: "Si un trabajador contratado no se presenta, puedes marcarlo como ausente en la app. Su puntaje de confiabilidad baja significativamente. Tu depósito no se libera: puedes volver a publicar el turno sin costo adicional de crédito." },
+  { q: "¿Puedo ver las calificaciones y experiencia de un trabajador antes de contratar?", a: "Sí. Cada perfil de trabajador muestra su calificación de estrellas, turnos completados, puntaje de confiabilidad, habilidades y reseñas de empleadores anteriores." },
+  { q: "¿Qué roles puedo publicar?", a: "ShiftChef admite todos los roles de hostelería y servicio de alimentos: meseros, bartenders, cocineros de línea, cocineros de preparación, lavaplatos, anfitriones, personal de eventos, personal de catering y más." },
+  { q: "¿Necesito una suscripción para usar ShiftChef?", a: "No. Puedes comenzar con una publicación individual de $35 y solo actualizar si necesitas más volumen. El plan ilimitado de $99/mes es mejor para restaurantes y locales que contratan múltiples turnos por semana." },
+];
+
+const WORKER_FAQS_EN: FAQItem[] = [
   {
     q: "Is it free to apply for shifts?",
     a: "Yes, 100% free. There are no fees to create a profile, apply for shifts, or receive payment. ShiftChef takes a 10% platform fee from the employer-funded escrow — you keep 90% of every shift's pay.",
@@ -79,6 +91,17 @@ const WORKER_FAQS: FAQItem[] = [
     q: "How do ratings work?",
     a: "After every completed shift, both you and the employer rate each other 1–5 stars. Your average rating and reliability score are visible to all employers. High ratings mean more job offers and higher-paying shifts. Low ratings reduce your visibility.",
   },
+];
+
+const WORKER_FAQS_ES: FAQItem[] = [
+  { q: "¿Es gratis solicitar turnos?", a: "Sí, 100% gratis. No hay tarifas para crear un perfil, solicitar turnos o recibir pago. ShiftChef toma una tarifa de plataforma del 10% del depósito pagado por el empleador: tú te quedas el 90% del pago de cada turno." },
+  { q: "¿Cómo funciona el pago el mismo día?", a: "Cuando termina tu turno y el empleador confirma la finalización, el depósito se libera a tu cuenta de ShiftChef. Desde allí, puedes transferir a tu cuenta bancaria vinculada o Apple Pay. La mayoría de las transferencias se completan en pocas horas." },
+  { q: "¿Necesito verificar mi identidad?", a: "Sí. La verificación de identidad es obligatoria antes de solicitar turnos. Esto protege a los empleadores y garantiza que seas tratado como un profesional de confianza. La verificación toma unos 2 minutos." },
+  { q: "¿Soy empleado o contratista?", a: "Eres un contratista independiente 1099. Tú eliges qué turnos solicitar, estableces tu propio horario y trabajas para múltiples empleadores. Eres responsable de tus propios impuestos." },
+  { q: "¿Qué ciudades están disponibles?", a: "ShiftChef está actualmente activo en Austin TX, Phoenix AZ y Mesa AZ. Nos estamos expandiendo a ciudades adicionales: regístrate y te notificaremos cuando tu ciudad esté disponible." },
+  { q: "¿Qué pasa si me contratan pero no puedo asistir al turno?", a: "Si necesitas cancelar, házlo lo antes posible a través de la app. Las cancelaciones frecuentes después de ser contratado reducirán tu puntaje de confiabilidad, dificultando ser contratado en el futuro." },
+  { q: "¿Qué debo traer y cómo debo llegar?", a: "Llega al menos 10 minutos antes. Vístete apropiadamente para el rol. Trae cualquier equipo o certificación requerida. Sé profesional, cortés y listo para trabajar." },
+  { q: "¿Cómo funcionan las calificaciones?", a: "Después de cada turno completado, tú y el empleador se califican mutuamente del 1 al 5 estrellas. Tu calificación promedio y puntaje de confiabilidad son visibles para todos los empleadores." },
 ];
 
 function FAQAccordion({ items }: { items: FAQItem[] }) {
@@ -118,6 +141,9 @@ function FAQAccordion({ items }: { items: FAQItem[] }) {
 export default function FAQ() {
   const [, navigate] = useLocation();
   const [tab, setTab] = useState<"employer" | "worker">("employer");
+  const { isSpanish } = useLanguage();
+  const EMPLOYER_FAQS = isSpanish ? EMPLOYER_FAQS_ES : EMPLOYER_FAQS_EN;
+  const WORKER_FAQS = isSpanish ? WORKER_FAQS_ES : WORKER_FAQS_EN;
 
   return (
     <AppShell>
@@ -134,10 +160,10 @@ export default function FAQ() {
             <span className="text-xs font-bold text-primary uppercase tracking-wider">FAQ</span>
           </div>
           <h1 className="text-3xl font-black text-foreground mb-2">
-            Questions answered.
+            {isSpanish ? "Preguntas respondidas." : "Questions answered."}
           </h1>
           <p className="text-muted-foreground text-sm max-w-xs mx-auto">
-            Everything you need to know before your first shift — whether you're hiring or working.
+            {isSpanish ? "Todo lo que necesitas saber antes de tu primer turno, ya sea que estés contratando o trabajando." : "Everything you need to know before your first shift — whether you're hiring or working."}
           </p>
         </div>
 
@@ -153,7 +179,7 @@ export default function FAQ() {
             onClick={() => setTab("employer")}
           >
             <Building2 size={14} />
-            Employers
+            {isSpanish ? "Empleadores" : "Employers"}
           </button>
           <button
             className={cn(
@@ -165,7 +191,7 @@ export default function FAQ() {
             onClick={() => setTab("worker")}
           >
             <ChefHat size={14} />
-            Workers
+            {isSpanish ? "Trabajadores" : "Workers"}
           </button>
         </div>
 
@@ -178,13 +204,13 @@ export default function FAQ() {
 
         {/* Bottom CTA */}
         <div className="mt-8 rounded-2xl border border-border bg-card p-5 text-center">
-          <p className="font-bold text-foreground text-sm mb-1">Still have a question?</p>
+          <p className="font-bold text-foreground text-sm mb-1">{isSpanish ? "¿Todavía tienes una pregunta?" : "Still have a question?"}</p>
           <p className="text-xs text-muted-foreground mb-4">
-            Reach out at{" "}
+            {isSpanish ? "Contáctanos en" : "Reach out at"}{" "}
             <a href="mailto:support@shiftchef.co" className="text-primary hover:underline">
               support@shiftchef.co
             </a>{" "}
-            and we'll get back to you within a few hours.
+            {isSpanish ? "y te responderemos en pocas horas." : "and we'll get back to you within a few hours."}
           </p>
           <div className="flex gap-3">
             <Button
@@ -192,13 +218,13 @@ export default function FAQ() {
               className="flex-1 h-10 text-sm font-bold rounded-xl"
               onClick={() => navigate("/pricing")}
             >
-              See Pricing
+              {isSpanish ? "Ver Precios" : "See Pricing"}
             </Button>
             <Button
               className="flex-1 h-10 text-sm font-bold rounded-xl btn-glow"
               onClick={() => navigate("/how-it-works")}
             >
-              How It Works
+              {isSpanish ? "Cómo Funciona" : "How It Works"}
               <ArrowRight size={13} className="ml-1" />
             </Button>
           </div>

@@ -5,20 +5,21 @@ import { Button } from "@/components/ui/button";
 import AppShell from "@/components/AppShell";
 import { useLocation } from "wouter";
 import { useState } from "react";
-import { ArrowLeft, Check, Zap, Crown, Package, TrendingUp, DollarSign } from "lucide-react";
+import { ArrowLeft, Check, Zap, Crown, Package } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
+import { useLanguage } from "@/contexts/LanguageContext";
 
-const ROLES = [
-  { value: "cook", label: "Cook", emoji: "👨‍🍳" },
-  { value: "sous_chef", label: "Sous Chef", emoji: "🍴" },
-  { value: "prep", label: "Prep Cook", emoji: "🥗" },
-  { value: "dishwasher", label: "Dishwasher", emoji: "🫧" },
-  { value: "cleaner", label: "Cleaner", emoji: "🧹" },
-  { value: "server", label: "Server", emoji: "🍽️" },
-  { value: "bartender", label: "Bartender", emoji: "🍸" },
-  { value: "host", label: "Host", emoji: "🤝" },
-  { value: "manager", label: "Manager", emoji: "📋" },
+const ROLE_KEYS = [
+  { value: "cook", key: "cook" as const, emoji: "👨‍🍳" },
+  { value: "sous_chef", key: "sous_chef" as const, emoji: "🍴" },
+  { value: "prep", key: "prep" as const, emoji: "🥗" },
+  { value: "dishwasher", key: "dishwasher" as const, emoji: "🫧" },
+  { value: "cleaner", key: "cleaner" as const, emoji: "🧹" },
+  { value: "server", key: "server" as const, emoji: "🍽️" },
+  { value: "bartender", key: "bartender" as const, emoji: "🍸" },
+  { value: "host", key: "host" as const, emoji: "🤝" },
+  { value: "manager", key: "manager" as const, emoji: "📋" },
 ] as const;
 
 const CITIES = ["Austin, TX", "Phoenix, AZ", "Mesa, AZ", "Houston, TX", "Dallas, TX", "San Antonio, TX", "New York, NY", "Chicago, IL"];
@@ -31,6 +32,7 @@ export default function PostJob() {
   const [step, setStep] = useState<Step>("pricing");
   const [couponCode, setCouponCode] = useState("");
   const [couponApplied, setCouponApplied] = useState(false);
+  const { t, isSpanish } = useLanguage();
 
   const { data: profile } = trpc.profile.get.useQuery(undefined, { enabled: isAuthenticated, retry: false });
   const utils = trpc.useUtils();
@@ -46,15 +48,15 @@ export default function PostJob() {
 
   const purchaseMutation = trpc.payments.purchaseCredits.useMutation({
     onSuccess: (data) => {
-      toast.info("Redirecting to secure checkout...");
-      window.open(data.url, "_blank");
+      // Direct navigation — mobile browsers block window.open popups
+      window.location.href = data.url;
     },
     onError: (e) => toast.error(e.message),
   });
 
   const createJobMutation = trpc.jobs.create.useMutation({
     onSuccess: () => {
-      toast.success("Shift is live in the feed!");
+      toast.success(t("shiftIsLive"));
       utils.jobs.myJobs.invalidate();
       navigate("/applications");
     },
@@ -87,13 +89,13 @@ export default function PostJob() {
 
   const handleSubmit = () => {
     if (!payRate || !startDate || !startTime || !endTime || !location) {
-      toast.error("Please fill in all required fields");
+      toast.error(t("fillAllFields"));
       return;
     }
     const startMs = new Date(`${startDate}T${startTime}`).getTime();
     const endMs = new Date(`${startDate}T${endTime}`).getTime();
     if (isNaN(startMs) || isNaN(endMs) || endMs <= startMs) {
-      toast.error("Invalid date/time — end must be after start");
+      toast.error(t("invalidTime"));
       return;
     }
     createJobMutation.mutate({
@@ -125,9 +127,9 @@ export default function PostJob() {
             <ArrowLeft size={17} />
           </button>
           <div>
-            <h1 className="text-xl font-black text-foreground">Post a Shift</h1>
+            <h1 className="text-xl font-black text-foreground">{t("postAShift")}</h1>
             <p className="text-xs text-muted-foreground">
-              {step === "pricing" ? "Choose a plan to get started" : "Fill in your shift details"}
+              {step === "pricing" ? t("chooseAPlan") : t("fillShiftDetails")}
             </p>
           </div>
         </div>
@@ -144,35 +146,35 @@ export default function PostJob() {
                   {profile?.subscriptionStatus !== "active" && (profile?.postsRemaining ?? 0) === 1 && !profile?.freePostUsed ? (
                     <>
                       <div className="flex items-center gap-2 mb-0.5">
-                        <p className="font-bold text-sm text-emerald-400">Your first post is FREE</p>
+                        <p className="font-bold text-sm text-emerald-400">{t("firstPostFree")}</p>
                         <span className="bg-orange-500 text-white text-[10px] font-black px-2 py-0.5 rounded-full uppercase tracking-wide">FREE</span>
                       </div>
-                      <p className="text-xs text-muted-foreground">No charge — post your first shift on us</p>
+                      <p className="text-xs text-muted-foreground">{t("firstPostFreeDesc")}</p>
                     </>
                   ) : (
                     <>
-                      <p className="font-bold text-sm text-emerald-400">Credits available</p>
+                      <p className="font-bold text-sm text-emerald-400">{t("creditsAvailable")}</p>
                       <p className="text-xs text-muted-foreground">
                         {profile?.subscriptionStatus === "active"
-                          ? "Unlimited posts (subscription active)"
-                          : `${profile?.postsRemaining} post(s) remaining`}
+                          ? t("unlimitedPosts")
+                          : `${profile?.postsRemaining} ${t("postsRemaining")}`}
                       </p>
                     </>
                   )}
                 </div>
                 <Button size="sm" className="flex-shrink-0 rounded-xl" onClick={() => setStep("form")}>
-                  Continue
+                  {t("continue")}
                 </Button>
               </div>
             )}
 
             {/* Coupon Code Input */}
             <div className="bg-card border border-border rounded-2xl p-4">
-              <p className="text-xs font-bold text-muted-foreground uppercase tracking-wider mb-3">Have a Coupon Code?</p>
+              <p className="text-xs font-bold text-muted-foreground uppercase tracking-wider mb-3">{t("couponCode")}</p>
               {couponApplied ? (
                 <div className="flex items-center gap-2 text-emerald-400">
                   <Check size={14} strokeWidth={2.5} />
-                  <span className="text-sm font-bold">Coupon applied! Credits added.</span>
+                  <span className="text-sm font-bold">{t("couponApplied")}</span>
                 </div>
               ) : (
                 <div className="flex gap-2">
@@ -180,7 +182,7 @@ export default function PostJob() {
                     type="text"
                     value={couponCode}
                     onChange={(e) => setCouponCode(e.target.value.toUpperCase())}
-                    placeholder="SHIFT-XXXXXXXX"
+                    placeholder={t("couponPlaceholder")}
                     className="flex-1 bg-secondary border border-border rounded-xl px-3 py-2 text-sm font-mono text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-primary/50"
                     maxLength={20}
                   />
@@ -191,41 +193,50 @@ export default function PostJob() {
                     disabled={!couponCode.trim() || redeemCouponMutation.isPending}
                     onClick={() => redeemCouponMutation.mutate({ code: couponCode.trim() })}
                   >
-                    {redeemCouponMutation.isPending ? "..." : "Apply"}
+                    {redeemCouponMutation.isPending ? "..." : t("applyCoupon")}
                   </Button>
                 </div>
               )}
             </div>
 
-            <p className="text-xs font-bold text-muted-foreground uppercase tracking-wider pt-1">Choose a Plan</p>
+            <p className="text-xs font-bold text-muted-foreground uppercase tracking-wider pt-1">{t("choosePlan")}</p>
 
             <PricingCard
               icon={<Zap size={18} />}
-              title="Single Post"
+              title={t("singlePost")}
               price="$35"
-              desc="Post one shift to the live feed"
-              features={["1 job post", "Instant live feed listing", "Applicant management"]}
+              desc={t("singlePostDesc")}
+              features={isSpanish
+                ? ["1 publicación", "En vivo al instante", "Gestión de solicitantes"]
+                : ["1 job post", "Instant live feed listing", "Applicant management"]}
               onClick={() => purchaseMutation.mutate({ tier: "single", origin: window.location.origin })}
               loading={purchaseMutation.isPending}
+              isSpanish={isSpanish}
             />
             <PricingCard
               icon={<Package size={18} />}
-              title="3-Post Bundle"
+              title={t("bundlePost")}
               price="$75"
-              desc="Best value for occasional hiring"
-              features={["3 job posts", "Save $30 vs single", "30-day validity"]}
+              desc={t("bundlePostDesc")}
+              features={isSpanish
+                ? ["3 publicaciones", "Ahorra $30 vs individual", "Válido 30 días"]
+                : ["3 job posts", "Save $30 vs single", "30-day validity"]}
               highlighted
               onClick={() => purchaseMutation.mutate({ tier: "bundle3", origin: window.location.origin })}
               loading={purchaseMutation.isPending}
+              isSpanish={isSpanish}
             />
             <PricingCard
               icon={<Crown size={18} />}
-              title="Monthly Unlimited"
+              title={t("monthlyUnlimited")}
               price="$99/mo"
-              desc="For restaurants that hire regularly"
-              features={["Unlimited posts", "Priority in feed", "Analytics & insights"]}
+              desc={t("monthlyUnlimitedDesc")}
+              features={isSpanish
+                ? ["Publicaciones ilimitadas", "Prioridad en el feed", "Analíticas e insights"]
+                : ["Unlimited posts", "Priority in feed", "Analytics & insights"]}
               onClick={() => purchaseMutation.mutate({ tier: "subscription", origin: window.location.origin })}
               loading={purchaseMutation.isPending}
+              isSpanish={isSpanish}
             />
           </div>
         )}
@@ -235,9 +246,9 @@ export default function PostJob() {
           <div className="space-y-4">
             {/* Role picker */}
             <div>
-              <p className="text-xs font-bold text-muted-foreground uppercase tracking-wider mb-2">Role Needed *</p>
+              <p className="text-xs font-bold text-muted-foreground uppercase tracking-wider mb-2">{t("roleNeeded")} *</p>
               <div className="grid grid-cols-3 gap-2">
-                {ROLES.map((r) => (
+                {ROLE_KEYS.map((r) => (
                   <button
                     key={r.value}
                     onClick={() => setRole(r.value)}
@@ -249,19 +260,19 @@ export default function PostJob() {
                     )}
                   >
                     <span className="text-base">{r.emoji}</span>
-                    {r.label}
+                    {t(r.key)}
                   </button>
                 ))}
               </div>
             </div>
 
             {/* Venue name */}
-            <FormField label="Restaurant / Venue Name">
-              <input value={restaurantName} onChange={(e) => setRestaurantName(e.target.value)} placeholder="e.g. The Capital Grille" className="sc-input" />
+            <FormField label={t("restaurantNameLabel")}>
+              <input value={restaurantName} onChange={(e) => setRestaurantName(e.target.value)} placeholder={t("restaurantNamePlaceholder")} className="sc-input" />
             </FormField>
 
             {/* Pay rate */}
-            <FormField label="Pay Rate ($/hr) *">
+            <FormField label={`${t("hourlyRate")} *`}>
               <div className="relative">
                 <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground text-sm">$</span>
                 <input type="number" value={payRate} onChange={(e) => setPayRate(e.target.value)} placeholder="18.00" min="7.25" step="0.25" className="sc-input pl-7" />
@@ -269,53 +280,53 @@ export default function PostJob() {
             </FormField>
 
             {/* Date */}
-            <FormField label="Shift Date *">
+            <FormField label={`${t("startDate")} *`}>
               <input type="date" value={startDate} onChange={(e) => setStartDate(e.target.value)} min={new Date().toISOString().split("T")[0]} className="sc-input" />
             </FormField>
 
             {/* Times */}
             <div className="grid grid-cols-2 gap-3">
-              <FormField label="Start Time *">
+              <FormField label={`${t("startTime")} *`}>
                 <input type="time" value={startTime} onChange={(e) => setStartTime(e.target.value)} className="sc-input" />
               </FormField>
-              <FormField label="End Time *">
+              <FormField label={`${t("endTime")} *`}>
                 <input type="time" value={endTime} onChange={(e) => setEndTime(e.target.value)} className="sc-input" />
               </FormField>
             </div>
 
             {/* City */}
-            <FormField label="City *">
+            <FormField label={`${t("city")} *`}>
               <select value={city} onChange={(e) => setCity(e.target.value)} className="sc-input">
                 {CITIES.map((c) => <option key={c} value={c}>{c}</option>)}
               </select>
             </FormField>
 
             {/* Address */}
-            <FormField label="Address / Location *">
-              <input value={location} onChange={(e) => setLocation(e.target.value)} placeholder="123 Main St, Austin, TX" className="sc-input" />
+            <FormField label={`${t("locationLabel")} *`}>
+              <input value={location} onChange={(e) => setLocation(e.target.value)} placeholder={t("locationPlaceholder")} className="sc-input" />
             </FormField>
 
             {/* Min rating */}
-            <FormField label="Minimum Worker Rating">
+            <FormField label={t("minimumRating")}>
               <select value={minRating} onChange={(e) => setMinRating(e.target.value)} className="sc-input">
-                <option value="0">No minimum</option>
-                <option value="3">3★ or higher</option>
-                <option value="3.5">3.5★ or higher</option>
-                <option value="4">4★ or higher</option>
-                <option value="4.5">4.5★ or higher</option>
+                <option value="0">{t("noRatingReq")}</option>
+                <option value="3">3★ {isSpanish ? "o más" : "or higher"}</option>
+                <option value="3.5">3.5★ {isSpanish ? "o más" : "or higher"}</option>
+                <option value="4">4★ {isSpanish ? "o más" : "or higher"}</option>
+                <option value="4.5">4.5★ {isSpanish ? "o más" : "or higher"}</option>
               </select>
             </FormField>
 
             {/* Description */}
-            <FormField label="Description">
-              <textarea value={description} onChange={(e) => setDescription(e.target.value)} placeholder="Describe the shift, requirements, dress code, etc." className="sc-input h-24 resize-none" maxLength={2000} />
+            <FormField label={t("jobDescription")}>
+              <textarea value={description} onChange={(e) => setDescription(e.target.value)} placeholder={t("descriptionPlaceholder")} className="sc-input h-24 resize-none" maxLength={2000} />
             </FormField>
 
             {/* Permanent toggle */}
             <div className="flex items-center justify-between bg-card rounded-2xl p-4 border border-border">
               <div>
-                <p className="font-bold text-sm text-foreground">Permanent Potential</p>
-                <p className="text-xs text-muted-foreground">Could this become a full-time role?</p>
+                <p className="font-bold text-sm text-foreground">{t("permanentOpportunity")}</p>
+                <p className="text-xs text-muted-foreground">{t("permanentDesc")}</p>
               </div>
               <button
                 onClick={() => setIsPermanent(!isPermanent)}
@@ -328,18 +339,18 @@ export default function PostJob() {
             {/* Pay preview */}
             {preview && (
               <div className="bg-primary/10 border border-primary/30 rounded-2xl p-4">
-                <p className="text-xs font-bold text-primary uppercase tracking-wider mb-2">Pay Preview</p>
+                <p className="text-xs font-bold text-primary uppercase tracking-wider mb-2">{t("payPreview")}</p>
                 <div className="space-y-1.5 text-sm">
                   <div className="flex justify-between">
                     <span className="text-muted-foreground">{preview.hours}h × ${payRate}/hr</span>
                     <span className="font-bold text-foreground">${preview.total}</span>
                   </div>
                   <div className="flex justify-between">
-                    <span className="text-muted-foreground">Worker receives (90%)</span>
+                    <span className="text-muted-foreground">{t("workerReceives")} (90%)</span>
                     <span className="font-bold text-emerald-400">${preview.worker}</span>
                   </div>
                   <div className="flex justify-between">
-                    <span className="text-muted-foreground">Platform fee (10%)</span>
+                    <span className="text-muted-foreground">{isSpanish ? "Comisión plataforma (10%)" : "Platform fee (10%)"}</span>
                     <span className="text-muted-foreground">${(parseFloat(preview.total) * 0.1).toFixed(2)}</span>
                   </div>
                 </div>
@@ -355,7 +366,7 @@ export default function PostJob() {
               {createJobMutation.isPending ? (
                 <div className="w-5 h-5 border-2 border-primary-foreground border-t-transparent rounded-full animate-spin" />
               ) : (
-                "Post Shift Now"
+                isSpanish ? "Publicar Turno Ahora" : "Post Shift Now"
               )}
             </Button>
           </div>
@@ -392,10 +403,10 @@ function FormField({ label, children }: { label: string; children: React.ReactNo
 }
 
 function PricingCard({
-  icon, title, price, desc, features, highlighted, onClick, loading
+  icon, title, price, desc, features, highlighted, onClick, loading, isSpanish
 }: {
   icon: React.ReactNode; title: string; price: string; desc: string;
-  features: string[]; highlighted?: boolean; onClick: () => void; loading: boolean;
+  features: string[]; highlighted?: boolean; onClick: () => void; loading: boolean; isSpanish: boolean;
 }) {
   return (
     <div className={cn(
@@ -423,7 +434,7 @@ function PricingCard({
         ))}
       </ul>
       <Button className="w-full rounded-xl" variant={highlighted ? "default" : "outline"} onClick={onClick} disabled={loading} size="sm">
-        {loading ? "Processing..." : `Get ${title}`}
+        {loading ? (isSpanish ? "Procesando..." : "Processing...") : (isSpanish ? `Obtener ${title}` : `Get ${title}`)}
       </Button>
     </div>
   );

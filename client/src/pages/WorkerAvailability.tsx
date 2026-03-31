@@ -8,8 +8,9 @@ import { Zap, MapPin, Clock, Trash2, Plus, ChefHat } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { formatDistanceToNow } from "date-fns";
+import { useLanguage } from "@/contexts/LanguageContext";
 
-const SKILLS = [
+const SKILLS_EN = [
   { value: "cook", label: "Cook", emoji: "👨‍🍳" },
   { value: "sous_chef", label: "Sous Chef", emoji: "🍴" },
   { value: "prep", label: "Prep Cook", emoji: "🥗" },
@@ -20,19 +21,32 @@ const SKILLS = [
   { value: "host", label: "Host", emoji: "🤝" },
   { value: "manager", label: "Manager", emoji: "📋" },
 ];
+const SKILLS_ES = [
+  { value: "cook", label: "Cocinero", emoji: "👨‍🍳" },
+  { value: "sous_chef", label: "Sous Chef", emoji: "🍴" },
+  { value: "prep", label: "Prep Cook", emoji: "🥗" },
+  { value: "dishwasher", label: "Lavaplatos", emoji: "🫧" },
+  { value: "cleaner", label: "Limpiador", emoji: "🧹" },
+  { value: "server", label: "Mesero", emoji: "🍽️" },
+  { value: "bartender", label: "Bartender", emoji: "🍸" },
+  { value: "host", label: "Anfitrión", emoji: "🤝" },
+  { value: "manager", label: "Gerente", emoji: "📋" },
+];
 
 const CITIES = ["Austin, TX", "Phoenix, AZ", "Mesa, AZ", "Houston, TX", "Dallas, TX", "San Antonio, TX", "New York, NY", "Chicago, IL"];
 
 export default function WorkerAvailability() {
   const { isAuthenticated } = useAuth();
   const [showForm, setShowForm] = useState(false);
+  const { t, isSpanish } = useLanguage();
+  const SKILLS = isSpanish ? SKILLS_ES : SKILLS_EN;
 
   const { data: myPosts, isLoading, refetch } = trpc.availability.mine.useQuery(
     undefined, { enabled: isAuthenticated }
   );
 
   const removeMutation = trpc.availability.remove.useMutation({
-    onSuccess: () => { toast.success("Post removed"); refetch(); },
+    onSuccess: () => { toast.success(isSpanish ? "Publicación eliminada" : "Post removed"); refetch(); },
     onError: (e) => toast.error(e.message),
   });
 
@@ -47,11 +61,13 @@ export default function WorkerAvailability() {
           <div className="relative z-10">
             <div className="flex items-center gap-2 mb-1">
               <Zap size={14} className="text-primary" strokeWidth={2.5} />
-              <p className="text-xs font-bold text-primary uppercase tracking-wider">Availability Mode</p>
+              <p className="text-xs font-bold text-primary uppercase tracking-wider">{isSpanish ? "Modo Disponibilidad" : "Availability Mode"}</p>
             </div>
-            <p className="text-xl font-black text-foreground">Let employers find you</p>
+            <p className="text-xl font-black text-foreground">{isSpanish ? "Deja que los empleadores te encuentren" : "Let employers find you"}</p>
             <p className="text-xs text-muted-foreground mt-1">
-              Post your availability and get hired directly from the live feed. Posts expire in 24 hours.
+              {isSpanish
+                ? "Publica tu disponibilidad y sé contratado directamente desde el feed. Las publicaciones expiran en 24 horas."
+                : "Post your availability and get hired directly from the live feed. Posts expire in 24 hours."}
             </p>
           </div>
           {!showForm && (
@@ -60,7 +76,7 @@ export default function WorkerAvailability() {
               onClick={() => setShowForm(true)}
             >
               <Plus size={15} className="mr-2" strokeWidth={2.5} />
-              Post Availability
+              {t("postAvailability")}
             </Button>
           )}
         </div>
@@ -72,7 +88,7 @@ export default function WorkerAvailability() {
 
         {/* ── Active Posts ──────────────────────────────────────────────── */}
         <div>
-          <p className="text-xs font-bold text-muted-foreground uppercase tracking-wider mb-3">Your Active Posts</p>
+          <p className="text-xs font-bold text-muted-foreground uppercase tracking-wider mb-3">{isSpanish ? "Tus Publicaciones Activas" : "Your Active Posts"}</p>
           {isLoading ? (
             <div className="space-y-2">
               {[1, 2].map((i) => (
@@ -82,8 +98,8 @@ export default function WorkerAvailability() {
           ) : !myPosts?.length ? (
             <div className="flex flex-col items-center py-10 text-center">
               <ChefHat size={32} className="text-muted-foreground/30 mb-3" />
-              <p className="font-bold text-foreground text-sm">No active posts</p>
-              <p className="text-xs text-muted-foreground mt-1">Post your availability to appear in the feed</p>
+              <p className="font-bold text-foreground text-sm">{isSpanish ? "Sin publicaciones activas" : "No active posts"}</p>
+              <p className="text-xs text-muted-foreground mt-1">{isSpanish ? "Publica tu disponibilidad para aparecer en el feed" : "Post your availability to appear in the feed"}</p>
             </div>
           ) : (
             <div className="space-y-2">
@@ -97,7 +113,7 @@ export default function WorkerAvailability() {
                       <div className="flex-1">
                         <div className="flex items-center gap-1.5 mb-2">
                           <div className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
-                          <span className="text-xs font-bold text-emerald-400">LIVE</span>
+                          <span className="text-xs font-bold text-emerald-400">{isSpanish ? "EN VIVO" : "LIVE"}</span>
                         </div>
                         <div className="flex flex-wrap gap-1.5 mb-2">
                           {skills.map((s: string) => {
@@ -146,9 +162,11 @@ function AvailabilityForm({ onSuccess, onCancel }: { onSuccess: () => void; onCa
   const [selectedSkills, setSelectedSkills] = useState<string[]>([]);
   const [city, setCity] = useState("Austin, TX");
   const [note, setNote] = useState("");
+  const { t, isSpanish } = useLanguage();
+  const SKILLS = isSpanish ? SKILLS_ES : SKILLS_EN;
 
   const createMutation = trpc.availability.post.useMutation({
-    onSuccess: () => { toast.success("You're live on the feed!"); onSuccess(); },
+    onSuccess: () => { toast.success(isSpanish ? "¡Estás en vivo en el feed!" : "You're live on the feed!"); onSuccess(); },
     onError: (e) => toast.error(e.message),
   });
 
@@ -161,13 +179,13 @@ function AvailabilityForm({ onSuccess, onCancel }: { onSuccess: () => void; onCa
   return (
     <div className="bg-card rounded-2xl border border-primary/30 p-5 space-y-4">
       <div className="flex items-center justify-between">
-        <p className="font-black text-foreground">New Availability Post</p>
-        <button onClick={onCancel} className="text-xs text-muted-foreground hover:text-foreground">Cancel</button>
+        <p className="font-black text-foreground">{isSpanish ? "Nueva Publicación de Disponibilidad" : "New Availability Post"}</p>
+        <button onClick={onCancel} className="text-xs text-muted-foreground hover:text-foreground">{t("cancel")}</button>
       </div>
 
       {/* City */}
       <div>
-        <p className="text-xs font-bold text-muted-foreground uppercase tracking-wider mb-1.5">City *</p>
+        <p className="text-xs font-bold text-muted-foreground uppercase tracking-wider mb-1.5">{isSpanish ? "Ciudad *" : "City *"}</p>
         <select
           value={city}
           onChange={(e) => setCity(e.target.value)}
@@ -179,7 +197,7 @@ function AvailabilityForm({ onSuccess, onCancel }: { onSuccess: () => void; onCa
 
       {/* Skills */}
       <div>
-        <p className="text-xs font-bold text-muted-foreground uppercase tracking-wider mb-2">Skills / Roles *</p>
+        <p className="text-xs font-bold text-muted-foreground uppercase tracking-wider mb-2">{isSpanish ? "Habilidades / Roles *" : "Skills / Roles *"}</p>
         <div className="grid grid-cols-3 gap-2">
           {SKILLS.map((s) => (
             <button
@@ -201,11 +219,11 @@ function AvailabilityForm({ onSuccess, onCancel }: { onSuccess: () => void; onCa
 
       {/* Note */}
       <div>
-        <p className="text-xs font-bold text-muted-foreground uppercase tracking-wider mb-1.5">Note (optional)</p>
+        <p className="text-xs font-bold text-muted-foreground uppercase tracking-wider mb-1.5">{isSpanish ? "Nota (opcional)" : "Note (optional)"}</p>
         <textarea
           value={note}
           onChange={(e) => setNote(e.target.value)}
-          placeholder="Available for doubles, experienced in fine dining..."
+          placeholder={isSpanish ? "Disponible para dobles, experiencia en alta cocina..." : "Available for doubles, experienced in fine dining..."}
           className="w-full bg-secondary border border-border rounded-xl p-3 text-sm resize-none h-16 focus:outline-none focus:ring-1 focus:ring-primary placeholder:text-muted-foreground text-foreground"
           maxLength={300}
         />
@@ -218,7 +236,7 @@ function AvailabilityForm({ onSuccess, onCancel }: { onSuccess: () => void; onCa
       >
         {createMutation.isPending ? (
           <div className="w-4 h-4 border-2 border-primary-foreground border-t-transparent rounded-full animate-spin" />
-        ) : "Go Live Now"}
+        ) : (isSpanish ? "Ir en Vivo Ahora" : "Go Live Now")}
       </Button>
     </div>
   );

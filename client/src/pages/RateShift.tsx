@@ -8,22 +8,7 @@ import { useState } from "react";
 import { toast } from "sonner";
 import { ArrowLeft, ChefHat, Star, CheckCircle2, Clock, MapPin, Briefcase } from "lucide-react";
 import { cn } from "@/lib/utils";
-
-const RATING_LABELS: Record<number, string> = {
-  5: "Absolutely",
-  4: "Sure",
-  3: "Maybe",
-  2: "Not really",
-  1: "Never",
-};
-
-const RATING_DESCRIPTIONS: Record<number, string> = {
-  5: "Would hire/work with again without hesitation",
-  4: "Would likely hire/work with again",
-  3: "Neutral — might consider again",
-  2: "Probably wouldn't hire/work with again",
-  1: "Would not hire/work with again",
-};
+import { useLanguage } from "@/contexts/LanguageContext";
 
 const RATING_COLORS: Record<number, string> = {
   5: "text-emerald-400",
@@ -41,10 +26,15 @@ const STAR_COLORS: Record<number, string> = {
   1: "bg-red-500/20 border-red-500/40 text-red-400",
 };
 
-const ROLE_LABELS: Record<string, string> = {
+const ROLE_LABELS_EN: Record<string, string> = {
   cook: "Cook", sous_chef: "Sous Chef", prep: "Prep Cook",
   dishwasher: "Dishwasher", cleaner: "Cleaner", server: "Server",
   bartender: "Bartender", host: "Host", manager: "Manager",
+};
+const ROLE_LABELS_ES: Record<string, string> = {
+  cook: "Cocinero", sous_chef: "Sous Chef", prep: "Cocinero de Preparación",
+  dishwasher: "Lavaplatos", cleaner: "Limpiador", server: "Mesero",
+  bartender: "Bartender", host: "Anfitrión", manager: "Gerente",
 };
 
 export default function RateShift() {
@@ -53,6 +43,14 @@ export default function RateShift() {
   const [score, setScore] = useState<number | null>(null);
   const [comment, setComment] = useState("");
   const [submitted, setSubmitted] = useState(false);
+  const { t, isSpanish } = useLanguage();
+  const ROLE_LABELS = isSpanish ? ROLE_LABELS_ES : ROLE_LABELS_EN;
+  const RATING_LABELS: Record<number, string> = isSpanish
+    ? { 5: "Absolutamente", 4: "Claro", 3: "Tal vez", 2: "No realmente", 1: "Nunca" }
+    : { 5: "Absolutely", 4: "Sure", 3: "Maybe", 2: "Not really", 1: "Never" };
+  const RATING_DESCRIPTIONS: Record<number, string> = isSpanish
+    ? { 5: "Contrataría/trabajaría de nuevo sin dudarlo", 4: "Probablemente contrataría/trabajaría de nuevo", 3: "Neutral — podría considerar de nuevo", 2: "Probablemente no contrataría/trabajaría de nuevo", 1: "No contrataría/trabajaría de nuevo" }
+    : { 5: "Would hire/work with again without hesitation", 4: "Would likely hire/work with again", 3: "Neutral — might consider again", 2: "Probably wouldn't hire/work with again", 1: "Would not hire/work with again" };
 
   const jobIdNum = parseInt(jobId ?? "0", 10);
 
@@ -109,17 +107,17 @@ export default function RateShift() {
         <div className="max-w-lg mx-auto px-4 py-8">
           <button onClick={() => navigate("/ratings")} className="flex items-center gap-2 text-muted-foreground hover:text-foreground transition-colors mb-6">
             <ArrowLeft size={16} />
-            <span className="text-sm font-medium">Back to Ratings</span>
+            <span className="text-sm font-medium">{isSpanish ? "Volver a Calificaciones" : "Back to Ratings"}</span>
           </button>
 
           <div className="flex flex-col items-center py-12 text-center">
             <div className="w-20 h-20 rounded-full bg-emerald-500/20 flex items-center justify-center mb-4">
               <CheckCircle2 size={40} className="text-emerald-400" />
             </div>
-            <h2 className="text-2xl font-black text-foreground mb-2">Rating Submitted!</h2>
+            <h2 className="text-2xl font-black text-foreground mb-2">{isSpanish ? "¡Calificación Enviada!" : "Rating Submitted!"}</h2>
             <p className="text-muted-foreground max-w-xs">
-              Your feedback helps build trust on the platform.
-              {otherUser?.name && ` ${otherUser.name} has been notified.`}
+              {isSpanish ? "Tu opinión ayuda a construir confianza en la plataforma." : "Your feedback helps build trust on the platform."}
+              {otherUser?.name && ` ${otherUser.name} ${isSpanish ? "ha sido notificado." : "has been notified."}`}
             </p>
             {submitted && score !== null && (
               <div className={cn("mt-4 text-4xl font-black", RATING_COLORS[score])}>
@@ -133,10 +131,10 @@ export default function RateShift() {
             )}
             <div className="flex gap-3 mt-8">
               <Button variant="outline" className="rounded-2xl" onClick={() => navigate("/ratings")}>
-                View All Ratings
+                {isSpanish ? "Ver Todas las Calificaciones" : "View All Ratings"}
               </Button>
               <Button className="rounded-2xl btn-glow" onClick={() => navigate("/feed")}>
-                Find More Shifts
+                {isSpanish ? "Buscar Más Turnos" : "Find More Shifts"}
               </Button>
             </div>
           </div>
@@ -152,17 +150,17 @@ export default function RateShift() {
         <div className="max-w-lg mx-auto px-4 py-8">
           <button onClick={() => navigate("/ratings")} className="flex items-center gap-2 text-muted-foreground hover:text-foreground transition-colors mb-6">
             <ArrowLeft size={16} />
-            <span className="text-sm font-medium">Back to Ratings</span>
+            <span className="text-sm font-medium">{isSpanish ? "Volver a Calificaciones" : "Back to Ratings"}</span>
           </button>
           <div className="bg-card rounded-2xl border border-border p-6 text-center">
             <div className="w-14 h-14 rounded-2xl bg-secondary flex items-center justify-center mx-auto mb-4">
               <Clock size={24} className="text-muted-foreground" />
             </div>
-            <h3 className="font-bold text-foreground mb-2">Rating Not Available Yet</h3>
+            <h3 className="font-bold text-foreground mb-2">{isSpanish ? "Calificación No Disponible Aún" : "Rating Not Available Yet"}</h3>
             <p className="text-sm text-muted-foreground">
               {job.status !== "completed"
-                ? "This shift hasn't been completed yet."
-                : "Payment must be released before ratings are unlocked."}
+                ? (isSpanish ? "Este turno aún no ha sido completado." : "This shift hasn't been completed yet.")
+                : (isSpanish ? "El pago debe ser liberado antes de que se desbloqueen las calificaciones." : "Payment must be released before ratings are unlocked.")}
             </p>
           </div>
         </div>
@@ -177,16 +175,16 @@ export default function RateShift() {
         {/* Back */}
         <button onClick={() => navigate("/ratings")} className="flex items-center gap-2 text-muted-foreground hover:text-foreground transition-colors mb-6">
           <ArrowLeft size={16} />
-          <span className="text-sm font-medium">Back to Ratings</span>
+          <span className="text-sm font-medium">{isSpanish ? "Volver a Calificaciones" : "Back to Ratings"}</span>
         </button>
 
         {/* Header */}
         <div className="mb-6">
           <h1 className="text-2xl font-black text-foreground" style={{ fontFamily: "'Plus Jakarta Sans', sans-serif" }}>
-            Rate This Shift
+            {isSpanish ? "Califica Este Turno" : "Rate This Shift"}
           </h1>
           <p className="text-muted-foreground text-sm mt-1">
-            {isEmployer ? "How did the worker perform?" : "How was working with this employer?"}
+            {isEmployer ? (isSpanish ? "¿Cómo se desempeñó el trabajador?" : "How did the worker perform?") : (isSpanish ? "¿Cómo fue trabajar con este empleador?" : "How was working with this employer?")}
           </p>
         </div>
 
@@ -217,7 +215,7 @@ export default function RateShift() {
         {/* Person being rated */}
         <div className="bg-card rounded-2xl border border-border p-4 mb-6">
           <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider mb-3">
-            {isEmployer ? "Worker" : "Employer"}
+            {isEmployer ? (isSpanish ? "Trabajador" : "Worker") : (isSpanish ? "Empleador" : "Employer")}
           </p>
           <div className="flex items-center gap-3">
             <div className="w-12 h-12 rounded-2xl bg-secondary flex items-center justify-center overflow-hidden flex-shrink-0">
@@ -231,7 +229,7 @@ export default function RateShift() {
               <p className="font-bold text-foreground">{otherUser?.name ?? "Unknown"}</p>
               {otherUser?.rating && otherUser.rating > 0 && (
                 <p className="text-xs text-muted-foreground">
-                  {otherUser.rating.toFixed(1)}★ avg · {otherUser.totalRatings ?? 0} ratings
+                  {otherUser.rating.toFixed(1)}★ avg · {otherUser.totalRatings ?? 0} {isSpanish ? "calificaciones" : "ratings"}
                 </p>
               )}
             </div>
@@ -241,9 +239,9 @@ export default function RateShift() {
         {/* Rating question */}
         <div className="mb-6">
           <p className="text-sm font-bold text-foreground mb-1">
-            Would you {isEmployer ? "hire" : "work with"} them again?
+            {isSpanish ? `¿Volverías a ${isEmployer ? "contratar" : "trabajar con"} esta persona?` : `Would you ${isEmployer ? "hire" : "work with"} them again?`}
           </p>
-          <p className="text-xs text-muted-foreground mb-4">Select a rating below</p>
+          <p className="text-xs text-muted-foreground mb-4">{isSpanish ? "Selecciona una calificación abajo" : "Select a rating below"}</p>
 
           <div className="space-y-2.5">
             {[5, 4, 3, 2, 1].map((s) => (
@@ -282,14 +280,14 @@ export default function RateShift() {
         {/* Comment */}
         <div className="mb-6">
           <label className="text-xs font-bold text-muted-foreground uppercase tracking-wider block mb-2">
-            Add a comment <span className="normal-case font-normal">(optional)</span>
+            {isSpanish ? "Agrega un comentario" : "Add a comment"} <span className="normal-case font-normal">({isSpanish ? "opcional" : "optional"})</span>
           </label>
           <textarea
             value={comment}
             onChange={(e) => setComment(e.target.value)}
             placeholder={isEmployer
-              ? "Describe their punctuality, skill, attitude..."
-              : "Describe the work environment, communication, pay accuracy..."}
+              ? (isSpanish ? "Describe su puntualidad, habilidad, actitud..." : "Describe their punctuality, skill, attitude...")
+              : (isSpanish ? "Describe el ambiente de trabajo, comunicación, exactitud del pago..." : "Describe the work environment, communication, pay accuracy...")}
             className="w-full bg-card border border-border rounded-2xl p-4 text-sm resize-none h-28 focus:outline-none focus:ring-1 focus:ring-primary text-foreground placeholder:text-muted-foreground transition-colors"
             maxLength={1000}
           />
@@ -309,12 +307,12 @@ export default function RateShift() {
           {submitMutation.isPending ? (
             <div className="w-5 h-5 border-2 border-primary-foreground border-t-transparent rounded-full animate-spin" />
           ) : (
-            <>Submit Rating {score !== null && `— ${RATING_LABELS[score]}`}</>
+            <>{isSpanish ? "Enviar Calificación" : "Submit Rating"} {score !== null && `— ${RATING_LABELS[score]}`}</>
           )}
         </Button>
 
         <p className="text-center text-xs text-muted-foreground mt-3">
-          Ratings are visible on public profiles and help build platform trust.
+          {isSpanish ? "Las calificaciones son visibles en perfiles públicos y ayudan a construir confianza en la plataforma." : "Ratings are visible on public profiles and help build platform trust."}
         </p>
       </div>
     </AppShell>

@@ -4,6 +4,7 @@ import { SEOHead } from "@/components/SEOHead";
 import { useAuth } from "@/_core/hooks/useAuth";
 import { useLocation } from "wouter";
 import { useEffect } from "react";
+import { useLanguage } from "@/contexts/LanguageContext";
 import {
   DollarSign, ChefHat, Star, Users, TrendingUp, Clock,
   CheckCircle, AlertCircle, BarChart3, Award
@@ -65,6 +66,7 @@ export default function EmployerDashboard() {
   const { user, isAuthenticated } = useAuth();
   const authLoading = isAuthenticated === undefined;
   const [, navigate] = useLocation();
+  const { isSpanish } = useLanguage();
 
   const { data: summary, isLoading: summaryLoading } = trpc.employerDashboard.summary.useQuery(undefined, {
     enabled: !!user,
@@ -98,8 +100,8 @@ export default function EmployerDashboard() {
 
         {/* Header */}
         <div>
-          <h1 className="text-xl font-black text-foreground">Employer Dashboard</h1>
-          <p className="text-sm text-muted-foreground mt-0.5">Your complete hiring history and spending overview</p>
+          <h1 className="text-xl font-black text-foreground">{isSpanish ? "Panel del Empleador" : "Employer Dashboard"}</h1>
+          <p className="text-sm text-muted-foreground mt-0.5">{isSpanish ? "Tu historial completo de contrataciones y gastos" : "Your complete hiring history and spending overview"}</p>
         </div>
 
         {/* Stat Cards */}
@@ -107,33 +109,33 @@ export default function EmployerDashboard() {
           <div className="grid grid-cols-2 gap-3">
             <StatCard
               icon={<DollarSign size={16} className="text-orange-400" />}
-              label="Total Spent"
+              label={isSpanish ? "Total Gastado" : "Total Spent"}
               value={fmt(summary.totalSpent)}
-              sub={`${fmt(summary.totalPlatformFees)} platform fees`}
+              sub={`${fmt(summary.totalPlatformFees)} ${isSpanish ? "tarifas de plataforma" : "platform fees"}`}
               accent="bg-orange-500/15"
             />
             <StatCard
               icon={<ChefHat size={16} className="text-blue-400" />}
-              label="Shifts Completed"
+              label={isSpanish ? "Turnos Completados" : "Shifts Completed"}
               value={String(summary.completedShifts)}
-              sub={summary.heldShifts > 0 ? `${summary.heldShifts} in escrow` : "All settled"}
+              sub={summary.heldShifts > 0 ? `${summary.heldShifts} ${isSpanish ? "en depósito" : "in escrow"}` : (isSpanish ? "Todo liquidado" : "All settled")}
               accent="bg-blue-500/15"
             />
             <StatCard
               icon={<Users size={16} className="text-emerald-400" />}
-              label="Workers Hired"
+              label={isSpanish ? "Trabajadores Contratados" : "Workers Hired"}
               value={String(summary.uniqueWorkers)}
-              sub={`${summary.totalJobs} total posts`}
+              sub={`${summary.totalJobs} ${isSpanish ? "publicaciones totales" : "total posts"}`}
               accent="bg-emerald-500/15"
             />
             <StatCard
               icon={<TrendingUp size={16} className="text-purple-400" />}
-              label="Avg Cost / Shift"
+              label={isSpanish ? "Costo Promedio / Turno" : "Avg Cost / Shift"}
               value={summary.completedShifts > 0 ? fmt(summary.avgCostPerShift) : "—"}
               sub={
                 summary.avgRatingGiven != null
-                  ? `Avg rating given: ${summary.avgRatingGiven.toFixed(1)}★`
-                  : "No ratings given yet"
+                  ? `${isSpanish ? "Calificación prom. dada" : "Avg rating given"}: ${summary.avgRatingGiven.toFixed(1)}★`
+                  : (isSpanish ? "Sin calificaciones dadas" : "No ratings given yet")
               }
               accent="bg-purple-500/15"
             />
@@ -145,8 +147,8 @@ export default function EmployerDashboard() {
           <div>
             <div className="flex items-center gap-2 mb-3">
               <Award size={14} className="text-orange-400" />
-              <h2 className="text-sm font-black text-foreground">Preferred Workers</h2>
-              <span className="text-[10px] text-muted-foreground bg-muted px-2 py-0.5 rounded-full">Hired 2+ times</span>
+              <h2 className="text-sm font-black text-foreground">{isSpanish ? "Trabajadores Preferidos" : "Preferred Workers"}</h2>
+              <span className="text-[10px] text-muted-foreground bg-muted px-2 py-0.5 rounded-full">{isSpanish ? "Contratado 2+ veces" : "Hired 2+ times"}</span>
             </div>
             <div className="flex flex-wrap gap-2">
               {summary.preferredWorkers.map((w: any) => (
@@ -163,7 +165,7 @@ export default function EmployerDashboard() {
                   )}
                   <div>
                     <p className="text-xs font-bold text-foreground">{w.name ?? "Worker"}</p>
-                    <p className="text-[10px] text-muted-foreground">{w.hireCount}× hired</p>
+                    <p className="text-[10px] text-muted-foreground">{w.hireCount}× {isSpanish ? "contratado" : "hired"}</p>
                   </div>
                   {w.rating && (
                     <div className="flex items-center gap-0.5 ml-1">
@@ -181,7 +183,7 @@ export default function EmployerDashboard() {
         <div>
           <div className="flex items-center gap-2 mb-3">
             <BarChart3 size={14} className="text-orange-400" />
-            <h2 className="text-sm font-black text-foreground">Shift History</h2>
+              <h2 className="text-sm font-black text-foreground">{isSpanish ? "Historial de Turnos" : "Shift History"}</h2>
             {history && (
               <span className="text-[10px] text-muted-foreground bg-muted px-2 py-0.5 rounded-full">
                 {history.length} total
@@ -198,8 +200,8 @@ export default function EmployerDashboard() {
           ) : !history || history.length === 0 ? (
             <div className="bg-card border border-border rounded-2xl p-8 text-center">
               <ChefHat size={32} className="text-muted-foreground/30 mx-auto mb-3" />
-              <p className="text-sm font-bold text-foreground">No shifts posted yet</p>
-              <p className="text-xs text-muted-foreground mt-1">Post your first shift to start building your history</p>
+              <p className="text-sm font-bold text-foreground">{isSpanish ? "Sin turnos publicados aún" : "No shifts posted yet"}</p>
+              <p className="text-xs text-muted-foreground mt-1">{isSpanish ? "Publica tu primer turno para comenzar tu historial" : "Post your first shift to start building your history"}</p>
             </div>
           ) : (
             <div className="space-y-2">
@@ -241,7 +243,7 @@ export default function EmployerDashboard() {
                       {job.applicantCount > 0 && (
                         <div className="flex items-center gap-1 text-[11px] text-muted-foreground">
                           <Users size={10} />
-                          {job.applicantCount} applicant{job.applicantCount !== 1 ? "s" : ""}
+                          {job.applicantCount} {isSpanish ? `solicitante${job.applicantCount !== 1 ? "s" : ""}` : `applicant${job.applicantCount !== 1 ? "s" : ""}`}
                         </div>
                       )}
                     </div>
@@ -264,7 +266,7 @@ export default function EmployerDashboard() {
                               <StarRow score={job.ratingGiven.stars} />
                             ) : (
                               job.status === "completed" && (
-                                <p className="text-[10px] text-muted-foreground">Not rated</p>
+                                <p className="text-[10px] text-muted-foreground">{isSpanish ? "Sin calificar" : "Not rated"}</p>
                               )
                             )}
                           </div>
@@ -272,7 +274,7 @@ export default function EmployerDashboard() {
                       ) : (
                         <div className="flex items-center gap-1 text-[11px] text-muted-foreground">
                           <AlertCircle size={10} />
-                          No worker hired
+                          {isSpanish ? "Sin trabajador contratado" : "No worker hired"}
                         </div>
                       )}
 
@@ -283,10 +285,10 @@ export default function EmployerDashboard() {
                           <p className="text-[10px] text-muted-foreground">
                             {job.payment.status === "released" ? (
                               <span className="text-emerald-400 flex items-center gap-0.5 justify-end">
-                                <CheckCircle size={9} /> Paid
+                                <CheckCircle size={9} /> {isSpanish ? "Pagado" : "Paid"}
                               </span>
                             ) : job.payment.status === "held" ? (
-                              "In escrow"
+                              isSpanish ? "En depósito" : "In escrow"
                             ) : (
                               job.payment.status
                             )}
@@ -302,7 +304,7 @@ export default function EmployerDashboard() {
                     {/* Rating review */}
                     {job.ratingGiven?.review && (
                       <p className="mt-2 text-[11px] text-muted-foreground italic border-t border-border pt-2">
-                        Your review: "{job.ratingGiven.review}"
+                        {isSpanish ? "Tu reseña" : "Your review"}: "{job.ratingGiven.review}"
                       </p>
                     )}
                   </div>

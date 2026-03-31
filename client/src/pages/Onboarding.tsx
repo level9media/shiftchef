@@ -7,51 +7,58 @@ import { useEffect, useState } from "react";
 import { ChefHat, Briefcase, Users, ArrowRight, CheckCircle2 } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
+import { useLanguage } from "@/contexts/LanguageContext";
 
 type UserType = "worker" | "employer" | "both";
-
-const ROLES = [
-  {
-    value: "worker" as UserType,
-    icon: <ChefHat size={26} strokeWidth={1.8} />,
-    label: "I'm a Worker",
-    desc: "Find shifts, get paid fast, build your reputation",
-    color: "oklch(0.68 0.22 38 / 0.12)",
-    borderActive: "oklch(0.68 0.22 38 / 0.5)",
-    iconColor: "text-primary",
-    perks: ["Browse live shifts near you", "Apply in one tap", "🏆 Enter to win $100 Amazon gift card"],
-  },
-  {
-    value: "employer" as UserType,
-    icon: <Briefcase size={26} strokeWidth={1.8} />,
-    label: "I'm Hiring",
-    desc: "Post shifts, find verified staff, pay securely",
-    color: "oklch(0.60 0.18 250 / 0.12)",
-    borderActive: "oklch(0.60 0.18 250 / 0.5)",
-    iconColor: "text-blue-400",
-    perks: ["🎁 First shift post is FREE", "Verified worker ratings", "Secure escrow payments"],
-  },
-  {
-    value: "both" as UserType,
-    icon: <Users size={26} strokeWidth={1.8} />,
-    label: "Both",
-    desc: "Switch between hiring and working anytime",
-    color: "oklch(0.55 0.15 155 / 0.12)",
-    borderActive: "oklch(0.55 0.15 155 / 0.5)",
-    iconColor: "text-emerald-400",
-    perks: ["Full worker access", "Full employer access", "Switch roles anytime"],
-  },
-];
 
 export default function Onboarding() {
   const { isAuthenticated, loading } = useAuth();
   const [, navigate] = useLocation();
   const [selected, setSelected] = useState<UserType | null>(null);
+  const { t, isSpanish } = useLanguage();
+
+  const ROLES = [
+    {
+      value: "worker" as UserType,
+      icon: <ChefHat size={26} strokeWidth={1.8} />,
+      label: isSpanish ? "Soy Trabajador" : "I'm a Worker",
+      desc: isSpanish ? "Encuentra turnos, cobra rápido, construye tu reputación" : "Find shifts, get paid fast, build your reputation",
+      color: "oklch(0.68 0.22 38 / 0.12)",
+      borderActive: "oklch(0.68 0.22 38 / 0.5)",
+      iconColor: "text-primary",
+      perks: isSpanish
+        ? ["Explora turnos cerca de ti", "Aplica con un toque", "🏆 Participa para ganar tarjeta Amazon de $100"]
+        : ["Browse live shifts near you", "Apply in one tap", "🏆 Enter to win $100 Amazon gift card"],
+    },
+    {
+      value: "employer" as UserType,
+      icon: <Briefcase size={26} strokeWidth={1.8} />,
+      label: isSpanish ? "Estoy Contratando" : "I'm Hiring",
+      desc: isSpanish ? "Publica turnos, encuentra personal verificado, paga de forma segura" : "Post shifts, find verified staff, pay securely",
+      color: "oklch(0.60 0.18 250 / 0.12)",
+      borderActive: "oklch(0.60 0.18 250 / 0.5)",
+      iconColor: "text-blue-400",
+      perks: isSpanish
+        ? ["🎁 Primera publicación GRATIS", "Calificaciones de trabajadores verificados", "Pagos seguros en custodia"]
+        : ["🎁 First shift post is FREE", "Verified worker ratings", "Secure escrow payments"],
+    },
+    {
+      value: "both" as UserType,
+      icon: <Users size={26} strokeWidth={1.8} />,
+      label: isSpanish ? "Ambos" : "Both",
+      desc: isSpanish ? "Cambia entre contratar y trabajar en cualquier momento" : "Switch between hiring and working anytime",
+      color: "oklch(0.55 0.15 155 / 0.12)",
+      borderActive: "oklch(0.55 0.15 155 / 0.5)",
+      iconColor: "text-emerald-400",
+      perks: isSpanish
+        ? ["Acceso completo como trabajador", "Acceso completo como empleador", "Cambia de rol en cualquier momento"]
+        : ["Full worker access", "Full employer access", "Switch roles anytime"],
+    },
+  ];
 
   const setRole = trpc.profile.setRole.useMutation({
     onSuccess: (_data, vars) => {
-      toast.success("Welcome to ShiftChef!");
-      // Employers get a guided onboarding flow first
+      toast.success(isSpanish ? "¡Bienvenido a ShiftChef!" : "Welcome to ShiftChef!");
       if (vars.userType === "employer" || vars.userType === "both") {
         navigate("/employer-onboarding");
       } else {
@@ -74,99 +81,105 @@ export default function Onboarding() {
       >
         {/* Glow */}
         <div
-        className="absolute inset-0 pointer-events-none"
-        style={{ background: "radial-gradient(ellipse 80% 40% at 50% 0%, oklch(0.68 0.22 38 / 0.07), transparent)" }}
+          className="absolute inset-0 pointer-events-none"
+          style={{ background: "radial-gradient(ellipse 80% 40% at 50% 0%, oklch(0.68 0.22 38 / 0.07), transparent)" }}
         />
 
         <div className="relative z-10 flex flex-col flex-1 px-5 pt-8 max-w-sm mx-auto w-full">
-        {/* Logo */}
-        <div className="flex items-center gap-2 mb-8">
-          <div className="w-9 h-9 rounded-2xl bg-primary flex items-center justify-center">
-            <ChefHat size={17} className="text-primary-foreground" strokeWidth={2.5} />
+          {/* Logo */}
+          <div className="flex items-center gap-2 mb-8">
+            <div className="w-9 h-9 rounded-2xl bg-primary flex items-center justify-center">
+              <ChefHat size={17} className="text-primary-foreground" strokeWidth={2.5} />
+            </div>
+            <span className="text-xl font-black" style={{ fontFamily: "'Plus Jakarta Sans', sans-serif" }}>
+              Shift<span className="text-primary">Chef</span>
+            </span>
           </div>
-          <span className="text-xl font-black" style={{ fontFamily: "'Plus Jakarta Sans', sans-serif" }}>
-            Shift<span className="text-primary">Chef</span>
-          </span>
-        </div>
 
-        <h1 className="text-3xl font-black mb-1.5" style={{ fontFamily: "'Plus Jakarta Sans', sans-serif" }}>
-          How will you use ShiftChef?
-        </h1>
-        <p className="text-muted-foreground text-sm mb-4">You can always switch later from your profile.</p>
+          <h1 className="text-3xl font-black mb-1.5" style={{ fontFamily: "'Plus Jakarta Sans', sans-serif" }}>
+            {isSpanish ? "¿Cómo usarás ShiftChef?" : "How will you use ShiftChef?"}
+          </h1>
+          <p className="text-muted-foreground text-sm mb-4">
+            {isSpanish ? "Siempre puedes cambiar desde tu perfil." : "You can always switch later from your profile."}
+          </p>
 
-        {/* Promo banners */}
-        <div className="space-y-2 mb-5">
-          <div className="flex items-center gap-2.5 bg-orange-500/10 border border-orange-500/25 rounded-xl px-3.5 py-2.5">
-            <span className="text-lg">🏆</span>
-            <p className="text-xs text-orange-300 font-semibold leading-tight">
-              Workers: Sign up &amp; complete your profile to enter our <span className="font-black text-orange-400">$100 Amazon gift card</span> giveaway!
-            </p>
+          {/* Promo banners */}
+          <div className="space-y-2 mb-5">
+            <div className="flex items-center gap-2.5 bg-orange-500/10 border border-orange-500/25 rounded-xl px-3.5 py-2.5">
+              <span className="text-lg">🏆</span>
+              <p className="text-xs text-orange-300 font-semibold leading-tight">
+                {isSpanish
+                  ? <>Trabajadores: Regístrate y completa tu perfil para participar en nuestro sorteo de <span className="font-black text-orange-400">tarjeta Amazon de $100</span>!</>
+                  : <>Workers: Sign up &amp; complete your profile to enter our <span className="font-black text-orange-400">$100 Amazon gift card</span> giveaway!</>}
+              </p>
+            </div>
+            <div className="flex items-center gap-2.5 bg-blue-500/10 border border-blue-500/25 rounded-xl px-3.5 py-2.5">
+              <span className="text-lg">🎁</span>
+              <p className="text-xs text-blue-300 font-semibold leading-tight">
+                {isSpanish
+                  ? <>Empleadores: <span className="font-black text-blue-400">La primera publicación es GRATIS</span> — no se requiere tarjeta de crédito para comenzar.</>
+                  : <>Employers: <span className="font-black text-blue-400">First shift post is FREE</span> — no credit card required to get started.</>}
+              </p>
+            </div>
           </div>
-          <div className="flex items-center gap-2.5 bg-blue-500/10 border border-blue-500/25 rounded-xl px-3.5 py-2.5">
-            <span className="text-lg">🎁</span>
-            <p className="text-xs text-blue-300 font-semibold leading-tight">
-              Employers: <span className="font-black text-blue-400">First shift post is FREE</span> — no credit card required to get started.
-            </p>
-          </div>
-        </div>
 
-        {/* Role cards */}
-        <div className="space-y-3 flex-1">
-          {ROLES.map((role) => {
-            const isSelected = selected === role.value;
-            return (
-              <button
-                key={role.value}
-                onClick={() => setSelected(role.value)}
-                className="w-full text-left rounded-2xl p-4 border-2 transition-all duration-200 card-press"
-                style={{
-                  background: isSelected ? role.color : "oklch(0.10 0 0)",
-                  borderColor: isSelected ? role.borderActive : "oklch(0.20 0 0)",
-                }}
-              >
-                <div className="flex items-start gap-3.5">
-                  <div
-                    className={cn("w-12 h-12 rounded-2xl flex items-center justify-center flex-shrink-0", role.iconColor)}
-                    style={{ background: role.color }}
-                  >
-                    {role.icon}
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center justify-between mb-0.5">
-                      <p className="font-black text-sm text-foreground">{role.label}</p>
-                      {isSelected && <CheckCircle2 size={16} className="text-primary flex-shrink-0" strokeWidth={2.5} />}
+          {/* Role cards */}
+          <div className="space-y-3 flex-1">
+            {ROLES.map((role) => {
+              const isSelected = selected === role.value;
+              return (
+                <button
+                  key={role.value}
+                  onClick={() => setSelected(role.value)}
+                  className="w-full text-left rounded-2xl p-4 border-2 transition-all duration-200 card-press"
+                  style={{
+                    background: isSelected ? role.color : "oklch(0.10 0 0)",
+                    borderColor: isSelected ? role.borderActive : "oklch(0.20 0 0)",
+                  }}
+                >
+                  <div className="flex items-start gap-3.5">
+                    <div
+                      className={cn("w-12 h-12 rounded-2xl flex items-center justify-center flex-shrink-0", role.iconColor)}
+                      style={{ background: role.color }}
+                    >
+                      {role.icon}
                     </div>
-                    <p className="text-xs text-muted-foreground mb-2.5">{role.desc}</p>
-                    <div className="space-y-1">
-                      {role.perks.map((perk) => (
-                        <div key={perk} className="flex items-center gap-1.5">
-                          <div className="w-1 h-1 rounded-full bg-muted-foreground/50 flex-shrink-0" />
-                          <span className="text-[11px] text-muted-foreground">{perk}</span>
-                        </div>
-                      ))}
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center justify-between mb-0.5">
+                        <p className="font-black text-sm text-foreground">{role.label}</p>
+                        {isSelected && <CheckCircle2 size={16} className="text-primary flex-shrink-0" strokeWidth={2.5} />}
+                      </div>
+                      <p className="text-xs text-muted-foreground mb-2.5">{role.desc}</p>
+                      <div className="space-y-1">
+                        {role.perks.map((perk) => (
+                          <div key={perk} className="flex items-center gap-1.5">
+                            <div className="w-1 h-1 rounded-full bg-muted-foreground/50 flex-shrink-0" />
+                            <span className="text-[11px] text-muted-foreground">{perk}</span>
+                          </div>
+                        ))}
+                      </div>
                     </div>
                   </div>
-                </div>
-              </button>
-            );
-          })}
-        </div>
+                </button>
+              );
+            })}
+          </div>
 
-        {/* CTA */}
-        <div className="mt-6">
-          <Button
-            size="lg"
-            className="w-full h-14 text-base font-bold rounded-2xl btn-glow"
-            disabled={!selected || setRole.isPending}
-            onClick={() => selected && setRole.mutate({ userType: selected })}
-          >
-            {setRole.isPending ? (
-              <div className="w-5 h-5 border-2 border-primary-foreground border-t-transparent rounded-full animate-spin" />
-            ) : (
-              <>Continue <ArrowRight size={17} className="ml-2" /></>
-            )}
-          </Button>
-        </div>
+          {/* CTA */}
+          <div className="mt-6">
+            <Button
+              size="lg"
+              className="w-full h-14 text-base font-bold rounded-2xl btn-glow"
+              disabled={!selected || setRole.isPending}
+              onClick={() => selected && setRole.mutate({ userType: selected })}
+            >
+              {setRole.isPending ? (
+                <div className="w-5 h-5 border-2 border-primary-foreground border-t-transparent rounded-full animate-spin" />
+              ) : (
+                <>{t("continue")} <ArrowRight size={17} className="ml-2" /></>
+              )}
+            </Button>
+          </div>
         </div>
       </div>
     </>

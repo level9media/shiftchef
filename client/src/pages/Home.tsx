@@ -5,11 +5,13 @@ import { Button } from "@/components/ui/button";
 import { useEffect, useState } from "react";
 import { useLocation, Link } from "wouter";
 import { ChefHat, Zap, Shield, DollarSign, Star, ArrowRight, TrendingUp, Menu, X } from "lucide-react";
+import { useLanguage } from "@/contexts/LanguageContext";
 
 export default function Home() {
   const { isAuthenticated, loading } = useAuth();
   const [, navigate] = useLocation();
   const [menuOpen, setMenuOpen] = useState(false);
+  const { isSpanish } = useLanguage();
 
   useEffect(() => {
     if (!loading && isAuthenticated) {
@@ -77,12 +79,12 @@ export default function Home() {
       {menuOpen && (
         <div className="relative z-20 mx-5 mt-1 mb-2 rounded-2xl border border-border/50 bg-card/90 backdrop-blur-md shadow-xl overflow-hidden">
           {[
-            { label: "Home", path: "/" },
-            { label: "How It Works", path: "/how-it-works" },
-            { label: "Pricing", path: "/pricing" },
+            { label: isSpanish ? "Inicio" : "Home", path: "/" },
+            { label: isSpanish ? "Cómo Funciona" : "How It Works", path: "/how-it-works" },
+            { label: isSpanish ? "Precios" : "Pricing", path: "/pricing" },
             { label: "FAQ", path: "/faq" },
-            { label: "Find Shifts", path: "/feed" },
-            { label: "Post a Job", path: "/post-job" },
+            { label: isSpanish ? "Buscar Turnos" : "Find Shifts", path: "/feed" },
+            { label: isSpanish ? "Publicar Trabajo" : "Post a Job", path: "/post-job" },
           ].map((item, i) => (
             <Link
               key={item.path}
@@ -104,7 +106,7 @@ export default function Home() {
         {/* Badge */}
         <div className="inline-flex items-center gap-1.5 bg-primary/15 border border-primary/30 text-primary text-xs font-bold px-3 py-1.5 rounded-full mb-6 fade-in-up">
           <Zap size={11} strokeWidth={2.5} />
-          Real-time hospitality staffing
+          {isSpanish ? "Personal de hostelería en tiempo real" : "Real-time hospitality staffing"}
         </div>
 
         {/* Headline */}
@@ -112,13 +114,13 @@ export default function Home() {
           className="text-5xl font-black leading-[1.05] tracking-tight mb-4 fade-in-up card-2"
           style={{ fontFamily: "'Plus Jakarta Sans', sans-serif" }}
         >
-          Find shifts.
+          {isSpanish ? "Encuentra turnos." : "Find shifts."}
           <br />
-          <span className="text-primary">Hire fast.</span>
+          <span className="text-primary">{isSpanish ? "Contrata rápido." : "Hire fast."}</span>
         </h1>
 
         <p className="text-muted-foreground text-base max-w-xs leading-relaxed mb-10 fade-in-up card-3">
-          Connect with skilled kitchen staff in minutes. Post a shift, get paid same day.
+          {isSpanish ? "Conectáte con personal de cocina calificado en minutos. Publica un turno, cobra el mismo día." : "Connect with skilled kitchen staff in minutes. Post a shift, get paid same day."}
         </p>
 
         {/* CTAs */}
@@ -128,7 +130,7 @@ export default function Home() {
               size="lg"
               className="w-full h-14 text-base font-bold rounded-2xl btn-glow"
             >
-              Get Started Free
+              {isSpanish ? "Comenzar Gratis" : "Get Started Free"}
               <ArrowRight size={18} className="ml-2" />
             </Button>
           </a>
@@ -138,7 +140,7 @@ export default function Home() {
               size="lg"
               className="w-full h-14 text-base font-semibold rounded-2xl border-border bg-secondary/50 text-foreground"
             >
-              Browse Live Shifts
+              {isSpanish ? "Ver Turnos en Vivo" : "Browse Live Shifts"}
             </Button>
           </a>
         </div>
@@ -157,7 +159,7 @@ export default function Home() {
             ))}
           </div>
           <p className="text-xs text-muted-foreground">
-            <span className="text-foreground font-semibold">500+</span> shifts filled in Austin
+            <span className="text-foreground font-semibold">500+</span> {isSpanish ? "turnos cubiertos en Austin" : "shifts filled in Austin"}
           </p>
         </div>
       </div>
@@ -167,26 +169,26 @@ export default function Home() {
         <FeatureCard
           icon={<Zap size={16} className="text-primary" />}
           color="oklch(0.68 0.22 38 / 0.12)"
-          title="Live job feed"
-          desc="Real-time shifts from local restaurants"
+          title={isSpanish ? "Feed de trabajos en vivo" : "Live job feed"}
+          desc={isSpanish ? "Turnos en tiempo real de restaurantes locales" : "Real-time shifts from local restaurants"}
         />
         <FeatureCard
           icon={<Shield size={16} className="text-emerald-400" />}
           color="oklch(0.55 0.15 155 / 0.12)"
-          title="Secure escrow payments"
-          desc="Funds held safely, released after shift"
+          title={isSpanish ? "Pagos seguros en depósito" : "Secure escrow payments"}
+          desc={isSpanish ? "Fondos retenidos de forma segura, liberados después del turno" : "Funds held safely, released after shift"}
         />
         <FeatureCard
           icon={<DollarSign size={16} className="text-yellow-400" />}
           color="oklch(0.85 0.18 95 / 0.12)"
-          title="90% payout to workers"
-          desc="We only take 10% — you keep the rest"
+          title={isSpanish ? "90% de pago a trabajadores" : "90% payout to workers"}
+          desc={isSpanish ? "Solo tomamos el 10% — tú te quedas el resto" : "We only take 10% — you keep the rest"}
         />
         <FeatureCard
           icon={<TrendingUp size={16} className="text-blue-400" />}
           color="oklch(0.60 0.18 250 / 0.12)"
-          title="Permanent potential"
-          desc="Temp shifts that can turn into full-time roles"
+          title={isSpanish ? "Potencial permanente" : "Permanent potential"}
+          desc={isSpanish ? "Turnos temporales que pueden convertirse en empleos de tiempo completo" : "Temp shifts that can turn into full-time roles"}
         />
       </div>
 
@@ -196,9 +198,9 @@ export default function Home() {
         style={{ paddingBottom: "calc(var(--sab) + 1.5rem)" }}
       >
         <div className="flex items-center justify-center gap-4">
-          <button onClick={() => navigate("/how-it-works")} className="text-primary hover:underline font-semibold">How It Works</button>
+          <button onClick={() => navigate("/how-it-works")} className="text-primary hover:underline font-semibold">{isSpanish ? "Cómo Funciona" : "How It Works"}</button>
           <span className="opacity-30">|</span>
-          <button onClick={() => navigate("/pricing")} className="text-primary hover:underline font-semibold">Pricing</button>
+          <button onClick={() => navigate("/pricing")} className="text-primary hover:underline font-semibold">{isSpanish ? "Precios" : "Pricing"}</button>
           <span className="opacity-30">|</span>
           <button onClick={() => navigate("/faq")} className="text-primary hover:underline font-semibold">FAQ</button>
         </div>

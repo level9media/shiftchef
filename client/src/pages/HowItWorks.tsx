@@ -9,6 +9,7 @@ import {
   Search, FileText, Star, Banknote,
   ArrowRight, ChefHat, Building2, Zap, Shield
 } from "lucide-react";
+import { useLanguage } from "@/contexts/LanguageContext";
 
 const EMPLOYER_STEPS = [
   {
@@ -82,6 +83,28 @@ const TRUST_POINTS = [
 export default function HowItWorks() {
   const [, navigate] = useLocation();
   const { isAuthenticated } = useAuth();
+  const { isSpanish } = useLanguage();
+
+  const EMPLOYER_STEPS_TRANSLATED = isSpanish ? [
+    { step: "01", icon: <ClipboardList size={22} className="text-white" />, color: "#FF6B00", title: "Publica Tu Turno", desc: "Ingresa el rol, fecha, hora, tarifa de pago y ubicación. Tu turno se publica en el feed de ShiftChef en menos de 60 segundos. Los trabajadores en tu ciudad lo ven al instante." },
+    { step: "02", icon: <Users size={22} className="text-white" />, color: "#FF6B00", title: "Revisa Solicitantes", desc: "Trabajadores calificados aplican con su perfil, experiencia y calificación de estrellas. Tú mantienes el control total de quién entra por tu puerta." },
+    { step: "03", icon: <CheckCircle size={22} className="text-white" />, color: "#FF6B00", title: "Confirma y Comunica", desc: "Los trabajadores contratados reciben una notificación instantánea con tu dirección, información de contacto e instrucciones de llegada. Todo se maneja dentro de la app." },
+    { step: "04", icon: <DollarSign size={22} className="text-white" />, color: "#FF6B00", title: "Rastrea el Turno y Paga", desc: "Inicia el turno con un toque. Registra la salida cuando termine. Las horas y salarios se calculan automáticamente. Libera el pago a través de Stripe — los fondos llegan el mismo día." },
+  ] : EMPLOYER_STEPS;
+
+  const WORKER_STEPS_TRANSLATED = isSpanish ? [
+    { step: "01", icon: <Search size={22} className="text-white" />, color: "#10B981", title: "Explora Turnos Disponibles", desc: "Filtra por ciudad, rol, tarifa de pago y fecha. Cada publicación muestra el pago total por adelantado. Turnos disponibles en Austin, Phoenix y Mesa." },
+    { step: "02", icon: <FileText size={22} className="text-white" />, color: "#10B981", title: "Aplica en Segundos", desc: "Toca Aplicar, agrega una nota opcional y envía. Tu perfil, calificación y experiencia se envían al empleador automáticamente. Sin cargas de CV, sin formularios." },
+    { step: "03", icon: <CheckCircle size={22} className="text-white" />, color: "#10B981", title: "Sé Contratado y Preséntate", desc: "¿Aceptado? Recibes una notificación instantánea con la dirección, persona de contacto e instrucciones de llegada. Llega 10 minutos antes y sé profesional." },
+    { step: "04", icon: <Banknote size={22} className="text-white" />, color: "#10B981", title: "Cobra el Mismo Día", desc: "Registra tu salida cuando termina el turno. El empleador libera el pago a través del depósito Stripe. Transfiere directamente a tu cuenta bancaria o Apple Pay — el mismo día." },
+  ] : WORKER_STEPS;
+
+  const TRUST_POINTS_TRANSLATED = isSpanish ? [
+    { icon: <Shield size={16} className="text-primary" />, text: "Depósito Stripe — fondos retenidos de forma segura hasta que el turno esté completo" },
+    { icon: <Star size={16} className="text-primary" />, text: "Calificaciones bidireccionales mantienen la calidad alta en ambos lados" },
+    { icon: <Zap size={16} className="text-primary" />, text: "Verificación de identidad para trabajadores — los empleadores saben quién llega" },
+    { icon: <CheckCircle size={16} className="text-primary" />, text: "Acuerdo de contratista 1099 firmado antes del primer turno" },
+  ] : TRUST_POINTS;
 
   return (
     <AppShell>
@@ -96,13 +119,13 @@ export default function HowItWorks() {
         <div className="text-center mb-10">
           <div className="inline-flex items-center gap-2 bg-primary/10 border border-primary/20 rounded-full px-3 py-1 mb-4">
             <ChefHat size={12} className="text-primary" />
-            <span className="text-xs font-bold text-primary uppercase tracking-wider">How ShiftChef Works</span>
+            <span className="text-xs font-bold text-primary uppercase tracking-wider">{isSpanish ? "Cómo Funciona ShiftChef" : "How ShiftChef Works"}</span>
           </div>
           <h1 className="text-3xl font-black text-foreground mb-2">
-            From post to paid<br />in one shift.
+            {isSpanish ? "De la publicación al pago" : "From post to paid"}<br />{isSpanish ? "en un turno." : "in one shift."}
           </h1>
           <p className="text-muted-foreground text-sm max-w-xs mx-auto">
-            ShiftChef connects hospitality businesses with vetted, on-demand workers. No agencies. No markups. Just fast, reliable staffing.
+            {isSpanish ? "ShiftChef conecta negocios de hostelería con trabajadores verificados bajo demanda. Sin agencias. Sin recargos. Solo personal rápido y confiable." : "ShiftChef connects hospitality businesses with vetted, on-demand workers. No agencies. No markups. Just fast, reliable staffing."}
           </p>
         </div>
 
@@ -112,7 +135,7 @@ export default function HowItWorks() {
             <div className="w-7 h-7 rounded-lg bg-primary flex items-center justify-center">
               <Building2 size={14} className="text-white" />
             </div>
-            <p className="font-black text-foreground text-base">For Employers</p>
+            <p className="font-black text-foreground text-base">{isSpanish ? "Para Empleadores" : "For Employers"}</p>
           </div>
 
           <div className="relative">
@@ -120,7 +143,7 @@ export default function HowItWorks() {
             <div className="absolute left-5 top-10 bottom-10 w-px bg-border" />
 
             <div className="space-y-6">
-              {EMPLOYER_STEPS.map((s) => (
+              {EMPLOYER_STEPS_TRANSLATED.map((s) => (
                 <div key={s.step} className="flex gap-4">
                   <div className="flex-shrink-0 relative z-10">
                     <div
@@ -146,7 +169,7 @@ export default function HowItWorks() {
             className="w-full h-11 font-bold rounded-xl text-sm mt-5 btn-glow"
             onClick={() => isAuthenticated ? navigate("/post-job") : window.location.href = getLoginUrl()}
           >
-            Post a Shift Now
+            {isSpanish ? "Publicar un Turno Ahora" : "Post a Shift Now"}
             <ArrowRight size={14} className="ml-1.5" />
           </Button>
         </div>
@@ -154,7 +177,7 @@ export default function HowItWorks() {
         {/* Divider */}
         <div className="relative flex items-center gap-3 mb-10">
           <div className="flex-1 h-px bg-border" />
-          <span className="text-xs text-muted-foreground font-bold uppercase tracking-wider">For Workers</span>
+          <span className="text-xs text-muted-foreground font-bold uppercase tracking-wider">{isSpanish ? "Para Trabajadores" : "For Workers"}</span>
           <div className="flex-1 h-px bg-border" />
         </div>
 
@@ -164,14 +187,14 @@ export default function HowItWorks() {
             <div className="w-7 h-7 rounded-lg bg-emerald-500 flex items-center justify-center">
               <ChefHat size={14} className="text-white" />
             </div>
-            <p className="font-black text-foreground text-base">For Workers</p>
+            <p className="font-black text-foreground text-base">{isSpanish ? "Para Trabajadores" : "For Workers"}</p>
           </div>
 
           <div className="relative">
             <div className="absolute left-5 top-10 bottom-10 w-px bg-border" />
 
             <div className="space-y-6">
-              {WORKER_STEPS.map((s) => (
+              {WORKER_STEPS_TRANSLATED.map((s) => (
                 <div key={s.step} className="flex gap-4">
                   <div className="flex-shrink-0 relative z-10">
                     <div
@@ -197,16 +220,16 @@ export default function HowItWorks() {
             className="w-full h-11 font-bold rounded-xl text-sm mt-5 bg-emerald-500 hover:bg-emerald-600 text-white border-0"
             onClick={() => isAuthenticated ? navigate("/feed") : window.location.href = getLoginUrl()}
           >
-            Browse Open Shifts
+            {isSpanish ? "Ver Turnos Disponibles" : "Browse Open Shifts"}
             <ArrowRight size={14} className="ml-1.5" />
           </Button>
         </div>
 
         {/* Trust section */}
         <div className="rounded-2xl border border-border bg-card p-5 mb-6">
-          <p className="font-black text-foreground text-sm mb-4">Built on trust. Backed by tech.</p>
+          <p className="font-black text-foreground text-sm mb-4">{isSpanish ? "Construido en confianza. Respaldado por tecnología." : "Built on trust. Backed by tech."}</p>
           <ul className="space-y-3">
-            {TRUST_POINTS.map((p, i) => (
+            {TRUST_POINTS_TRANSLATED.map((p, i) => (
               <li key={i} className="flex items-start gap-2.5 text-xs text-muted-foreground">
                 <span className="flex-shrink-0 mt-0.5">{p.icon}</span>
                 {p.text}
@@ -217,20 +240,20 @@ export default function HowItWorks() {
 
         {/* Bottom CTA */}
         <div className="text-center space-y-3">
-          <p className="text-xs text-muted-foreground">Still have questions?</p>
+          <p className="text-xs text-muted-foreground">{isSpanish ? "¿Todavía tienes preguntas?" : "Still have questions?"}</p>
           <div className="flex gap-3">
             <Button
               variant="outline"
               className="flex-1 h-10 text-sm font-bold rounded-xl"
               onClick={() => navigate("/faq")}
             >
-              Read the FAQ
+              {isSpanish ? "Leer el FAQ" : "Read the FAQ"}
             </Button>
             <Button
               className="flex-1 h-10 text-sm font-bold rounded-xl btn-glow"
               onClick={() => navigate("/pricing")}
             >
-              See Pricing
+              {isSpanish ? "Ver Precios" : "See Pricing"}
             </Button>
           </div>
         </div>

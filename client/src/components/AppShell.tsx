@@ -227,14 +227,17 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
 
             {/* Right: language toggle + role badge + bell + avatar */}
             <div className="flex items-center gap-2.5">
-              {/* EN / ES toggle */}
+              {/* Language toggle with flag icon */}
               <button
                 onClick={() => setLanguage(language === "en" ? "es" : "en")}
-                className="flex items-center gap-1 text-[11px] font-bold px-2.5 py-1 rounded-full bg-secondary border border-border text-muted-foreground hover:text-foreground hover:border-primary/50 transition-all"
+                className="flex items-center gap-1.5 text-[11px] font-bold px-2.5 py-1 rounded-full bg-secondary border border-border text-muted-foreground hover:text-foreground hover:border-primary/50 transition-all"
                 title={language === "en" ? "Cambiar a Español" : "Switch to English"}
               >
-                <Languages size={12} strokeWidth={2} />
-                {language === "en" ? "ES" : "EN"}
+                {/* Show the flag of the CURRENT language (tap to switch) */}
+                <span className="text-base leading-none" aria-hidden="true">
+                  {language === "en" ? "🇺🇸" : "🇲🇽"}
+                </span>
+                <span className="text-[10px]">{language === "en" ? "EN" : "ES"}</span>
               </button>
               {profile && (
                 <span className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground bg-secondary px-2.5 py-1 rounded-full border border-border">

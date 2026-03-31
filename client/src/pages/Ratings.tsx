@@ -8,13 +8,21 @@ import { useLocation } from "wouter";
 import { Star, MessageSquare, CheckCircle, ChefHat, ArrowRight } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
+import { useLanguage } from "@/contexts/LanguageContext";
 
-const RATING_LABELS: Record<number, string> = {
+const RATING_LABELS_EN: Record<number, string> = {
   5: "Absolutely",
   4: "Sure",
   3: "Maybe",
   2: "Not really",
   1: "Never",
+};
+const RATING_LABELS_ES: Record<number, string> = {
+  5: "Absolutamente",
+  4: "Claro",
+  3: "Tal vez",
+  2: "No realmente",
+  1: "Nunca",
 };
 
 const RATING_COLORS: Record<number, string> = {
@@ -25,16 +33,24 @@ const RATING_COLORS: Record<number, string> = {
   1: "text-red-400",
 };
 
-const ROLE_LABELS: Record<string, string> = {
+const ROLE_LABELS_EN: Record<string, string> = {
   cook: "Cook", sous_chef: "Sous Chef", prep: "Prep Cook",
   dishwasher: "Dishwasher", cleaner: "Cleaner", server: "Server",
   bartender: "Bartender", host: "Host", manager: "Manager",
+};
+const ROLE_LABELS_ES: Record<string, string> = {
+  cook: "Cocinero", sous_chef: "Sous Chef", prep: "Cocinero de Preparación",
+  dishwasher: "Lavaplatos", cleaner: "Limpiador", server: "Mesero",
+  bartender: "Bartender", host: "Anfitrión", manager: "Gerente",
 };
 
 export default function Ratings() {
   const { user } = useAuth();
   const [, navigate] = useLocation();
   const [tab, setTab] = useState<"pending" | "received" | "given">("pending");
+  const { isSpanish } = useLanguage();
+  const ROLE_LABELS = isSpanish ? ROLE_LABELS_ES : ROLE_LABELS_EN;
+  const RATING_LABELS = isSpanish ? RATING_LABELS_ES : RATING_LABELS_EN;
 
   const { data: pending, isLoading: pendingLoading } = trpc.ratings.pendingRatings.useQuery();
   const { data: received, isLoading: receivedLoading } = trpc.ratings.forUser.useQuery(
@@ -57,9 +73,9 @@ export default function Ratings() {
       <div className="max-w-lg mx-auto">
         <div className="px-4 pt-4 pb-3">
           <h1 className="text-2xl font-black text-foreground" style={{ fontFamily: "'Plus Jakarta Sans', sans-serif" }}>
-            Ratings
+            {isSpanish ? "Calificaciones" : "Ratings"}
           </h1>
-          <p className="text-sm text-muted-foreground mt-0.5">Your shift feedback history</p>
+          <p className="text-sm text-muted-foreground mt-0.5">{isSpanish ? "Tu historial de comentarios de turnos" : "Your shift feedback history"}</p>
         </div>
 
         {stats && stats.total > 0 && (
@@ -70,7 +86,7 @@ export default function Ratings() {
                   <span className="text-4xl font-black text-foreground">{stats.avg.toFixed(1)}</span>
                   <span className="text-primary text-xl font-black mb-1">/ 5</span>
                 </div>
-                <p className="text-xs text-muted-foreground">{stats.total} rating{stats.total !== 1 ? "s" : ""} received</p>
+                <p className="text-xs text-muted-foreground">{stats.total} {isSpanish ? `calificación${stats.total !== 1 ? "es" : ""} recibida${stats.total !== 1 ? "s" : ""}` : `rating${stats.total !== 1 ? "s" : ""} received`}</p>
               </div>
               <div className="flex gap-0.5">
                 {Array.from({ length: 5 }).map((_, i) => (
@@ -99,6 +115,9 @@ export default function Ratings() {
         <div className="flex gap-1 px-4 mb-4">
           {(["pending", "received", "given"] as const).map((t) => {
             const count = t === "pending" ? pendingCount : t === "received" ? receivedCount : givenCount;
+            const tabLabel = isSpanish
+              ? t === "pending" ? "Pendiente" : t === "received" ? "Recibidas" : "Dadas"
+              : t === "pending" ? "Pending" : t === "received" ? "Received" : "Given";
             return (
               <button
                 key={t}
@@ -108,7 +127,7 @@ export default function Ratings() {
                   tab === t ? "bg-primary text-primary-foreground" : "bg-secondary text-muted-foreground hover:text-foreground"
                 )}
               >
-                {t}
+                {tabLabel}
                 {count > 0 && (
                   <span className={cn("ml-1.5 px-1.5 py-0.5 rounded-full text-[9px] font-black", tab === t ? "bg-white/20" : "bg-card")}>
                     {count}
@@ -123,7 +142,7 @@ export default function Ratings() {
           {tab === "pending" && (
             pendingLoading ? <Skeletons /> :
             pendingCount === 0 ? (
-              <EmptyState icon={<CheckCircle size={32} className="text-emerald-400" />} title="All caught up!" desc="No pending ratings. Complete a shift and release payment to unlock ratings." />
+              <EmptyState icon={<CheckCircle size={32} className="text-emerald-400" />} title={isSpanish ? "¡Todo al día!" : "All caught up!"} desc={isSpanish ? "Sin calificaciones pendientes. Completa un turno para desbloquear calificaciones." : "No pending ratings. Complete a shift and release payment to unlock ratings."} />
             ) : (
               pending!.map((item: any) => (
                 <PendingRatingCard key={item.job.id} item={item} onRate={(jobId) => navigate(`/rate/${jobId}`)} />
@@ -133,7 +152,7 @@ export default function Ratings() {
           {tab === "received" && (
             receivedLoading ? <Skeletons /> :
             receivedCount === 0 ? (
-              <EmptyState icon={<Star size={32} className="text-muted-foreground" />} title="No ratings yet" desc="Complete shifts and get rated by employers and workers." />
+              <EmptyState icon={<Star size={32} className="text-muted-foreground" />} title={isSpanish ? "Sin calificaciones aún" : "No ratings yet"} desc={isSpanish ? "Completa turnos y recibe calificaciones de empleadores y trabajadores." : "Complete shifts and get rated by employers and workers."} />
             ) : (
               received!.map((rating: any) => (
                 <ReceivedRatingCard key={rating.id} rating={rating} />
@@ -143,7 +162,7 @@ export default function Ratings() {
           {tab === "given" && (
             givenLoading ? <Skeletons /> :
             givenCount === 0 ? (
-              <EmptyState icon={<MessageSquare size={32} className="text-muted-foreground" />} title="No ratings given yet" desc="After completing a shift, rate the other party to build platform trust." />
+              <EmptyState icon={<MessageSquare size={32} className="text-muted-foreground" />} title={isSpanish ? "Sin calificaciones dadas aún" : "No ratings given yet"} desc={isSpanish ? "Después de completar un turno, califica a la otra parte para construir confianza." : "After completing a shift, rate the other party to build platform trust."} />
             ) : (
               given!.map((rating: any) => (
                 <GivenRatingCard key={rating.id} rating={rating} />
@@ -158,6 +177,8 @@ export default function Ratings() {
 
 function PendingRatingCard({ item, onRate }: { item: any; onRate: (jobId: number) => void }) {
   const { job, otherUser } = item;
+  const { isSpanish } = useLanguage();
+  const ROLE_LABELS = isSpanish ? ROLE_LABELS_ES : ROLE_LABELS_EN;
   const formatDate = (ms: number) => new Date(ms).toLocaleDateString([], { month: "short", day: "numeric" });
   return (
     <div className="bg-card rounded-2xl border border-primary/30 p-4 space-y-3">
@@ -168,7 +189,7 @@ function PendingRatingCard({ item, onRate }: { item: any; onRate: (jobId: number
           </p>
           <p className="text-xs text-muted-foreground mt-0.5">{formatDate(job.startTime)}</p>
         </div>
-        <span className="text-[10px] font-bold text-primary bg-primary/15 px-2 py-1 rounded-full">Rate Now</span>
+        <span className="text-[10px] font-bold text-primary bg-primary/15 px-2 py-1 rounded-full">{isSpanish ? "Calificar" : "Rate Now"}</span>
       </div>
       {otherUser && (
         <div className="flex items-center gap-2.5 bg-secondary/60 rounded-xl p-2.5">
@@ -186,7 +207,7 @@ function PendingRatingCard({ item, onRate }: { item: any; onRate: (jobId: number
         </div>
       )}
       <Button className="w-full h-11 rounded-xl btn-glow font-bold" onClick={() => onRate(job.id)}>
-        Leave Rating <ArrowRight size={14} className="ml-2" />
+        {isSpanish ? "Dejar Calificación" : "Leave Rating"} <ArrowRight size={14} className="ml-2" />
       </Button>
     </div>
   );
@@ -197,6 +218,8 @@ function ReceivedRatingCard({ rating }: { rating: any }) {
   const [reply, setReply] = useState(rating.response ?? "");
   const [saved, setSaved] = useState(false);
   const utils = trpc.useUtils();
+  const { isSpanish } = useLanguage();
+  const RATING_LABELS = isSpanish ? RATING_LABELS_ES : RATING_LABELS_EN;
   const respondMutation = trpc.ratings.respond.useMutation({
     onSuccess: () => { setSaved(true); toast.success("Response saved!"); utils.ratings.forUser.invalidate(); },
     onError: (e) => toast.error(e.message),
@@ -250,6 +273,9 @@ function ReceivedRatingCard({ rating }: { rating: any }) {
 
 function GivenRatingCard({ rating }: { rating: any }) {
   const color = RATING_COLORS[rating.score as number] ?? "text-muted-foreground";
+  const { isSpanish } = useLanguage();
+  const ROLE_LABELS = isSpanish ? ROLE_LABELS_ES : ROLE_LABELS_EN;
+  const RATING_LABELS = isSpanish ? RATING_LABELS_ES : RATING_LABELS_EN;
   return (
     <div className="bg-card rounded-2xl border border-border p-4 space-y-3">
       <div className="flex items-start justify-between">

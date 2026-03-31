@@ -10,15 +10,23 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
+import { useLanguage } from "@/contexts/LanguageContext";
 
-const ROLE_LABELS: Record<string, string> = {
+const ROLE_LABELS_EN: Record<string, string> = {
   cook: "Cook", sous_chef: "Sous Chef", prep: "Prep Cook",
   dishwasher: "Dishwasher", cleaner: "Cleaner", server: "Server",
   bartender: "Bartender", host: "Host", manager: "Manager",
 };
+const ROLE_LABELS_ES: Record<string, string> = {
+  cook: "Cocinero", sous_chef: "Sous Chef", prep: "Cocinero de Preparación",
+  dishwasher: "Lavaplatos", cleaner: "Limpiador", server: "Mesero",
+  bartender: "Bartender", host: "Anfitrión", manager: "Gerente",
+};
 
 export default function Earnings() {
   const { isAuthenticated } = useAuth();
+  const { t, isSpanish } = useLanguage();
+  const ROLE_LABELS = isSpanish ? ROLE_LABELS_ES : ROLE_LABELS_EN;
 
   const { data: earnings, isLoading, refetch } = trpc.payments.earnings.useQuery(
     undefined, { enabled: isAuthenticated }
@@ -92,9 +100,9 @@ export default function Earnings() {
           <div className="bg-yellow-500/10 border border-yellow-500/30 rounded-2xl p-4 flex gap-3 items-start">
             <AlertCircle size={18} className="text-yellow-400 flex-shrink-0 mt-0.5" />
             <div className="flex-1">
-              <p className="font-bold text-yellow-300 text-sm">Connect your bank to get paid</p>
+              <p className="font-bold text-yellow-300 text-sm">{isSpanish ? "Conecta tu banco para cobrar" : "Connect your bank to get paid"}</p>
               <p className="text-xs text-yellow-400/80 mt-0.5 mb-3">
-                Same-day pay is waiting. Connect your bank account via Stripe to receive your earnings after each shift.
+                {isSpanish ? "El pago del mismo día te espera. Conecta tu cuenta bancaria vía Stripe para recibir tus ganancias después de cada turno." : "Same-day pay is waiting. Connect your bank account via Stripe to receive your earnings after each shift."}
               </p>
               <Button
                 size="sm"
@@ -105,7 +113,7 @@ export default function Earnings() {
                 {connectStripeMutation.isPending ? (
                   <><RefreshCw size={12} className="mr-1.5 animate-spin" />Setting up...</>
                 ) : (
-                  <><Banknote size={12} className="mr-1.5" />Connect Bank Account</>
+                  <><Banknote size={12} className="mr-1.5" />{isSpanish ? "Conectar Cuenta Bancaria" : "Connect Bank Account"}</>
                 )}
               </Button>
             </div>
@@ -118,10 +126,10 @@ export default function Earnings() {
           <div className="relative z-10">
             <div className="flex items-center gap-2 mb-1">
               <Wallet size={13} className="text-primary" />
-              <p className="text-xs font-bold text-muted-foreground uppercase tracking-wider">Available Balance</p>
+              <p className="text-xs font-bold text-muted-foreground uppercase tracking-wider">{isSpanish ? "Saldo Disponible" : "Available Balance"}</p>
             </div>
             <p className="text-5xl font-black text-foreground">${fmt(available)}</p>
-            <p className="text-xs text-muted-foreground mt-0.5">After 10% platform fee</p>
+            <p className="text-xs text-muted-foreground mt-0.5">{isSpanish ? "Después de la comisión del 10%" : "After 10% platform fee"}</p>
           </div>
 
           {stripeConnected ? (
@@ -135,7 +143,7 @@ export default function Earnings() {
                 {withdrawMutation.isPending ? (
                   <div className="w-4 h-4 border-2 border-primary-foreground border-t-transparent rounded-full animate-spin" />
                 ) : (
-                  <><Banknote size={16} className="mr-2" />Send to Bank Account</>
+                  <><Banknote size={16} className="mr-2" />{isSpanish ? "Enviar a Cuenta Bancaria" : "Send to Bank Account"}</>
                 )}
               </Button>
 
@@ -157,7 +165,7 @@ export default function Earnings() {
                     }
                   }}
                 >
-                  <Smartphone size={12} className="mr-1.5" />Add to Apple Pay
+                  <Smartphone size={12} className="mr-1.5" />{isSpanish ? "Agregar a Apple Pay" : "Add to Apple Pay"}
                 </Button>
                 <Button
                   variant="outline"
@@ -171,14 +179,14 @@ export default function Earnings() {
                   ) : (
                     <ExternalLink size={12} className="mr-1.5" />
                   )}
-                  Stripe Dashboard
+                  {isSpanish ? "Panel Stripe" : "Stripe Dashboard"}
                 </Button>
               </div>
 
               {/* Connected badge */}
               <div className="flex items-center gap-1.5 justify-center pt-1">
                 <ShieldCheck size={11} className="text-emerald-400" />
-                <p className="text-[10px] text-emerald-400 font-medium">Bank connected via Stripe Express</p>
+                <p className="text-[10px] text-emerald-400 font-medium">{isSpanish ? "Banco conectado vía Stripe Express" : "Bank connected via Stripe Express"}</p>
               </div>
             </div>
           ) : (
@@ -188,20 +196,20 @@ export default function Earnings() {
               disabled={connectStripeMutation.isPending}
               onClick={() => connectStripeMutation.mutate({ origin: window.location.origin })}
             >
-              <Banknote size={16} className="mr-2" />Connect Bank to Withdraw
+              <Banknote size={16} className="mr-2" />{isSpanish ? "Conectar Banco para Retirar" : "Connect Bank to Withdraw"}
             </Button>
           )}
         </div>
 
         {/* ── How Payouts Work ──────────────────────────────────────────── */}
         <div className="bg-card rounded-2xl border border-border p-4">
-          <p className="text-xs font-bold text-muted-foreground uppercase tracking-wider mb-3">How Same-Day Pay Works</p>
+          <p className="text-xs font-bold text-muted-foreground uppercase tracking-wider mb-3">{isSpanish ? "Cómo Funciona el Pago del Mismo Día" : "How Same-Day Pay Works"}</p>
           <div className="space-y-2.5">
             {[
-              { icon: CheckCircle, color: "text-emerald-400", label: "Shift completed", sub: "Employer marks shift as ended" },
-              { icon: DollarSign, color: "text-primary", label: "Payment released", sub: "90% goes to you, 10% platform fee" },
-              { icon: Banknote, color: "text-blue-400", label: "Instant transfer", sub: "Stripe sends to your connected bank" },
-              { icon: Smartphone, color: "text-purple-400", label: "Same-day access", sub: "Available via bank or Apple Pay" },
+              { icon: CheckCircle, color: "text-emerald-400", label: isSpanish ? "Turno completado" : "Shift completed", sub: isSpanish ? "El empleador marca el turno como finalizado" : "Employer marks shift as ended" },
+              { icon: DollarSign, color: "text-primary", label: isSpanish ? "Pago liberado" : "Payment released", sub: isSpanish ? "90% para ti, 10% comisión" : "90% goes to you, 10% platform fee" },
+              { icon: Banknote, color: "text-blue-400", label: isSpanish ? "Transferencia instantánea" : "Instant transfer", sub: isSpanish ? "Stripe envía a tu banco conectado" : "Stripe sends to your connected bank" },
+              { icon: Smartphone, color: "text-purple-400", label: isSpanish ? "Acceso el mismo día" : "Same-day access", sub: isSpanish ? "Disponible vía banco o Apple Pay" : "Available via bank or Apple Pay" },
             ].map(({ icon: Icon, color, label, sub }) => (
               <div key={label} className="flex items-center gap-3">
                 <div className={cn("w-7 h-7 rounded-lg bg-card border border-border flex items-center justify-center flex-shrink-0", color)}>
@@ -223,31 +231,31 @@ export default function Earnings() {
               <div className="w-8 h-8 rounded-xl bg-emerald-500/10 flex items-center justify-center">
                 <TrendingUp size={14} className="text-emerald-400" />
               </div>
-              <p className="text-xs text-muted-foreground">Total Earned</p>
+              <p className="text-xs text-muted-foreground">{isSpanish ? "Total Ganado" : "Total Earned"}</p>
             </div>
             <p className="text-2xl font-black text-foreground">${fmt(totalEarned)}</p>
-            <p className="text-[10px] text-muted-foreground mt-0.5">All time gross</p>
+            <p className="text-[10px] text-muted-foreground mt-0.5">{isSpanish ? "Bruto total" : "All time gross"}</p>
           </div>
           <div className="bg-card rounded-2xl border border-border p-4">
             <div className="flex items-center gap-2 mb-2">
               <div className="w-8 h-8 rounded-xl bg-orange-500/10 flex items-center justify-center">
                 <DollarSign size={14} className="text-orange-400" />
               </div>
-              <p className="text-xs text-muted-foreground">Platform Fees</p>
+              <p className="text-xs text-muted-foreground">{isSpanish ? "Comisiones Plataforma" : "Platform Fees"}</p>
             </div>
             <p className="text-2xl font-black text-foreground">${fmt(totalFees)}</p>
-            <p className="text-[10px] text-muted-foreground mt-0.5">10% per shift</p>
+            <p className="text-[10px] text-muted-foreground mt-0.5">{isSpanish ? "10% por turno" : "10% per shift"}</p>
           </div>
         </div>
 
         {/* ── History ───────────────────────────────────────────────────── */}
         <div>
-          <p className="text-xs font-bold text-muted-foreground uppercase tracking-wider mb-3">Payment History</p>
+          <p className="text-xs font-bold text-muted-foreground uppercase tracking-wider mb-3">{t("paymentHistory")}</p>
           {history.length === 0 ? (
             <div className="flex flex-col items-center py-12 text-center">
               <ChefHat size={36} className="text-muted-foreground/30 mb-3" />
-              <p className="font-bold text-foreground">No completed shifts yet</p>
-              <p className="text-sm text-muted-foreground mt-1">Complete shifts to see your earnings here</p>
+              <p className="font-bold text-foreground">{isSpanish ? "Sin turnos completados aún" : "No completed shifts yet"}</p>
+              <p className="text-sm text-muted-foreground mt-1">{isSpanish ? "Completa turnos para ver tus ganancias aquí" : "Complete shifts to see your earnings here"}</p>
             </div>
           ) : (
             <div className="space-y-2">
@@ -267,7 +275,7 @@ export default function Earnings() {
                     </div>
                     <div className="flex-1 min-w-0">
                       <p className="font-bold text-sm text-foreground">
-                        {p.job ? (ROLE_LABELS[p.job.role] ?? p.job.role) : "Shift Payment"}
+                        {p.job ? (ROLE_LABELS[p.job.role] ?? p.job.role) : (isSpanish ? "Pago de Turno" : "Shift Payment")}
                       </p>
                       <p className="text-xs text-muted-foreground">
                         {p.job?.restaurantName ?? ""}
@@ -278,7 +286,7 @@ export default function Earnings() {
                       <p className={cn("font-black text-base", isReleased ? "text-emerald-400" : "text-yellow-400")}>
                         +${fmt(workerPayout)}
                       </p>
-                      <p className="text-[10px] text-muted-foreground">-${fmt(platformFee)} fee</p>
+                      <p className="text-[10px] text-muted-foreground">-${fmt(platformFee)} {isSpanish ? "comisión" : "fee"}</p>
                     </div>
                   </div>
                 );

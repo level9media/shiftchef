@@ -416,3 +416,21 @@
 - [x] Add SplashScreen.hide() call in main.tsx (800ms delay + 400ms fade after React mounts)
 - [x] Inject splash screen PNG (2732x2732 orange) into iOS build via Codemagic pipeline step
 - [x] TypeScript: 0 errors
+
+## Bug Fixes & Full Spanish Translation (v25)
+- [x] Fix Stripe Checkout redirect on PostJob - changed window.open to window.location.href (mobile popup fix)
+- [x] Full Spanish translation: ALL UI text across every page, form, button, label, placeholder, error message
+- [x] Spanish translations: PostJob form (all fields, labels, placeholders, pricing modal)
+- [x] Spanish translations: Feed, JobDetail, Applications, Profile, Earnings, Onboarding, Verification, Contract
+- [x] Spanish translations: AppShell nav labels, header, notifications
+- [x] Spanish translations: Admin pages, EmployerDashboard, RateShift, FAQ, Pricing, HowItWorks, Home
+- [x] Add flag icons to language toggle: 🇲🇽 when Spanish active, 🇺🇸 when English active
+- [x] Show flag icon in header next to language toggle button
+- [x] Slim down Apply button on job detail page — too large/tall, bring it up closer to content
+
+## Hire Flow — "You're Hired" Email & Employer Confirmation (v26)
+- [x] Backend: extend applications.accept to send rich "You're Hired" email to worker via notifyOwner proxy (with shift details, address, Google Maps link, arrival instructions)
+- [x] Backend: send employer confirmation notification when worker is hired
+- [x] Frontend: "Hire" button on employer applicant card (replaces plain accept)
+- [x] Frontend: Hire confirmation modal showing what will be sent to worker
+- [x] Frontend: Post-hire state on applicant card shows "Hired ✓" with worker details

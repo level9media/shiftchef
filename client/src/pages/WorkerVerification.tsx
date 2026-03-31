@@ -8,37 +8,7 @@ import {
   ShieldCheck, ShieldAlert, ShieldX, Upload, Camera,
   CheckCircle2, Clock, XCircle, ArrowLeft, ChevronRight, FileText
 } from "lucide-react";
-
-const STATUS_CONFIG = {
-  unverified: {
-    icon: ShieldAlert,
-    color: "text-yellow-400",
-    bg: "bg-yellow-400/10 border-yellow-400/20",
-    label: "Not Verified",
-    desc: "Verify your identity to unlock all jobs and build employer trust.",
-  },
-  pending: {
-    icon: Clock,
-    color: "text-blue-400",
-    bg: "bg-blue-400/10 border-blue-400/20",
-    label: "Under Review",
-    desc: "Your ID is being reviewed. This usually takes under 24 hours.",
-  },
-  verified: {
-    icon: ShieldCheck,
-    color: "text-emerald-400",
-    bg: "bg-emerald-400/10 border-emerald-400/20",
-    label: "Verified ✓",
-    desc: "Your identity is confirmed. You appear as verified to all employers.",
-  },
-  rejected: {
-    icon: ShieldX,
-    color: "text-red-400",
-    bg: "bg-red-400/10 border-red-400/20",
-    label: "Rejected",
-    desc: "Your verification was rejected. Please resubmit with a clearer ID photo.",
-  },
-};
+import { useLanguage } from "@/contexts/LanguageContext";
 
 export default function WorkerVerification() {
   const [, navigate] = useLocation();
@@ -50,11 +20,43 @@ export default function WorkerVerification() {
   const [uploading, setUploading] = useState(false);
   const idInputRef = useRef<HTMLInputElement>(null);
   const selfieInputRef = useRef<HTMLInputElement>(null);
+  const { t, isSpanish } = useLanguage();
+
+  const STATUS_CONFIG = {
+    unverified: {
+      icon: ShieldAlert,
+      color: "text-yellow-400",
+      bg: "bg-yellow-400/10 border-yellow-400/20",
+      label: isSpanish ? "No Verificado" : "Not Verified",
+      desc: isSpanish ? "Verifica tu identidad para desbloquear todos los trabajos y generar confianza con los empleadores." : "Verify your identity to unlock all jobs and build employer trust.",
+    },
+    pending: {
+      icon: Clock,
+      color: "text-blue-400",
+      bg: "bg-blue-400/10 border-blue-400/20",
+      label: isSpanish ? "En Revisión" : "Under Review",
+      desc: isSpanish ? "Tu ID está siendo revisado. Esto generalmente toma menos de 24 horas." : "Your ID is being reviewed. This usually takes under 24 hours.",
+    },
+    verified: {
+      icon: ShieldCheck,
+      color: "text-emerald-400",
+      bg: "bg-emerald-400/10 border-emerald-400/20",
+      label: isSpanish ? "Verificado ✓" : "Verified ✓",
+      desc: isSpanish ? "Tu identidad está confirmada. Apareces como verificado para todos los empleadores." : "Your identity is confirmed. You appear as verified to all employers.",
+    },
+    rejected: {
+      icon: ShieldX,
+      color: "text-red-400",
+      bg: "bg-red-400/10 border-red-400/20",
+      label: isSpanish ? "Rechazado" : "Rejected",
+      desc: isSpanish ? "Tu verificación fue rechazada. Por favor reenvía con una foto de ID más clara." : "Your verification was rejected. Please resubmit with a clearer ID photo.",
+    },
+  };
 
   const { data: statusData, refetch } = trpc.verification.myStatus.useQuery();
   const submitMutation = trpc.verification.submit.useMutation({
     onSuccess: () => {
-      toast.success("Verification submitted! We'll review within 24 hours.");
+      toast.success(isSpanish ? "¡Verificación enviada! Revisaremos en 24 horas." : "Verification submitted! We'll review within 24 hours.");
       refetch();
       setStep("status");
     },
@@ -82,8 +84,8 @@ export default function WorkerVerification() {
   }
 
   async function handleSubmit() {
-    if (!legalName.trim()) { toast.error("Enter your legal name"); return; }
-    if (!idImage) { toast.error("Upload your ID photo"); return; }
+    if (!legalName.trim()) { toast.error(isSpanish ? "Ingresa tu nombre legal" : "Enter your legal name"); return; }
+    if (!idImage) { toast.error(isSpanish ? "Sube tu foto de ID" : "Upload your ID photo"); return; }
     setUploading(true);
     try {
       await submitMutation.mutateAsync({
@@ -108,8 +110,8 @@ export default function WorkerVerification() {
             <ArrowLeft className="w-4 h-4 text-white" />
           </button>
           <div>
-            <h1 className="text-lg font-bold text-white font-display">Identity Verification</h1>
-            <p className="text-xs text-white/40">Required to apply for jobs</p>
+            <h1 className="text-lg font-bold text-white font-display">{isSpanish ? "Verificación de Identidad" : "Identity Verification"}</h1>
+            <p className="text-xs text-white/40">{isSpanish ? "Requerido para aplicar a trabajos" : "Required to apply for jobs"}</p>
           </div>
         </div>
       </div>
@@ -147,13 +149,18 @@ export default function WorkerVerification() {
             {/* Why Verify */}
             {status !== "verified" && (
               <div className="rounded-2xl bg-white/[0.03] border border-white/5 p-5 space-y-3">
-                <h3 className="text-sm font-semibold text-white/80">Why get verified?</h3>
-                {[
+                <h3 className="text-sm font-semibold text-white/80">{isSpanish ? "¿Por qué verificarse?" : "Why get verified?"}</h3>
+                {(isSpanish ? [
+                  "Los empleadores filtran primero por trabajadores verificados",
+                  "La insignia verificado aparece en tu perfil y tarjeta del feed",
+                  "Accede a trabajos mejor pagados con requisitos de calificación mínima",
+                  "Genera confianza — los trabajadores verificados se contratan 3x más rápido",
+                ] : [
                   "Employers filter by verified workers first",
                   "Verified badge appears on your profile and feed card",
                   "Access higher-paying jobs with minimum rating requirements",
                   "Builds trust — verified workers get hired 3x faster",
-                ].map((item) => (
+                ]).map((item) => (
                   <div key={item} className="flex items-start gap-3">
                     <CheckCircle2 className="w-4 h-4 text-[#FF6B00] mt-0.5 shrink-0" />
                     <p className="text-sm text-white/60">{item}</p>
@@ -165,12 +172,16 @@ export default function WorkerVerification() {
             {/* What You'll Need */}
             {(status === "unverified" || status === "rejected") && (
               <div className="rounded-2xl bg-white/[0.03] border border-white/5 p-5 space-y-3">
-                <h3 className="text-sm font-semibold text-white/80">What you'll need</h3>
-                {[
+                <h3 className="text-sm font-semibold text-white/80">{isSpanish ? "Lo que necesitarás" : "What you'll need"}</h3>
+                {(isSpanish ? [
+                  { icon: FileText, text: "ID emitido por el gobierno (licencia de conducir, pasaporte o ID estatal)" },
+                  { icon: Camera, text: "Opcional: foto selfie para aprobación más rápida" },
+                  { icon: CheckCircle2, text: "Tu nombre legal tal como aparece en tu ID" },
+                ] : [
                   { icon: FileText, text: "Government-issued ID (driver's license, passport, or state ID)" },
                   { icon: Camera, text: "Optional: selfie photo for faster approval" },
                   { icon: CheckCircle2, text: "Your legal name as it appears on your ID" },
-                ].map(({ icon: Icon, text }) => (
+                ]).map(({ icon: Icon, text }) => (
                   <div key={text} className="flex items-start gap-3">
                     <Icon className="w-4 h-4 text-white/30 mt-0.5 shrink-0" />
                     <p className="text-sm text-white/60">{text}</p>
@@ -185,15 +196,15 @@ export default function WorkerVerification() {
                 onClick={() => setStep("upload")}
                 className="w-full h-14 rounded-2xl bg-[#FF6B00] text-white font-bold text-base flex items-center justify-center gap-2 active:scale-[0.98] transition-transform"
               >
-                {status === "rejected" ? "Resubmit Verification" : "Start Verification"}
+                {status === "rejected" ? (isSpanish ? "Reenviar Verificación" : "Resubmit Verification") : (isSpanish ? "Iniciar Verificación" : "Start Verification")}
                 <ChevronRight className="w-5 h-5" />
               </button>
             )}
 
             {status === "pending" && (
               <div className="rounded-2xl bg-blue-500/10 border border-blue-500/20 p-4 text-center">
-                <p className="text-sm text-blue-300">Your verification is being reviewed.</p>
-                <p className="text-xs text-white/40 mt-1">Typical review time: under 24 hours</p>
+                <p className="text-sm text-blue-300">{isSpanish ? "Tu verificación está siendo revisada." : "Your verification is being reviewed."}</p>
+                <p className="text-xs text-white/40 mt-1">{isSpanish ? "Tiempo de revisión típico: menos de 24 horas" : "Typical review time: under 24 hours"}</p>
               </div>
             )}
           </>
@@ -205,7 +216,7 @@ export default function WorkerVerification() {
               {/* Legal Name */}
               <div>
                 <label className="text-xs font-semibold text-white/50 uppercase tracking-wider block mb-2">
-                  Legal Name (as on ID)
+                  {isSpanish ? "Nombre Legal (como en el ID)" : "Legal Name (as on ID)"}
                 </label>
                 <input
                   type="text"
@@ -219,7 +230,7 @@ export default function WorkerVerification() {
               {/* ID Photo Upload */}
               <div>
                 <label className="text-xs font-semibold text-white/50 uppercase tracking-wider block mb-2">
-                  ID Photo <span className="text-[#FF6B00]">*</span>
+                  {isSpanish ? "Foto de ID" : "ID Photo"} <span className="text-[#FF6B00]">*</span>
                 </label>
                 <input ref={idInputRef} type="file" accept="image/*" className="hidden"
                   onChange={(e) => handleFileChange(e, "id")} />
@@ -234,7 +245,7 @@ export default function WorkerVerification() {
                     </button>
                     <div className="absolute bottom-2 left-2 bg-emerald-500/80 rounded-full px-2 py-0.5 flex items-center gap-1">
                       <CheckCircle2 className="w-3 h-3 text-white" />
-                      <span className="text-xs text-white font-medium">Uploaded</span>
+                      <span className="text-xs text-white font-medium">{isSpanish ? "Subido" : "Uploaded"}</span>
                     </div>
                   </div>
                 ) : (
@@ -243,7 +254,7 @@ export default function WorkerVerification() {
                     className="w-full h-32 rounded-xl border-2 border-dashed border-white/10 flex flex-col items-center justify-center gap-2 active:border-[#FF6B00]/50 transition-colors"
                   >
                     <Upload className="w-6 h-6 text-white/30" />
-                    <p className="text-sm text-white/40">Tap to upload ID photo</p>
+                    <p className="text-sm text-white/40">{isSpanish ? "Toca para subir foto de ID" : "Tap to upload ID photo"}</p>
                     <p className="text-xs text-white/20">JPG, PNG — max 5MB</p>
                   </button>
                 )}
@@ -252,7 +263,7 @@ export default function WorkerVerification() {
               {/* Selfie Upload (optional) */}
               <div>
                 <label className="text-xs font-semibold text-white/50 uppercase tracking-wider block mb-2">
-                  Selfie Photo <span className="text-white/20">(optional — speeds up review)</span>
+                  {isSpanish ? "Foto Selfie" : "Selfie Photo"} <span className="text-white/20">({isSpanish ? "opcional — acelera la revisión" : "optional — speeds up review"})</span>
                 </label>
                 <input ref={selfieInputRef} type="file" accept="image/*" className="hidden"
                   onChange={(e) => handleFileChange(e, "selfie")} />
@@ -272,14 +283,14 @@ export default function WorkerVerification() {
                     className="w-full h-24 rounded-xl border-2 border-dashed border-white/10 flex flex-col items-center justify-center gap-2 active:border-white/20 transition-colors"
                   >
                     <Camera className="w-5 h-5 text-white/30" />
-                    <p className="text-sm text-white/40">Tap to upload selfie</p>
+                    <p className="text-sm text-white/40">{isSpanish ? "Toca para subir selfie" : "Tap to upload selfie"}</p>
                   </button>
                 )}
               </div>
 
               {/* Privacy note */}
               <p className="text-xs text-white/30 text-center">
-                Your ID is encrypted and stored securely. It is only used for identity verification and never shared with employers.
+                {isSpanish ? "Tu ID está cifrado y almacenado de forma segura. Solo se usa para verificación de identidad y nunca se comparte con empleadores." : "Your ID is encrypted and stored securely. It is only used for identity verification and never shared with employers."}
               </p>
             </div>
 
@@ -293,7 +304,7 @@ export default function WorkerVerification() {
               ) : (
                 <>
                   <ShieldCheck className="w-5 h-5" />
-                  Submit for Verification
+                  {isSpanish ? "Enviar para Verificación" : "Submit for Verification"}
                 </>
               )}
             </button>

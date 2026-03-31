@@ -1,6 +1,7 @@
 import { TRPCError } from "@trpc/server";
 import { z } from "zod";
 import { notifyOwner } from "../_core/notification";
+import { sendHireNotification } from "../_core/hireNotification";
 import {
   createApplication,
   getApplicationByJobAndWorker,
@@ -150,11 +151,24 @@ export const applicationsRouter = router({
       // Mark job as filled
       await updateJob(app.jobId, { status: "filled", acceptedWorkerId: app.workerId });
 
-      // Notify owner of accepted shift
+      // Notify owner + send rich hire notification to worker
       const worker = await getUserById(app.workerId);
-      notifyOwner({
-        title: "ShiftChef: Shift Confirmed",
-        content: `${job.restaurantName ?? "Employer"} accepted ${worker?.name ?? "a worker"} for ${job.role} shift.`,
+      const employer = await getUserById(ctx.user.id);
+      sendHireNotification({
+        workerName: worker?.name ?? "Worker",
+        workerEmail: worker?.email,
+        workerPhone: worker?.phone,
+        employerName: employer?.name ?? job.restaurantName ?? "Employer",
+        employerEmail: employer?.email,
+        employerPhone: employer?.phone,
+        restaurantName: job.restaurantName,
+        role: job.role,
+        startTime: job.startTime,
+        endTime: job.endTime,
+        payRate: job.payRate,
+        location: job.location,
+        city: job.city,
+        description: job.description,
       }).catch(() => {});
 
       return { success: true };

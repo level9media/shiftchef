@@ -8,26 +8,34 @@ import { useState } from "react";
 import {
   Clock, CheckCircle, XCircle, ChefHat, Briefcase,
   DollarSign, Star, Zap, ArrowRight, CheckCircle2, ChevronRight,
-  LogIn, LogOut
+  LogIn, LogOut, MapPin, UserCheck, CalendarDays, CreditCard
 } from "lucide-react";
 import { WorkerProfileModal } from "@/components/WorkerProfileModal";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import { formatDistanceToNow } from "date-fns";
+import { useLanguage } from "@/contexts/LanguageContext";
 
-const ROLE_LABELS: Record<string, string> = {
+const ROLE_LABELS_EN: Record<string, string> = {
   cook: "Cook", sous_chef: "Sous Chef", prep: "Prep Cook",
   dishwasher: "Dishwasher", cleaner: "Cleaner", server: "Server",
   bartender: "Bartender", host: "Host", manager: "Manager",
 };
-
-const STATUS_CONFIG: Record<string, { label: string; color: string; bg: string }> = {
-  pending:   { label: "Pending",   color: "text-yellow-400", bg: "bg-yellow-400/10" },
-  accepted:  { label: "Accepted",  color: "text-emerald-400", bg: "bg-emerald-400/10" },
-  rejected:  { label: "Rejected",  color: "text-red-400",    bg: "bg-red-400/10" },
-  confirmed: { label: "Confirmed", color: "text-blue-400",   bg: "bg-blue-400/10" },
-  completed: { label: "Completed", color: "text-muted-foreground", bg: "bg-secondary" },
+const ROLE_LABELS_ES: Record<string, string> = {
+  cook: "Cocinero", sous_chef: "Sous Chef", prep: "Cocinero de Preparación",
+  dishwasher: "Lavaplatos", cleaner: "Limpiador", server: "Mesero",
+  bartender: "Bartender", host: "Anfitrión", manager: "Gerente",
 };
+
+function getStatusConfig(isSpanish: boolean): Record<string, { label: string; color: string; bg: string }> {
+  return {
+    pending:   { label: isSpanish ? "Pendiente" : "Pending",   color: "text-yellow-400", bg: "bg-yellow-400/10" },
+    accepted:  { label: isSpanish ? "Aceptado" : "Accepted",  color: "text-emerald-400", bg: "bg-emerald-400/10" },
+    rejected:  { label: isSpanish ? "Rechazado" : "Rejected",  color: "text-red-400",    bg: "bg-red-400/10" },
+    confirmed: { label: isSpanish ? "Confirmado" : "Confirmed", color: "text-blue-400",   bg: "bg-blue-400/10" },
+    completed: { label: isSpanish ? "Completado" : "Completed", color: "text-muted-foreground", bg: "bg-secondary" },
+  };
+}
 
 function formatTime(ms: number) {
   return new Date(ms).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
@@ -46,6 +54,9 @@ export default function Applications() {
   const { isAuthenticated } = useAuth();
   const [, navigate] = useLocation();
   const [tab, setTab] = useState<"worker" | "employer">("worker");
+  const { t, isSpanish } = useLanguage();
+  const ROLE_LABELS = isSpanish ? ROLE_LABELS_ES : ROLE_LABELS_EN;
+  const STATUS_CONFIG = getStatusConfig(isSpanish);
 
   const { data: profile } = trpc.profile.get.useQuery(undefined, { enabled: isAuthenticated, retry: false });
   const utils = trpc.useUtils();
@@ -58,25 +69,24 @@ export default function Applications() {
   );
 
   const acceptMutation = trpc.applications.accept.useMutation({
-    onSuccess: () => { toast.success("Applicant accepted!"); utils.jobs.myJobs.invalidate(); },
+    onSuccess: () => { toast.success(isSpanish ? "¡Solicitante aceptado!" : "Applicant accepted!"); utils.jobs.myJobs.invalidate(); },
     onError: (e) => toast.error(e.message),
   });
   const rejectMutation = trpc.applications.reject.useMutation({
-    onSuccess: () => { toast.success("Applicant rejected"); utils.jobs.myJobs.invalidate(); },
+    onSuccess: () => { toast.success(isSpanish ? "Solicitante rechazado" : "Applicant rejected"); utils.jobs.myJobs.invalidate(); },
     onError: (e) => toast.error(e.message),
   });
   const acceptAndPayMutation = trpc.payments.acceptAndPay.useMutation({
     onSuccess: (data) => {
-      toast.info("Redirecting to secure checkout to confirm this worker...");
-      window.open(data.url, "_blank");
+      // Direct navigation — mobile browsers block window.open popups
+      window.location.href = data.url;
     },
     onError: (e) => toast.error(e.message),
   });
   // Legacy payForJob kept for backward compat with existing held-payment jobs
   const payMutation = trpc.payments.payForJob.useMutation({
     onSuccess: (data) => {
-      toast.info("Redirecting to secure checkout...");
-      window.open(data.url, "_blank");
+      window.location.href = data.url;
     },
     onError: (e) => toast.error(e.message),
   });
@@ -122,9 +132,9 @@ export default function Applications() {
               </div>
               <div className="text-left flex-1">
                 <p className="text-sm font-bold text-foreground">
-                  {pendingRatings.length} shift{pendingRatings.length !== 1 ? "s" : ""} waiting for your rating
+                  {pendingRatings.length} {isSpanish ? `turno${pendingRatings.length !== 1 ? "s" : ""} esperando tu calificación` : `shift${pendingRatings.length !== 1 ? "s" : ""} waiting for your rating`}
                 </p>
-                <p className="text-xs text-muted-foreground">Tap to rate and build your reputation</p>
+                <p className="text-xs text-muted-foreground">{isSpanish ? "Toca para calificar y construir tu reputación" : "Tap to rate and build your reputation"}</p>
               </div>
               <ChevronRight size={14} className="text-primary flex-shrink-0" />
             </button>
@@ -149,7 +159,7 @@ export default function Applications() {
                   tab === "worker" ? "bg-card text-foreground shadow-sm" : "text-muted-foreground"
                 )}
               >
-                <ChefHat size={11} strokeWidth={2.5} /> My Applications
+                <ChefHat size={11} strokeWidth={2.5} /> {t("myApplications")}
               </button>
             )}
             {isEmployer && (
@@ -160,7 +170,7 @@ export default function Applications() {
                   tab === "employer" ? "bg-card text-foreground shadow-sm" : "text-muted-foreground"
                 )}
               >
-                <Briefcase size={11} strokeWidth={2.5} /> My Shifts
+                <Briefcase size={11} strokeWidth={2.5} /> {t("myShifts")}
               </button>
             )}
           </div>
@@ -174,9 +184,9 @@ export default function Applications() {
             ) : !myApps?.length ? (
               <EmptyState
                 icon={<ChefHat size={36} className="text-muted-foreground/30" />}
-                title="No applications yet"
-                desc="Browse the live feed and apply to shifts"
-                action={{ label: "Browse Shifts", onClick: () => navigate("/feed") }}
+                title={t("noApplications")}
+                desc={isSpanish ? "Explora el feed y aplica a turnos" : "Browse the live feed and apply to shifts"}
+                action={{ label: isSpanish ? "Ver Turnos" : "Browse Shifts", onClick: () => navigate("/feed") }}
               />
             ) : (
               myApps.map((app: any) => {
@@ -217,10 +227,10 @@ export default function Applications() {
                       <div className="mt-2 p-3 bg-emerald-500/10 border border-emerald-500/30 rounded-xl">
                         <div className="flex items-center gap-2 mb-1">
                           <CheckCircle size={13} className="text-emerald-400 flex-shrink-0" />
-                          <p className="text-xs text-emerald-400 font-black">You got the shift!</p>
+                          <p className="text-xs text-emerald-400 font-black">{isSpanish ? "¡Conseguiste el turno!" : "You got the shift!"}</p>
                         </div>
                         <p className="text-xs text-muted-foreground">
-                          Show up on time and check in when you arrive. Payment is held securely and releases after the shift.
+                          {isSpanish ? "Llega a tiempo y regístra tu entrada al llegar. El pago se retiene de forma segura y se libera después del turno." : "Show up on time and check in when you arrive. Payment is held securely and releases after the shift."}
                         </p>
                       </div>
                     )}
@@ -240,7 +250,7 @@ export default function Applications() {
                           onClick={(e) => { e.stopPropagation(); clockOutMutation.mutate({ applicationId: app.id }); }}
                         >
                           <LogOut size={11} className="mr-1.5" />
-                          {clockOutMutation.isPending ? "Clocking out..." : "Clock Out"}
+                          {clockOutMutation.isPending ? (isSpanish ? "Registrando salida..." : "Clocking out...") : (isSpanish ? "Registrar Salida" : "Clock Out")}
                         </Button>
                       </div>
                     )}
@@ -255,7 +265,7 @@ export default function Applications() {
                           onClick={(e) => { e.stopPropagation(); checkInMutation.mutate({ applicationId: app.id }); }}
                         >
                           <LogIn size={11} className="mr-1.5" />
-                          {checkInMutation.isPending ? "Checking in..." : "Check In"}
+                          {checkInMutation.isPending ? (isSpanish ? "Registrando entrada..." : "Checking in...") : (isSpanish ? "Registrar Entrada" : "Check In")}
                         </Button>
                       </div>
                     )}
@@ -263,7 +273,7 @@ export default function Applications() {
                     {app.status === "confirmed" && (
                       <div className="mt-2 p-3 bg-blue-500/10 border border-blue-500/30 rounded-xl">
                         <p className="text-xs text-blue-400 font-bold flex items-center gap-1.5">
-                          <CheckCircle size={12} /> Shift confirmed — show up and get paid!
+                          <CheckCircle size={12} /> {isSpanish ? "Turno confirmado — ¡preséntate y cobra!" : "Shift confirmed — show up and get paid!"}
                         </p>
                       </div>
                     )}
@@ -289,7 +299,7 @@ export default function Applications() {
                 <div className="w-9 h-9 rounded-xl bg-primary flex items-center justify-center">
                   <Zap size={15} className="text-primary-foreground" strokeWidth={2.5} />
                 </div>
-                <span className="font-bold text-sm text-foreground">Post a New Shift</span>
+                <span className="font-bold text-sm text-foreground">{isSpanish ? "Publicar Nuevo Turno" : "Post a New Shift"}</span>
               </div>
               <ArrowRight size={15} className="text-primary" />
             </button>
@@ -299,8 +309,8 @@ export default function Applications() {
             ) : !myJobs?.length ? (
               <EmptyState
                 icon={<Briefcase size={36} className="text-muted-foreground/30" />}
-                title="No shifts posted yet"
-                desc="Post your first shift to start receiving applications"
+                title={isSpanish ? "Sin turnos publicados aún" : "No shifts posted yet"}
+                desc={isSpanish ? "Publica tu primer turno para recibir solicitudes" : "Post your first shift to start receiving applications"}
               />
             ) : (
               myJobs.map((job: any) => (
@@ -324,6 +334,138 @@ export default function Applications() {
   );
 }
 
+// ── Hire Confirmation Modal ──────────────────────────────────────────────────
+function HireConfirmModal({ open, onClose, onConfirm, app, job, loading, isSpanish }: {
+  open: boolean;
+  onClose: () => void;
+  onConfirm: () => void;
+  app: any;
+  job: any;
+  loading: boolean;
+  isSpanish: boolean;
+}) {
+  if (!open || !app || !job) return null;
+  const ROLE_LABELS = isSpanish ? ROLE_LABELS_ES : ROLE_LABELS_EN;
+  const roleLabel = ROLE_LABELS[job.role] ?? job.role;
+  const startDate = new Date(job.startTime).toLocaleString("en-US", {
+    weekday: "short", month: "short", day: "numeric",
+    hour: "2-digit", minute: "2-digit",
+  });
+  const arrivalTime = new Date(job.startTime - 10 * 60 * 1000).toLocaleString("en-US", {
+    hour: "2-digit", minute: "2-digit",
+  });
+  const endTime = new Date(job.endTime).toLocaleString("en-US", { hour: "2-digit", minute: "2-digit" });
+  const hours = ((job.endTime - job.startTime) / 3600000).toFixed(1);
+  const totalPay = (parseFloat(hours) * parseFloat(job.payRate)).toFixed(2);
+  const mapsUrl = [job.restaurantName, job.location, job.city].filter(Boolean).join(", ");
+  const mapsLink = mapsUrl ? "https://maps.google.com/?q=" + encodeURIComponent(mapsUrl) : null;
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-end justify-center" onClick={onClose}>
+      <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" />
+      <div
+        className="relative w-full max-w-lg bg-card rounded-t-3xl border-t border-border p-5 pb-8 max-h-[85vh] overflow-y-auto"
+        onClick={(e) => e.stopPropagation()}
+      >
+        {/* Header */}
+        <div className="flex items-center gap-3 mb-4">
+          <div className="w-10 h-10 rounded-2xl bg-emerald-500/20 flex items-center justify-center flex-shrink-0">
+            <UserCheck size={18} className="text-emerald-400" />
+          </div>
+          <div>
+            <p className="font-black text-base text-foreground">
+              {isSpanish ? "Confirmar Contratación" : "Confirm Hire"}
+            </p>
+            <p className="text-xs text-muted-foreground">
+              {isSpanish
+                ? `${app.worker?.name ?? "Worker"} recibirá los detalles del turno`
+                : `${app.worker?.name ?? "Worker"} will receive shift details`}
+            </p>
+          </div>
+        </div>
+
+        {/* Worker info */}
+        <div className="flex items-center gap-3 bg-secondary rounded-2xl p-3 mb-4">
+          {app.worker?.profileImage ? (
+            <img src={app.worker.profileImage} alt="" className="w-10 h-10 rounded-xl object-cover" />
+          ) : (
+            <div className="w-10 h-10 rounded-xl bg-card flex items-center justify-center">
+              <ChefHat size={16} className="text-muted-foreground" />
+            </div>
+          )}
+          <div>
+            <p className="text-sm font-bold text-foreground">{app.worker?.name ?? "Worker"}</p>
+            {app.worker?.rating && (
+              <span className="flex items-center gap-0.5 text-[10px] text-yellow-400">
+                <Star size={9} strokeWidth={2.5} />
+                {parseFloat(app.worker.rating).toFixed(1)} rating
+              </span>
+            )}
+          </div>
+        </div>
+
+        {/* What worker will receive */}
+        <p className="text-xs font-bold text-muted-foreground uppercase tracking-wider mb-2">
+          {isSpanish ? "El trabajador recibirá:" : "Worker will receive:"}
+        </p>
+        <div className="space-y-2 mb-5">
+          <div className="flex items-start gap-2.5 text-xs text-foreground">
+            <CalendarDays size={13} className="text-primary mt-0.5 flex-shrink-0" />
+            <div>
+              <span className="font-semibold">{isSpanish ? "Turno:" : "Shift:"}</span> {roleLabel} · {startDate}
+              <br />
+              <span className="text-muted-foreground">
+                {isSpanish ? "Llegar a las" : "Arrive by"} {arrivalTime} · {isSpanish ? "Termina" : "Ends"} {endTime} · {hours}h
+              </span>
+            </div>
+          </div>
+          <div className="flex items-start gap-2.5 text-xs text-foreground">
+            <MapPin size={13} className="text-primary mt-0.5 flex-shrink-0" />
+            <div>
+              <span className="font-semibold">{isSpanish ? "Ubicación:" : "Location:"}</span> {job.restaurantName ?? ""}{job.location ? " · " + job.location : ""}
+              {mapsLink && (
+                <a href={mapsLink} target="_blank" rel="noopener noreferrer" className="ml-1 text-primary underline">
+                  {isSpanish ? "Ver mapa" : "View map"}
+                </a>
+              )}
+            </div>
+          </div>
+          <div className="flex items-start gap-2.5 text-xs text-foreground">
+            <CreditCard size={13} className="text-primary mt-0.5 flex-shrink-0" />
+            <span>
+              <span className="font-semibold">{isSpanish ? "Pago:" : "Pay:"}</span> ${job.payRate}/hr · ~${totalPay} {isSpanish ? "total" : "total"}
+            </span>
+          </div>
+          <div className="flex items-start gap-2.5 text-xs text-muted-foreground">
+            <CheckCircle size={13} className="text-emerald-400 mt-0.5 flex-shrink-0" />
+            <span>{isSpanish ? "Instrucciones de llegada, info de contacto y enlace de Google Maps" : "Arrival instructions, your contact info, and Google Maps link"}</span>
+          </div>
+        </div>
+
+        {/* Actions */}
+        <div className="flex gap-2">
+          <Button variant="outline" className="flex-1 rounded-2xl" onClick={onClose} disabled={loading}>
+            {isSpanish ? "Cancelar" : "Cancel"}
+          </Button>
+          <Button className="flex-1 rounded-2xl btn-glow" onClick={onConfirm} disabled={loading}>
+            {loading ? (
+              <span className="flex items-center gap-1.5">
+                <span className="w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                {isSpanish ? "Procesando..." : "Processing..."}
+              </span>
+            ) : (
+              <span className="flex items-center gap-1.5">
+                <UserCheck size={14} />
+                {isSpanish ? "Contratar y Notificar" : "Hire & Notify Worker"}
+              </span>
+            )}
+          </Button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function EmployerJobCard({ job, onAccept, onAcceptAndPay, onReject, onMarkComplete, onRelease, responding, releasing }: {
   job: any;
   onAccept: (id: number) => void;
@@ -336,6 +478,10 @@ function EmployerJobCard({ job, onAccept, onAcceptAndPay, onReject, onMarkComple
 })  {
   const [expanded, setExpanded] = useState(false);
   const [selectedWorker, setSelectedWorker] = useState<any | null>(null);
+  const [hireTarget, setHireTarget] = useState<any | null>(null);
+  const { isSpanish } = useLanguage();
+  const ROLE_LABELS = isSpanish ? ROLE_LABELS_ES : ROLE_LABELS_EN;
+  const STATUS_CONFIG = getStatusConfig(isSpanish);
   const { data: apps, refetch: refetchApps } = trpc.applications.forJob.useQuery({ jobId: job.id }, { enabled: expanded });
   const hours = ((job.endTime - job.startTime) / 3600000).toFixed(1);
   const confirmedApp = apps?.find((a: any) => a.status === "confirmed" || a.status === "completed" || a.status === "accepted");
@@ -388,7 +534,7 @@ function EmployerJobCard({ job, onAccept, onAcceptAndPay, onReject, onMarkComple
               <div className="w-5 h-5 border-2 border-primary border-t-transparent rounded-full animate-spin" />
             </div>
           ) : apps.length === 0 ? (
-            <p className="p-4 text-xs text-muted-foreground text-center">No applications yet</p>
+            <p className="p-4 text-xs text-muted-foreground text-center">{isSpanish ? "Sin solicitudes aún" : "No applications yet"}</p>
           ) : (
             <div className="divide-y divide-border">
               {apps.map((app: any) => {
@@ -434,10 +580,10 @@ function EmployerJobCard({ job, onAccept, onAcceptAndPay, onReject, onMarkComple
                             size="sm"
                             className="flex-1 rounded-xl text-xs btn-glow"
                             disabled={responding}
-                            onClick={() => onAcceptAndPay(app.id)}
+                            onClick={() => setHireTarget(app)}
                           >
-                            <CheckCircle2 size={11} className="mr-1" />
-                            {responding ? "Processing..." : "Accept & Pay Escrow"}
+                            <UserCheck size={11} className="mr-1" />
+                            {isSpanish ? "Contratar" : "Hire"}
                           </Button>
                           <Button size="sm" variant="outline" className="flex-shrink-0 rounded-xl text-xs" disabled={responding} onClick={() => onReject(app.id)}>
                             <XCircle size={11} />
@@ -447,12 +593,12 @@ function EmployerJobCard({ job, onAccept, onAcceptAndPay, onReject, onMarkComple
                       {app.status === "accepted" && (
                         <div className="flex items-center gap-1.5 text-xs text-emerald-400 font-semibold">
                           <CheckCircle size={12} />
-                          Worker accepted — escrow held
+                          {isSpanish ? "Trabajador aceptado — depósito retenido" : "Worker accepted — escrow held"}
                         </div>
                       )}
                       {app.status === "completed" && (
                         <Button size="sm" className="flex-1 rounded-xl text-xs btn-glow" disabled={releasing} onClick={() => onRelease(app.jobId ?? job.id)}>
-                          {releasing ? "Releasing..." : "Release Payment"}
+                          {releasing ? (isSpanish ? "Liberando..." : "Releasing...") : (isSpanish ? "Liberar Pago" : "Release Payment")}
                         </Button>
                       )}
                     </div>
@@ -467,6 +613,20 @@ function EmployerJobCard({ job, onAccept, onAcceptAndPay, onReject, onMarkComple
         worker={selectedWorker}
         open={!!selectedWorker}
         onClose={() => setSelectedWorker(null)}
+      />
+      <HireConfirmModal
+        open={!!hireTarget}
+        onClose={() => setHireTarget(null)}
+        onConfirm={() => {
+          if (hireTarget) {
+            onAcceptAndPay(hireTarget.id);
+            setHireTarget(null);
+          }
+        }}
+        app={hireTarget}
+        job={job}
+        loading={responding}
+        isSpanish={isSpanish}
       />
     </div>
   );
