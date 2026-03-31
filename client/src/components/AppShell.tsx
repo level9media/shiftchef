@@ -1,6 +1,7 @@
 import { useAuth } from "@/_core/hooks/useAuth";
 import { Link, useLocation } from "wouter";
-import { Zap, Briefcase, User, DollarSign, Star, Bell, ChefHat, ShieldCheck, CheckCircle, X, BriefcaseBusiness } from "lucide-react";
+import { Zap, Briefcase, User, DollarSign, Star, Bell, ChefHat, ShieldCheck, CheckCircle, X, BriefcaseBusiness, Languages } from "lucide-react";
+import { useLanguage } from "@/contexts/LanguageContext";
 import { cn } from "@/lib/utils";
 import { trpc } from "@/lib/trpc";
 import { useState, useRef, useEffect } from "react";
@@ -120,6 +121,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
   });
 
   const [bellOpen, setBellOpen] = useState(false);
+  const { language, setLanguage } = useLanguage();
   const [dismissed, setDismissed] = useState<Set<string>>(new Set());
   const bellRef = useRef<HTMLDivElement>(null);
 
@@ -216,8 +218,17 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
               </div>
             </Link>
 
-            {/* Right: role badge + bell + avatar */}
+            {/* Right: language toggle + role badge + bell + avatar */}
             <div className="flex items-center gap-2.5">
+              {/* EN / ES toggle */}
+              <button
+                onClick={() => setLanguage(language === "en" ? "es" : "en")}
+                className="flex items-center gap-1 text-[11px] font-bold px-2.5 py-1 rounded-full bg-secondary border border-border text-muted-foreground hover:text-foreground hover:border-primary/50 transition-all"
+                title={language === "en" ? "Cambiar a Español" : "Switch to English"}
+              >
+                <Languages size={12} strokeWidth={2} />
+                {language === "en" ? "ES" : "EN"}
+              </button>
               {profile && (
                 <span className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground bg-secondary px-2.5 py-1 rounded-full border border-border">
                   {profile.userType ?? "worker"}

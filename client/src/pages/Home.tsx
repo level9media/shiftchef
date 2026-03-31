@@ -4,11 +4,14 @@ import { getLoginUrl } from "@/const";
 import { Button } from "@/components/ui/button";
 import { useEffect } from "react";
 import { useLocation } from "wouter";
-import { ChefHat, Zap, Shield, DollarSign, Star, ArrowRight, TrendingUp } from "lucide-react";
+import { ChefHat, Zap, Shield, DollarSign, Star, ArrowRight, TrendingUp, Menu, X } from "lucide-react";
+import { useState } from "react";
+import { Link } from "wouter";
 
 export default function Home() {
   const { isAuthenticated, loading } = useAuth();
   const [, navigate] = useLocation();
+  const [menuOpen, setMenuOpen] = useState(false);
 
   useEffect(() => {
     if (!loading && isAuthenticated) {
@@ -45,8 +48,8 @@ export default function Home() {
       />
 
       {/* Header */}
-      <div className="relative z-10 flex items-center justify-between px-5 pt-4 pb-2">
-        <div className="flex items-center gap-2">
+      <div className="relative z-20 flex items-center justify-between px-5 pt-4 pb-2">
+        <div className="flex items-center gap-3">
           <div className="w-9 h-9 rounded-2xl bg-primary flex items-center justify-center shadow-lg btn-glow">
             <ChefHat size={18} className="text-primary-foreground" strokeWidth={2.5} />
           </div>
@@ -56,6 +59,14 @@ export default function Home() {
           >
             Shift<span className="text-primary">Chef</span>
           </span>
+          {/* Hamburger toggle */}
+          <button
+            onClick={() => setMenuOpen(!menuOpen)}
+            className="ml-1 p-1.5 rounded-xl text-muted-foreground hover:text-foreground hover:bg-secondary transition-colors"
+            aria-label="Toggle menu"
+          >
+            {menuOpen ? <X size={20} /> : <Menu size={20} />}
+          </button>
         </div>
         <a href={getLoginUrl()}>
           <button className="text-sm font-semibold text-muted-foreground hover:text-foreground transition-colors px-3 py-1.5 rounded-xl hover:bg-secondary">
@@ -63,6 +74,32 @@ export default function Home() {
           </button>
         </a>
       </div>
+
+      {/* Dropdown nav menu */}
+      {menuOpen && (
+        <div className="relative z-20 mx-5 mt-1 mb-2 rounded-2xl border border-border/50 bg-card/90 backdrop-blur-md shadow-xl overflow-hidden">
+          {[
+            { label: "Home", path: "/" },
+            { label: "How It Works", path: "/how-it-works" },
+            { label: "Pricing", path: "/pricing" },
+            { label: "FAQ", path: "/faq" },
+            { label: "Find Shifts", path: "/feed" },
+            { label: "Post a Job", path: "/post-job" },
+          ].map((item, i) => (
+            <Link
+              key={item.path}
+              href={item.path}
+              onClick={() => setMenuOpen(false)}
+              className={`flex items-center justify-between px-5 py-3.5 text-sm font-semibold text-foreground hover:bg-primary/10 hover:text-primary transition-colors ${
+                i !== 0 ? "border-t border-border/30" : ""
+              }`}
+            >
+              {item.label}
+              <ArrowRight size={14} className="text-muted-foreground" />
+            </Link>
+          ))}
+        </div>
+      )}
 
       {/* Hero */}
       <div className="relative z-10 flex-1 flex flex-col items-center justify-center px-6 pt-8 pb-6 text-center">

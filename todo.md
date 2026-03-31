@@ -345,3 +345,9 @@
 
 ## v16 — Domain & Redirect Fixes
 - [x] Add non-www to www redirect so shiftchef.co forwards to www.shiftchef.co
+
+## Navigation & Language (v12)
+- [ ] Add hamburger menu to Home.tsx header with links to How It Works, Pricing, FAQ, Find Shifts, Post a Job
+- [ ] Build LanguageContext (EN/ES) with persistent localStorage preference
+- [ ] Create Spanish translations for core app strings (Feed, JobDetail, PostJob, Profile, Earnings, Onboarding)
+- [ ] Add EN/ES toggle button in app header/nav (AppShell)
