@@ -44,7 +44,10 @@ jobs:
           VITE_APP_TITLE: ShiftChef
           VITE_APP_LOGO: https://d2xsxph8kpxj0f.cloudfront.net/310519663450394445/5XtEwxhSav9aHUudDTD5pa/icon-512_d6867d62.png
 
-      # ── 4. Sync Capacitor ─────────────────────────────────────────────────────
+      # ── 4. Add & Sync Capacitor iOS ──────────────────────────────────────────
+      - name: Add Capacitor iOS platform
+        run: npx cap add ios
+
       - name: Sync Capacitor iOS
         run: npx cap sync ios
 
