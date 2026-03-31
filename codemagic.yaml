@@ -20,6 +20,12 @@ workflows:
       app_store_connect: Apple API Key
 
     scripts:
+      - name: Install pnpm via npm
+        script: |
+          corepack disable
+          npm install -g pnpm@10.4.1 --force
+          pnpm --version
+
       - name: Install dependencies
         script: pnpm install --frozen-lockfile
 
