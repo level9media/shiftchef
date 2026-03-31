@@ -347,7 +347,12 @@
 - [x] Add non-www to www redirect so shiftchef.co forwards to www.shiftchef.co
 
 ## Navigation & Language (v12)
-- [ ] Add hamburger menu to Home.tsx header with links to How It Works, Pricing, FAQ, Find Shifts, Post a Job
-- [ ] Build LanguageContext (EN/ES) with persistent localStorage preference
-- [ ] Create Spanish translations for core app strings (Feed, JobDetail, PostJob, Profile, Earnings, Onboarding)
-- [ ] Add EN/ES toggle button in app header/nav (AppShell)
+- [x] Add hamburger menu to Home.tsx header with links to How It Works, Pricing, FAQ, Find Shifts, Post a Job
+- [x] Build LanguageContext (EN/ES) with persistent localStorage preference
+- [x] Create Spanish translations for core app strings (Feed, JobDetail, PostJob, Profile, Earnings, Onboarding)
+- [x] Add EN/ES toggle button in app header/nav (AppShell)
+
+## App Store Submission (v17)
+- [x] New app icon: orange background, black line-art chef hat (all iOS sizes generated and injected into build pipeline)
+- [x] Add /privacy route with full Privacy Policy page (https://www.shiftchef.co/privacy)
+- [x] Generate iPad 13-inch screenshot (2048x2732px) for App Store upload
