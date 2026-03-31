@@ -3,7 +3,7 @@ import type { CapacitorConfig } from '@capacitor/cli';
 const config: CapacitorConfig = {
   appId: 'co.shiftchef.app',
   appName: 'ShiftChef',
-  webDir: 'dist',
+  webDir: 'dist/public',
   server: {
     // For production: remove androidScheme and use the built dist
     // For development: uncomment below to point to your live URL
