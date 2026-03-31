@@ -53,11 +53,13 @@ jobs:
 
       # ── 5. Import code-signing certificate ───────────────────────────────────
       - name: Import code-signing certificate
+        env:
+          CERT_PART1: ${{ secrets.APPLE_CERT_P12_PART1 }}
+          CERT_PART2: ${{ secrets.APPLE_CERT_P12_PART2 }}
+          CERT_PASSWORD: ${{ secrets.APPLE_CERTIFICATE_PASSWORD }}
         run: |
-          # Reassemble p12 from two halves, strip all whitespace before decoding
-          printf '%s%s' '${{ secrets.APPLE_CERT_P12_PART1 }}' '${{ secrets.APPLE_CERT_P12_PART2 }}' \
-            | tr -d '[:space:]' \
-            | base64 --decode > /tmp/cert.p12
+          # Reassemble p12 from two halves via env vars (avoids single-quote literal issue)
+          echo "${CERT_PART1}${CERT_PART2}" | tr -d '[:space:]' | base64 --decode > /tmp/cert.p12
           echo "p12 size: $(wc -c < /tmp/cert.p12) bytes"
 
           # Create temp keychain
@@ -72,7 +74,7 @@ jobs:
             -A \
             -T /usr/bin/codesign \
             -T /usr/bin/security \
-            -P "${{ secrets.APPLE_CERTIFICATE_PASSWORD }}"
+            -P "${CERT_PASSWORD}"
 
           # Make keychain default and allow access
           security list-keychains -d user -s signing_temp.keychain $(security list-keychains -d user | tr -d '"')
