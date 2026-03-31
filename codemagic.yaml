@@ -34,6 +34,15 @@ workflows:
       - name: Sync Capacitor iOS
         script: npx cap sync ios
 
+      - name: Inject app icon
+        script: |
+          ICON_DIR="ios/App/App/Assets.xcassets/AppIcon.appiconset"
+          mkdir -p "$ICON_DIR"
+          cp resources/ios/AppIcon.appiconset/*.png "$ICON_DIR/"
+          cp resources/ios/AppIcon.appiconset/Contents.json "$ICON_DIR/"
+          echo "Icon files injected:"
+          ls "$ICON_DIR/" | wc -l
+
       - name: Setup signing, build and archive
         script: |
           set -e
