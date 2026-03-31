@@ -61,8 +61,12 @@ jobs:
           MATCH_PASSWORD: ${{ secrets.MATCH_PASSWORD }}
           MATCH_GIT_BASIC_AUTHORIZATION: ${{ secrets.MATCH_GIT_BASIC_AUTHORIZATION }}
         run: |
-          cd fastlane
-          fastlane sync_signing
+          fastlane match appstore \
+            --app_identifier "co.shiftchef.app" \
+            --git_url "https://level9media:$(echo $MATCH_GIT_BASIC_AUTHORIZATION | base64 --decode | cut -d: -f2)@github.com/level9media/shiftchef-match.git" \
+            --team_id "U2PT554FKN" \
+            --readonly true \
+            --verbose false
 
       # ── 7. Build & Archive ────────────────────────────────────────────────────
       - name: Build & Archive (Xcode)
