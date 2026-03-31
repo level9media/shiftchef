@@ -4,21 +4,17 @@ workflows:
     max_build_duration: 60
     instance_type: mac_mini_m2
 
-    integrations:
-      app_store_connect: Apple API Key
-
     environment:
       node: v22.13.0
       xcode: latest
       cocoapods: default
-      ios_signing:
-        distribution_type: app_store
-        bundle_identifier: co.shiftchef.app
+      groups:
+        - shiftchef_signing
       vars:
         BUNDLE_ID: co.shiftchef.app
         XCODE_SCHEME: App
         XCODE_PROJECT: ios/App/App.xcodeproj
-        VITE_APP_TITLE: ShiftChef
+        PROFILE_UUID: f5330e02-bffe-4c36-8cfd-36e3446214b0
 
     scripts:
       - name: Install pnpm via npm
@@ -39,22 +35,73 @@ workflows:
       - name: Sync Capacitor iOS
         script: npx cap sync ios
 
-      - name: Set up code signing
-        script: xcode-project use-profiles
+      - name: Install signing certificate
+        script: |
+          echo $CERT_P12 | base64 --decode > /tmp/cert.p12
+          security create-keychain -p "" build.keychain
+          security default-keychain -s build.keychain
+          security unlock-keychain -p "" build.keychain
+          security set-keychain-settings -t 3600 -u build.keychain
+          security import /tmp/cert.p12 -k build.keychain -P "$CERT_PASSWORD" -T /usr/bin/codesign -T /usr/bin/xcodebuild
+          security set-key-partition-list -S apple-tool:,apple: -s -k "" build.keychain
+
+      - name: Install provisioning profile
+        script: |
+          mkdir -p ~/Library/MobileDevice/Provisioning\ Profiles
+          echo $PROVISIONING_PROFILE | base64 --decode > ~/Library/MobileDevice/Provisioning\ Profiles/${PROFILE_UUID}.mobileprovision
 
       - name: Build & Archive
         script: |
-          xcode-project build-ipa \
-            --project "$XCODE_PROJECT" \
-            --scheme "$XCODE_SCHEME"
+          xcodebuild \
+            -project "$XCODE_PROJECT" \
+            -scheme "$XCODE_SCHEME" \
+            -archivePath /tmp/ShiftChef.xcarchive \
+            -configuration Release \
+            CODE_SIGN_STYLE=Manual \
+            CODE_SIGN_IDENTITY="Apple Distribution" \
+            PROVISIONING_PROFILE="$PROFILE_UUID" \
+            PROVISIONING_PROFILE_SPECIFIER="ShiftChef App Store" \
+            DEVELOPMENT_TEAM=U2PT554FKN \
+            archive
+
+      - name: Export IPA
+        script: |
+          cat > /tmp/ExportOptions.plist << EOF
+          <?xml version="1.0" encoding="UTF-8"?>
+          <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+          <plist version="1.0">
+          <dict>
+            <key>method</key>
+            <string>app-store</string>
+            <key>teamID</key>
+            <string>U2PT554FKN</string>
+            <key>uploadBitcode</key>
+            <false/>
+            <key>uploadSymbols</key>
+            <true/>
+            <key>signingStyle</key>
+            <string>manual</string>
+            <key>provisioningProfiles</key>
+            <dict>
+              <key>co.shiftchef.app</key>
+              <string>ShiftChef App Store</string>
+            </dict>
+          </dict>
+          </plist>
+          EOF
+          xcodebuild -exportArchive \
+            -archivePath /tmp/ShiftChef.xcarchive \
+            -exportPath /tmp/ShiftChef-ipa \
+            -exportOptionsPlist /tmp/ExportOptions.plist
+
+      - name: Upload to TestFlight
+        script: |
+          xcrun altool --upload-app \
+            --type ios \
+            --file /tmp/ShiftChef-ipa/*.ipa \
+            --apiKey "$ASC_KEY_ID" \
+            --apiIssuer "$ASC_ISSUER_ID"
 
     artifacts:
-      - build/ios/ipa/*.ipa
+      - /tmp/ShiftChef-ipa/*.ipa
       - /tmp/xcodebuild_logs/*.log
-
-    publishing:
-      app_store_connect:
-        auth: integration
-        submit_to_testflight: true
-        beta_groups:
-          - Internal Testers
