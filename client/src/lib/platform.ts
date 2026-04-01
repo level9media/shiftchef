@@ -55,22 +55,22 @@ export const getOrigin = (): string => {
 };
 
 /**
- * Custom URL scheme for deep links.
- * iOS must have CFBundleURLSchemes = ["shiftchef"] in Info.plist.
+ * Custom URL scheme for deep links (kept for legacy Info.plist, not used for OAuth).
  */
 export const DEEP_LINK_SCHEME = "shiftchef";
 
 /**
- * The redirect URI used for OAuth in native Capacitor builds.
- * The server will redirect to this URL after login, and the Capacitor
- * App plugin will intercept it and handle the session token.
+ * The HTTPS redirect URI used for OAuth in native Capacitor builds.
+ * Manus OAuth only permits http://, https://, or manus* schemes.
+ * The server receives the callback at this URL, sets the session cookie,
+ * then redirects the browser back into the app via /feed.
  */
-export const NATIVE_OAUTH_REDIRECT_URI = `${DEEP_LINK_SCHEME}://oauth/callback`;
+export const NATIVE_OAUTH_REDIRECT_URI = `${PRODUCTION_API_BASE}/api/oauth/callback`;
 
 /**
  * Returns the correct OAuth redirect URI for the current environment.
- * - Browser: https://www.shiftchef.co/api/oauth/callback
- * - Native: shiftchef://oauth/callback
+ * Both web and native use the same HTTPS callback URL — the server
+ * detects native mode from the state parameter and handles accordingly.
  */
 export const getOAuthRedirectUri = (): string => {
   if (isCapacitor()) {

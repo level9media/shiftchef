@@ -4,8 +4,10 @@ import * as db from "../db";
 import { getSessionCookieOptions } from "./cookies";
 import { sdk } from "./sdk";
 
-const NATIVE_DEEP_LINK_SCHEME = "shiftchef";
-const NATIVE_REDIRECT_URI = `${NATIVE_DEEP_LINK_SCHEME}://oauth/callback`;
+// Native Capacitor apps now use HTTPS redirect URI (shiftchef:// is blocked by Manus OAuth).
+// After login, we set the session cookie and redirect to /feed — the Capacitor WebView
+// picks up the cookie automatically since it loads from https://www.shiftchef.co.
+const NATIVE_POST_LOGIN_PATH = "/feed";
 
 function getQueryParam(req: Request, key: string): string | undefined {
   const value = req.query[key];
@@ -60,12 +62,13 @@ export function registerOAuthRoutes(app: Express) {
       const parsedState = parseState(state);
 
       if (parsedState.native) {
-        // Native Capacitor flow: redirect to deep link with token in query param.
-        // The Capacitor App plugin intercepts shiftchef:// URLs and the deepLink.ts
-        // handler extracts the token, sets it as a cookie, and navigates to /feed.
-        console.log("[OAuth] Native login — redirecting to deep link");
-        const deepLinkUrl = `${NATIVE_REDIRECT_URI}?token=${encodeURIComponent(sessionToken)}`;
-        res.redirect(302, deepLinkUrl);
+        // Native Capacitor flow: set session cookie and redirect to /feed.
+        // The Capacitor WebView loads from https://www.shiftchef.co so the cookie
+        // is set on the correct domain and the app picks it up automatically.
+        console.log("[OAuth] Native login — setting cookie and redirecting to feed");
+        const cookieOptions = getSessionCookieOptions(req);
+        res.cookie(COOKIE_NAME, sessionToken, { ...cookieOptions, maxAge: ONE_YEAR_MS });
+        res.redirect(302, NATIVE_POST_LOGIN_PATH);
       } else {
         // Web browser flow: set session cookie and redirect to app.
         const cookieOptions = getSessionCookieOptions(req);
