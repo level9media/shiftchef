@@ -75,6 +75,16 @@ workflows:
           echo "URL scheme injected:"
           /usr/libexec/PlistBuddy -c "Print :CFBundleURLTypes" "$INFO_PLIST"
 
+      - name: Increment build number
+        script: |
+          set -e
+          # Use Codemagic's BUILD_NUMBER env var (auto-increments each build)
+          # Falls back to current timestamp if not set
+          BUILD_NUM=${BUILD_NUMBER:-$(date +%s)}
+          echo "Setting CFBundleVersion to $BUILD_NUM"
+          /usr/libexec/PlistBuddy -c "Set :CFBundleVersion $BUILD_NUM" ios/App/App/Info.plist
+          /usr/libexec/PlistBuddy -c "Print :CFBundleVersion" ios/App/App/Info.plist
+
       - name: Setup signing, build and archive
         script: |
           set -e
