@@ -254,14 +254,9 @@ export default defineConfig({
     dedupe: ["react", "react-dom", "react/jsx-runtime", "react/jsx-dev-runtime"],
   },
   optimizeDeps: {
-    // Exclude @trpc/react-query and @tanstack/react-query from pre-bundling.
-    // When Vite pre-bundles these CJS packages it emits multiple __toESM(require_react(), 1)
-    // wrappers that are not referentially equal — causing TRPCProvider to call useState on a
-    // different React namespace than the one react-dom initialized its dispatcher on.
-    // Excluding them forces Vite to transform them through the standard ESM pipeline instead,
-    // which shares the same React instance as the rest of the app.
-    exclude: ["@trpc/react-query", "@tanstack/react-query"],
-    include: ["react", "react-dom", "react-dom/client"],
+    // Include React packages to ensure they are pre-bundled as a single instance.
+    // The alias + dedupe config above ensures all packages share the same React.
+    include: ["react", "react-dom", "react-dom/client", "@trpc/react-query", "@tanstack/react-query"],
   },
   envDir: path.resolve(import.meta.dirname),
   root: path.resolve(import.meta.dirname, "client"),
@@ -272,10 +267,7 @@ export default defineConfig({
   },
   server: {
     host: true,
-    hmr: {
-      clientPort: 443,
-      protocol: 'wss',
-    },
+    hmr: true,
     allowedHosts: [
       ".manuspre.computer",
       ".manus.computer",

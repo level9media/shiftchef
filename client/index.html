@@ -132,8 +132,23 @@
     <script>
       if ('serviceWorker' in navigator) {
         window.addEventListener('load', function() {
-          navigator.serviceWorker.register('/sw.js', { scope: '/' })
-            .then(function(reg) { console.log('[SW] Registered:', reg.scope); })
+          navigator.serviceWorker.register('/sw.js', { scope: '/', updateViaCache: 'none' })
+            .then(function(reg) {
+              console.log('[SW] Registered:', reg.scope);
+              // Force update check every load to pick up new SW versions immediately
+              reg.update();
+              // If a new SW is waiting, activate it immediately
+              if (reg.waiting) { reg.waiting.postMessage({ type: 'SKIP_WAITING' }); }
+              reg.addEventListener('updatefound', function() {
+                var sw = reg.installing;
+                if (!sw) return;
+                sw.addEventListener('statechange', function() {
+                  if (sw.state === 'installed') {
+                    sw.postMessage({ type: 'SKIP_WAITING' });
+                  }
+                });
+              });
+            })
             .catch(function(err) { console.warn('[SW] Registration failed:', err); });
         });
       }

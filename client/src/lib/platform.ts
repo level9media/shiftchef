@@ -1,3 +1,4 @@
+// platform.ts v2 — exports: isNative, isCapacitor, getApiBase, getOrigin, getOAuthRedirectUri
 /**
  * Detect whether the app is running inside a Capacitor native WebView.
  * In Capacitor, window.location.origin is "capacitor://localhost" (iOS)

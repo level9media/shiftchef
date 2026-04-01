@@ -1,10 +1,9 @@
-// ShiftChef Service Worker v1
-const CACHE_NAME = 'shiftchef-v1';
+// ShiftChef Service Worker v4
+const CACHE_NAME = 'shiftchef-v4';
 const OFFLINE_URL = '/offline.html';
 
 // Assets to pre-cache on install
 const PRE_CACHE_ASSETS = [
-  '/',
   '/offline.html',
   '/manifest.json',
 ];
@@ -36,17 +35,21 @@ self.addEventListener('fetch', (event) => {
   const { request } = event;
   const url = new URL(request.url);
 
-  // Skip non-GET requests and API calls
+  // Skip non-GET requests
   if (request.method !== 'GET') return;
+  // Always bypass cache for: API, Vite internals, source files, HMR
   if (url.pathname.startsWith('/api/')) return;
   if (url.pathname.startsWith('/__manus__')) return;
+  if (url.pathname.startsWith('/@')) return;        // Vite internals (@vite/client, @react-refresh)
+  if (url.pathname.startsWith('/src/')) return;     // Source files — always fetch fresh
+  if (url.pathname.startsWith('/node_modules/')) return;
+  if (url.searchParams.has('v')) return;            // Vite cache-busted assets — skip SW cache
 
   // For navigation requests: network-first, fallback to offline page
   if (request.mode === 'navigate') {
     event.respondWith(
       fetch(request)
         .then((response) => {
-          // Cache successful navigation responses
           const clone = response.clone();
           caches.open(CACHE_NAME).then((cache) => cache.put(request, clone));
           return response;
@@ -72,6 +75,13 @@ self.addEventListener('fetch', (event) => {
       });
     })
   );
+});
+
+// Handle SKIP_WAITING message from page to activate new SW immediately
+self.addEventListener('message', (event) => {
+  if (event.data && event.data.type === 'SKIP_WAITING') {
+    self.skipWaiting();
+  }
 });
 
 // Push notification handler
