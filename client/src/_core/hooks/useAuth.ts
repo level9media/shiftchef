@@ -9,8 +9,19 @@ type UseAuthOptions = {
 };
 
 export function useAuth(options?: UseAuthOptions) {
-  const { redirectOnUnauthenticated = false, redirectPath = getLoginUrl() } =
-    options ?? {};
+  const { redirectOnUnauthenticated = false, redirectPath } = options ?? {};
+  // Compute login URL lazily — only when actually needed for redirect.
+  // Calling getLoginUrl() as a default parameter evaluates it on every render,
+  // which can crash on iOS Capacitor WKWebView due to URL/btoa restrictions.
+  const resolvedRedirectPath = useMemo(() => {
+    if (redirectPath !== undefined) return redirectPath;
+    try {
+      return getLoginUrl();
+    } catch {
+      return "/";
+    }
+  }, [redirectPath]);
+
   const utils = trpc.useUtils();
 
   const meQuery = trpc.auth.me.useQuery(undefined, {
@@ -42,10 +53,14 @@ export function useAuth(options?: UseAuthOptions) {
   }, [logoutMutation, utils]);
 
   const state = useMemo(() => {
-    localStorage.setItem(
-      "manus-runtime-user-info",
-      JSON.stringify(meQuery.data)
-    );
+    try {
+      localStorage.setItem(
+        "manus-runtime-user-info",
+        JSON.stringify(meQuery.data)
+      );
+    } catch {
+      // localStorage may throw in iOS private browsing or when storage is full
+    }
     return {
       user: meQuery.data ?? null,
       loading: meQuery.isLoading || logoutMutation.isPending,
@@ -65,12 +80,12 @@ export function useAuth(options?: UseAuthOptions) {
     if (meQuery.isLoading || logoutMutation.isPending) return;
     if (state.user) return;
     if (typeof window === "undefined") return;
-    if (window.location.pathname === redirectPath) return;
+    if (window.location.pathname === resolvedRedirectPath) return;
 
-    window.location.href = redirectPath
+    window.location.href = resolvedRedirectPath;
   }, [
     redirectOnUnauthenticated,
-    redirectPath,
+    resolvedRedirectPath,
     logoutMutation.isPending,
     meQuery.isLoading,
     state.user,

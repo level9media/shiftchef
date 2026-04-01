@@ -39,7 +39,11 @@ const redirectToLoginIfUnauthorized = (error: unknown) => {
 
   if (!isUnauthorized) return;
 
-  window.location.href = getLoginUrl();
+  try {
+    window.location.href = getLoginUrl();
+  } catch (err) {
+    console.error("[auth] Failed to redirect to login:", err);
+  }
 };
 
 queryClient.getQueryCache().subscribe(event => {
