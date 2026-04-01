@@ -14,6 +14,12 @@ workflows:
         BUNDLE_ID: co.shiftchef.app
         XCODE_SCHEME: App
         XCODE_PROJECT: ios/App/App.xcodeproj
+        # Vite build-time env vars — baked into the iOS bundle at build time
+        VITE_APP_ID: 5XtEwxhSav9aHUudDTD5pa
+        VITE_OAUTH_PORTAL_URL: https://manus.im
+        VITE_FRONTEND_FORGE_API_URL: https://forge.manus.ai
+        VITE_FRONTEND_FORGE_API_KEY: ZokMKTeVAZLoS5fSEMvHMV
+        VITE_APP_TITLE: ShiftChef - Find Food Service Jobs Fast!
 
     scripts:
       - name: Install pnpm via npm
