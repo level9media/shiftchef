@@ -32,7 +32,7 @@ workflows:
         script: pnpm install --frozen-lockfile
 
       - name: Build web bundle (with React singleton patch)
-        script: pnpm run build:client
+        script: rm -rf node_modules/.vite dist && pnpm run build:client
 
       - name: Add Capacitor iOS platform
         script: npx cap add ios
