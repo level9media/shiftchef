@@ -4,81 +4,112 @@ import * as db from "../db";
 import { getSessionCookieOptions } from "./cookies";
 import { sdk } from "./sdk";
 
-// Native Capacitor apps now use HTTPS redirect URI (shiftchef:// is blocked by Manus OAuth).
-// After login, we set the session cookie and redirect to /feed — the Capacitor WebView
-// picks up the cookie automatically since it loads from https://www.shiftchef.co.
-const NATIVE_POST_LOGIN_PATH = "/feed";
-
-function getQueryParam(req: Request, key: string): string | undefined {
-  const value = req.query[key];
-  return typeof value === "string" ? value : undefined;
-}
-
-/**
- * Parse the state parameter to detect native Capacitor login.
- * State is base64-encoded JSON: { origin, returnPath, native? }
- * Legacy format was just the redirect URI — treat as web.
- */
-function parseState(state: string): { origin?: string; returnPath?: string; native?: boolean } {
+// Verify Firebase ID token using Firebase Admin REST API
+async function verifyFirebaseToken(idToken: string): Promise<{
+  uid: string;
+  phone_number?: string;
+  name?: string;
+} | null> {
   try {
-    return JSON.parse(Buffer.from(state, "base64").toString("utf8"));
-  } catch {
-    return {};
+    const projectId = process.env.FIREBASE_PROJECT_ID || "shiftchef-c9854";
+    const res = await fetch(
+      `https://identitytoolkit.googleapis.com/v1/accounts:lookup?key=${process.env.FIREBASE_API_KEY}`,
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ idToken }),
+      }
+    );
+    if (!res.ok) {
+      console.warn("[Firebase] Token lookup failed:", res.status);
+      return null;
+    }
+    const data = await res.json();
+    const user = data.users?.[0];
+    if (!user) return null;
+    return {
+      uid: user.localId,
+      phone_number: user.phoneNumber,
+      name: user.displayName,
+    };
+  } catch (err) {
+    console.error("[Firebase] Token verification error:", err);
+    return null;
   }
 }
 
 export function registerOAuthRoutes(app: Express) {
-  app.get("/api/oauth/callback", async (req: Request, res: Response) => {
-    const code = getQueryParam(req, "code");
-    const state = getQueryParam(req, "state");
+  // Firebase phone auth callback — called from frontend after phone verification
+  app.post("/api/auth/firebase", async (req: Request, res: Response) => {
+    const { idToken, name, phone } = req.body;
 
-    if (!code || !state) {
-      res.status(400).json({ error: "code and state are required" });
+    if (!idToken) {
+      res.status(400).json({ error: "idToken is required" });
       return;
     }
 
     try {
-      const tokenResponse = await sdk.exchangeCodeForToken(code, state);
-      const userInfo = await sdk.getUserInfo(tokenResponse.accessToken);
-
-      if (!userInfo.openId) {
-        res.status(400).json({ error: "openId missing from user info" });
+      // Verify the Firebase token
+      const firebaseUser = await verifyFirebaseToken(idToken);
+      if (!firebaseUser) {
+        res.status(401).json({ error: "Invalid Firebase token" });
         return;
       }
 
+      const openId = `firebase:${firebaseUser.uid}`;
+      const phoneNumber = phone || firebaseUser.phone_number || null;
+      const displayName = name || null;
+
+      // Upsert user in DB
       await db.upsertUser({
-        openId: userInfo.openId,
-        name: userInfo.name || null,
-        email: userInfo.email ?? null,
-        loginMethod: userInfo.loginMethod ?? userInfo.platform ?? null,
+        openId,
+        name: displayName,
+        email: null,
+        loginMethod: "phone",
         lastSignedIn: new Date(),
+        ...(phoneNumber ? { phone: phoneNumber } : {}),
       });
 
-      const sessionToken = await sdk.createSessionToken(userInfo.openId, {
-        name: userInfo.name || "",
+      const user = await db.getUserByOpenId(openId);
+
+      // Create session token
+      const sessionToken = await sdk.createSessionToken(openId, {
+        name: displayName || phoneNumber || "",
         expiresInMs: ONE_YEAR_MS,
       });
 
-      const parsedState = parseState(state);
+      // Set session cookie
+      const cookieOptions = getSessionCookieOptions(req);
+      res.cookie(COOKIE_NAME, sessionToken, {
+        ...cookieOptions,
+        maxAge: ONE_YEAR_MS,
+      });
 
-      if (parsedState.native) {
-        // Native Capacitor flow: set session cookie and redirect to /feed.
-        // The Capacitor WebView loads from https://www.shiftchef.co so the cookie
-        // is set on the correct domain and the app picks it up automatically.
-        console.log("[OAuth] Native login — setting cookie and redirecting to feed");
-        const cookieOptions = getSessionCookieOptions(req);
-        res.cookie(COOKIE_NAME, sessionToken, { ...cookieOptions, maxAge: ONE_YEAR_MS });
-        res.redirect(302, NATIVE_POST_LOGIN_PATH);
-      } else {
-        // Web browser flow: set session cookie and redirect to app.
-        const cookieOptions = getSessionCookieOptions(req);
-        res.cookie(COOKIE_NAME, sessionToken, { ...cookieOptions, maxAge: ONE_YEAR_MS });
-        const returnPath = parsedState.returnPath || "/";
-        res.redirect(302, returnPath);
-      }
-    } catch (error) {
-      console.error("[OAuth] Callback failed", error);
-      res.status(500).json({ error: "OAuth callback failed" });
+      res.json({
+        success: true,
+        user: {
+          id: user?.id,
+          openId,
+          name: displayName,
+          phone: phoneNumber,
+          userType: user?.userType,
+          profileComplete: user?.profileComplete,
+          verificationStatus: user?.verificationStatus,
+        },
+      });
+    } catch (err) {
+      console.error("[Firebase Auth] Error:", err);
+      res.status(500).json({ error: "Authentication failed" });
     }
+  });
+
+  // Legacy OAuth callback — redirect to home with error
+  app.get("/api/oauth/callback", (_req: Request, res: Response) => {
+    res.redirect("/?error=legacy_auth");
+  });
+
+  // Health check
+  app.get("/api/auth/status", (req: Request, res: Response) => {
+    res.json({ status: "ok", auth: "firebase" });
   });
 }
