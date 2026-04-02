@@ -4,8 +4,7 @@ import NotFound from "@/pages/NotFound";
 import { Route, Switch } from "wouter";
 import ErrorBoundary from "./components/ErrorBoundary";
 import { ThemeProvider } from "./contexts/ThemeContext";
-import AppShell from "./components/AppShell";
-import Home from "./pages/Home";
+import Login from "./pages/Login";
 import Feed from "./pages/Feed";
 import JobDetail from "./pages/JobDetail";
 import PostJob from "./pages/PostJob";
@@ -33,7 +32,8 @@ import EmployerDashboard from "./pages/EmployerDashboard";
 function Router() {
   return (
     <Switch>
-      <Route path="/" component={Home} />
+      <Route path="/" component={Login} />
+      <Route path="/login" component={Login} />
       <Route path="/onboarding" component={Onboarding} />
       <Route path="/feed" component={Feed} />
       <Route path="/jobs/:id" component={JobDetail} />
