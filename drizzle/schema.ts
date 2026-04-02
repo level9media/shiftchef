@@ -113,8 +113,12 @@ export const jobs = mysqlTable("jobs", {
   endTime: bigint("endTime", { mode: "number" }).notNull(),     // UTC ms
   totalPay: decimal("totalPay", { precision: 10, scale: 2 }),   // computed
 
-  city: varchar("city", { length: 128 }).default("Austin, TX"),
+city: varchar("city", { length: 128 }).default("Austin, TX"),
   location: varchar("location", { length: 256 }),
+  latitude: float("latitude"),
+  longitude: float("longitude"),
+  contactName: varchar("contactName", { length: 256 }),
+  contactPhone: varchar("contactPhone", { length: 32 }),
   description: text("description"),
 
   minRating: float("minRating").default(0),
