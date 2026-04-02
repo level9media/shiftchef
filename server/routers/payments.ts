@@ -15,7 +15,6 @@ import {
 import { protectedProcedure, router } from "../_core/trpc";
 import { getStripe, STRIPE_PRODUCTS } from "../stripe";
 
-// Allowlist of trusted origins for Stripe redirect URLs
 const ALLOWED_ORIGINS = [
   "https://shiftchef.co",
   "https://www.shiftchef.co",
@@ -38,7 +37,6 @@ export const paymentsRouter = router({
       const user = await getUserById(ctx.user.id);
       if (!user) throw new TRPCError({ code: "NOT_FOUND" });
 
-      // Ensure Stripe customer exists
       let customerId = user.stripeCustomerId ?? undefined;
       if (!customerId) {
         const customer = await stripe.customers.create({
@@ -51,8 +49,6 @@ export const paymentsRouter = router({
       }
 
       if (input.tier === "subscription") {
-        // Recurring subscription — need a Price object
-        // Create an inline price for the subscription
         const session = await stripe.checkout.sessions.create({
           mode: "subscription",
           customer: customerId,
@@ -61,10 +57,7 @@ export const paymentsRouter = router({
             {
               price_data: {
                 currency: "usd",
-                product_data: {
-                  name: product.name,
-                  description: product.description,
-                },
+                product_data: { name: product.name, description: product.description },
                 unit_amount: product.amount,
                 recurring: { interval: "month" },
               },
@@ -84,7 +77,6 @@ export const paymentsRouter = router({
         });
         return { url: session.url!, sessionId: session.id };
       } else {
-        // One-time payment
         const session = await stripe.checkout.sessions.create({
           mode: "payment",
           customer: customerId,
@@ -93,10 +85,7 @@ export const paymentsRouter = router({
             {
               price_data: {
                 currency: "usd",
-                product_data: {
-                  name: product.name,
-                  description: product.description,
-                },
+                product_data: { name: product.name, description: product.description },
                 unit_amount: product.amount,
               },
               quantity: 1,
@@ -134,7 +123,6 @@ export const paymentsRouter = router({
       const user = await getUserById(ctx.user.id);
       if (!user) throw new TRPCError({ code: "NOT_FOUND" });
 
-      // Calculate amounts: total = pay rate * hours, platform fee = 10%
       const startMs = Number(job.startTime);
       const endMs = Number(job.endTime);
       const hours = Math.max(1, (endMs - startMs) / 3600000);
@@ -142,7 +130,6 @@ export const paymentsRouter = router({
       const platformFeeCents = Math.round(totalCents * 0.1);
       const workerPayoutCents = totalCents - platformFeeCents;
 
-      // Ensure customer exists
       let customerId = user.stripeCustomerId ?? undefined;
       if (!customerId) {
         const customer = await stripe.customers.create({
@@ -154,18 +141,13 @@ export const paymentsRouter = router({
         await updateUser(ctx.user.id, { stripeCustomerId: customerId });
       }
 
-      // Create Checkout session for shift payment (hold in escrow via manual capture)
       const session = await stripe.checkout.sessions.create({
         mode: "payment",
         customer: customerId,
         allow_promotion_codes: false,
         payment_intent_data: {
-          capture_method: "manual", // hold funds, capture on release
-          metadata: {
-            jobId: String(input.jobId),
-            userId: String(ctx.user.id),
-            type: "shift_payment",
-          },
+          capture_method: "manual",
+          metadata: { jobId: String(input.jobId), userId: String(ctx.user.id), type: "shift_payment" },
         },
         line_items: [
           {
@@ -192,7 +174,6 @@ export const paymentsRouter = router({
         },
       });
 
-      // Create or update payment record
       if (existing) {
         await updatePayment(existing.id, {
           stripePaymentIntentId: session.payment_intent as string ?? null,
@@ -217,9 +198,7 @@ export const paymentsRouter = router({
       return { url: session.url!, sessionId: session.id, amount: totalCents };
     }),
 
-  // ── Employer: Accept worker + pay escrow in one step ───────────────────────
-  // Returns a Stripe Checkout URL. On success, the webhook marks payment as held
-  // and the accept mutation fires automatically via the webhook handler.
+  // ── Employer: Accept worker + pay escrow in one step ─────────────────────
   acceptAndPay: protectedProcedure
     .input(z.object({ applicationId: z.number(), origin: z.string() }))
     .mutation(async ({ ctx, input }) => {
@@ -237,7 +216,6 @@ export const paymentsRouter = router({
       const user = await getUserById(ctx.user.id);
       if (!user) throw new TRPCError({ code: "NOT_FOUND" });
 
-      // Calculate amounts
       const startMs = Number(job.startTime);
       const endMs = Number(job.endTime);
       const hours = Math.max(1, (endMs - startMs) / 3600000);
@@ -245,7 +223,6 @@ export const paymentsRouter = router({
       const platformFeeCents = Math.round(totalCents * 0.1);
       const workerPayoutCents = totalCents - platformFeeCents;
 
-      // Ensure Stripe customer exists
       let customerId = user.stripeCustomerId ?? undefined;
       if (!customerId) {
         const customer = await stripe.customers.create({
@@ -257,7 +234,6 @@ export const paymentsRouter = router({
         await updateUser(ctx.user.id, { stripeCustomerId: customerId });
       }
 
-      // Create Checkout session — on success webhook will accept the application
       const session = await stripe.checkout.sessions.create({
         mode: "payment",
         customer: customerId,
@@ -299,7 +275,6 @@ export const paymentsRouter = router({
         },
       });
 
-      // Create pending payment record
       const existing = await getPaymentByJob(app.jobId);
       if (!existing) {
         await createPayment({
@@ -331,25 +306,20 @@ export const paymentsRouter = router({
       if (payment.status === "released") throw new TRPCError({ code: "BAD_REQUEST", message: "Already released" });
       if (payment.status !== "held") throw new TRPCError({ code: "BAD_REQUEST", message: "Payment must be held before release" });
 
-      // Capture the held PaymentIntent
       if (payment.stripePaymentIntentId) {
         try {
           await stripe.paymentIntents.capture(payment.stripePaymentIntentId);
         } catch (err: any) {
-          // If already captured, continue
           if (!err?.message?.includes("already captured")) throw err;
         }
       }
 
-      // Transfer 90% to worker's connected Stripe account
       const worker = await getUserById(payment.workerId);
       let transferSucceeded = true;
       if (worker?.stripeAccountId && !worker.stripeAccountId.startsWith("acct_sim_")) {
-        // Check worker has completed onboarding before attempting transfer
         try {
           const acct = await stripe.accounts.retrieve(worker.stripeAccountId);
           if (!acct.details_submitted || !acct.charges_enabled) {
-            console.warn(`[Stripe] Worker ${worker.id} Connect not fully onboarded — holding in pendingBalance`);
             transferSucceeded = false;
           }
         } catch { transferSucceeded = false; }
@@ -365,19 +335,14 @@ export const paymentsRouter = router({
           });
         } catch (err: any) {
           console.error("[Stripe] Transfer failed:", err.message);
-          // Transfer failed — hold funds in pendingBalance for manual retry
-          // Worker will see balance in dashboard and can retry via withdraw
           transferSucceeded = false;
         }
       }
 
-      // Update records
       await updatePayment(payment.id, { status: "released" });
       await updateJob(input.jobId, { status: "completed" });
 
       if (worker) {
-        // Always credit pendingBalance — if transfer succeeded, Express auto-pays out;
-        // if it failed, balance stays here until worker retries withdraw
         await updateUser(payment.workerId, {
           pendingBalance: (worker.pendingBalance ?? 0) + payment.workerPayout,
           totalEarned: (worker.totalEarned ?? 0) + payment.workerPayout,
@@ -401,25 +366,17 @@ export const paymentsRouter = router({
       if (!user) throw new TRPCError({ code: "NOT_FOUND" });
 
       let accountId = user.stripeAccountId;
-
-      // Create new Express account if not exists or simulated
       if (!accountId || accountId.startsWith("acct_sim_")) {
         const account = await stripe.accounts.create({
           type: "express",
           email: user.email ?? undefined,
-          capabilities: {
-            transfers: { requested: true },
-          },
+          capabilities: { transfers: { requested: true } },
           metadata: { userId: String(ctx.user.id) },
         });
         accountId = account.id;
-        await updateUser(ctx.user.id, {
-          stripeAccountId: accountId,
-          stripeOnboardingComplete: false,
-        });
+        await updateUser(ctx.user.id, { stripeAccountId: accountId, stripeOnboardingComplete: false });
       }
 
-      // Generate onboarding link
       const link = await stripe.accountLinks.create({
         account: accountId,
         refresh_url: `${sanitizeOrigin(input.origin)}/earnings?stripe=refresh`,
@@ -479,9 +436,7 @@ export const paymentsRouter = router({
     };
   }),
 
-  // ── Worker: Withdraw (Stripe payout to connected bank) ───────────────────
-  // For Express accounts: Stripe auto-pays out on a rolling basis.
-  // This procedure handles any held pendingBalance not yet transferred.
+  // ── Worker: Withdraw ──────────────────────────────────────────────────────
   withdraw: protectedProcedure.mutation(async ({ ctx }) => {
     const stripe = getStripe();
     const user = await getUserById(ctx.user.id);
@@ -492,7 +447,6 @@ export const paymentsRouter = router({
     const balance = user.pendingBalance ?? 0;
     if (balance <= 0) throw new TRPCError({ code: "BAD_REQUEST", message: "No balance available to withdraw" });
 
-    // Attempt transfer for any held balance not yet sent
     if (user.stripeAccountId && !user.stripeAccountId.startsWith("acct_sim_")) {
       try {
         await stripe.transfers.create({
@@ -508,22 +462,20 @@ export const paymentsRouter = router({
         throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Payout failed — please try again or contact support" });
       }
     }
-    // Express accounts: payouts are automatic — just clear internal balance
     await updateUser(ctx.user.id, { pendingBalance: 0 });
     return { success: true, amount: balance, method: "express_auto" };
   }),
 
   // ── Worker: Get Stripe Express dashboard link ─────────────────────────────
-  getExpressDashboardLink: protectedProcedure
-    .mutation(async ({ ctx }) => {
-      const stripe = getStripe();
-      const user = await getUserById(ctx.user.id);
-      if (!user?.stripeAccountId || user.stripeAccountId.startsWith("acct_sim_")) {
-        throw new TRPCError({ code: "BAD_REQUEST", message: "No connected Stripe account" });
-      }
-      const loginLink = await stripe.accounts.createLoginLink(user.stripeAccountId);
-      return { url: loginLink.url };
-    }),
+  getExpressDashboardLink: protectedProcedure.mutation(async ({ ctx }) => {
+    const stripe = getStripe();
+    const user = await getUserById(ctx.user.id);
+    if (!user?.stripeAccountId || user.stripeAccountId.startsWith("acct_sim_")) {
+      throw new TRPCError({ code: "BAD_REQUEST", message: "No connected Stripe account" });
+    }
+    const loginLink = await stripe.accounts.createLoginLink(user.stripeAccountId);
+    return { url: loginLink.url };
+  }),
 
   // ── Pricing tiers ─────────────────────────────────────────────────────────
   pricingTiers: protectedProcedure.query(() => {
@@ -536,7 +488,8 @@ export const paymentsRouter = router({
       mode: val.mode,
     }));
   }),
-// ── Employer: Pay worker after shift completes (Option A flow) ──────────────
+
+  // ── Employer: Pay worker after shift completes (Option A flow) ────────────
   payAfterShift: protectedProcedure
     .input(z.object({
       applicationId: z.number(),
@@ -567,7 +520,6 @@ export const paymentsRouter = router({
       const platformFeeCents = Math.round(baseWagesCents * 0.10);
       const workerPayoutCents = baseWagesCents - platformFeeCents + tipCents;
 
-      // Ensure Stripe customer exists
       let customerId = user.stripeCustomerId ?? undefined;
       if (!customerId) {
         const customer = await stripe.customers.create({
@@ -580,7 +532,7 @@ export const paymentsRouter = router({
       }
 
       const worker = await getUserById(app.workerId);
-      const lineItems = [
+      const lineItems: any[] = [
         {
           price_data: {
             currency: "usd",
@@ -632,7 +584,6 @@ export const paymentsRouter = router({
         },
       });
 
-      // Create payment record
       await createPayment({
         jobId: app.jobId,
         employerId: ctx.user.id,
@@ -645,4 +596,5 @@ export const paymentsRouter = router({
       });
 
       return { url: session.url!, sessionId: session.id, amount: totalCents };
-    }),});
+    }),
+});
