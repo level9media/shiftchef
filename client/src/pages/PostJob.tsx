@@ -4,11 +4,13 @@ import { trpc } from "@/lib/trpc";
 import { Button } from "@/components/ui/button";
 import AppShell from "@/components/AppShell";
 import { useLocation } from "wouter";
-import { useState } from "react";
-import { ArrowLeft, Check, Zap, Crown, Package } from "lucide-react";
+import { useState, useEffect, useRef } from "react";
+import { ArrowLeft, Check, Zap, Crown, Package, MapPin } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { useLanguage } from "@/contexts/LanguageContext";
+
+const MAPBOX_TOKEN = "pk.eyJ1Ijoic2hpZnRjaGVmIiwiYSI6ImNtbmgwcHFjczBmOXMycHEwYjBtMnRzZG8ifQ.kc9hWsTXbrzZej2fIo1b5g";
 
 const ROLE_KEYS = [
   { value: "cook", key: "cook" as const, emoji: "👨‍🍳" },
@@ -26,6 +28,102 @@ const CITIES = ["Austin, TX", "Phoenix, AZ", "Mesa, AZ", "Houston, TX", "Dallas,
 
 type Step = "pricing" | "form";
 
+// ─── Mapbox geocoder loader ───────────────────────────────────────────────────
+let geocoderLoaded = false;
+let geocoderLoading = false;
+const geocoderCallbacks: (() => void)[] = [];
+
+function loadGeocoder(cb: () => void) {
+  if (geocoderLoaded) { cb(); return; }
+  geocoderCallbacks.push(cb);
+  if (geocoderLoading) return;
+  geocoderLoading = true;
+
+  const css = document.createElement("link");
+  css.rel = "stylesheet";
+  css.href = "https://api.mapbox.com/mapbox-gl-js/v3.3.0/mapbox-gl.css";
+  document.head.appendChild(css);
+
+  const script = document.createElement("script");
+  script.src = "https://api.mapbox.com/mapbox-gl-js/v3.3.0/mapbox-gl.js";
+  script.onload = () => {
+    geocoderLoaded = true;
+    geocoderCallbacks.forEach(fn => fn());
+    geocoderCallbacks.length = 0;
+  };
+  document.head.appendChild(script);
+}
+
+// ─── Address Autocomplete ─────────────────────────────────────────────────────
+function AddressAutocomplete({ value, onChange, onSelect, placeholder }: {
+  value: string;
+  onChange: (v: string) => void;
+  onSelect: (address: string, lat: number, lng: number) => void;
+  placeholder: string;
+}) {
+  const [suggestions, setSuggestions] = useState<any[]>([]);
+  const [showSuggestions, setShowSuggestions] = useState(false);
+  const debounceRef = useRef<any>(null);
+
+  const search = async (query: string) => {
+    if (query.length < 3) { setSuggestions([]); return; }
+    try {
+      const res = await fetch(
+        `https://api.mapbox.com/geocoding/v5/mapbox.places/${encodeURIComponent(query)}.json?access_token=${MAPBOX_TOKEN}&types=address,poi&country=us&limit=5`
+      );
+      const data = await res.json();
+      setSuggestions(data.features ?? []);
+      setShowSuggestions(true);
+    } catch {}
+  };
+
+  const handleInput = (v: string) => {
+    onChange(v);
+    clearTimeout(debounceRef.current);
+    debounceRef.current = setTimeout(() => search(v), 300);
+  };
+
+  const handlePick = (feature: any) => {
+    const [lng, lat] = feature.center;
+    onChange(feature.place_name);
+    onSelect(feature.place_name, lat, lng);
+    setSuggestions([]);
+    setShowSuggestions(false);
+  };
+
+  return (
+    <div className="relative">
+      <div className="relative">
+        <MapPin size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-primary/70" />
+        <input
+          value={value}
+          onChange={(e) => handleInput(e.target.value)}
+          onFocus={() => suggestions.length > 0 && setShowSuggestions(true)}
+          onBlur={() => setTimeout(() => setShowSuggestions(false), 150)}
+          placeholder={placeholder}
+          className="sc-input pl-8"
+        />
+      </div>
+      {showSuggestions && suggestions.length > 0 && (
+        <div className="absolute z-50 left-0 right-0 mt-1 bg-card border border-border rounded-xl overflow-hidden shadow-xl">
+          {suggestions.map((s) => (
+            <button
+              key={s.id}
+              type="button"
+              onMouseDown={() => handlePick(s)}
+              className="w-full text-left px-3 py-2.5 text-xs text-foreground hover:bg-secondary transition-colors border-b border-border last:border-0"
+            >
+              <span className="font-bold">{s.text}</span>
+              <span className="text-muted-foreground ml-1">{s.place_name.replace(s.text, "").replace(/^,\s*/, "")}</span>
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ─── Main Component ───────────────────────────────────────────────────────────
 export default function PostJob() {
   const { isAuthenticated } = useAuth();
   const [, navigate] = useLocation();
@@ -48,7 +146,6 @@ export default function PostJob() {
 
   const purchaseMutation = trpc.payments.purchaseCredits.useMutation({
     onSuccess: (data) => {
-      // Direct navigation — mobile browsers block window.open popups
       window.location.href = data.url;
     },
     onError: (e) => toast.error(e.message),
@@ -72,6 +169,10 @@ export default function PostJob() {
   const [endTime, setEndTime] = useState("");
   const [city, setCity] = useState("Austin, TX");
   const [location, setLocation] = useState("");
+  const [latitude, setLatitude] = useState<number | null>(null);
+  const [longitude, setLongitude] = useState<number | null>(null);
+  const [contactName, setContactName] = useState("");
+  const [contactPhone, setContactPhone] = useState("");
   const [description, setDescription] = useState("");
   const [minRating, setMinRating] = useState("0");
   const [isPermanent, setIsPermanent] = useState(false);
@@ -105,6 +206,10 @@ export default function PostJob() {
       endTime: endMs,
       city,
       location,
+      latitude: latitude ?? undefined,
+      longitude: longitude ?? undefined,
+      contactName: contactName || undefined,
+      contactPhone: contactPhone || undefined,
       description: description || undefined,
       minRating: parseFloat(minRating),
       isPermanent,
@@ -168,7 +273,7 @@ export default function PostJob() {
               </div>
             )}
 
-            {/* Coupon Code Input */}
+            {/* Coupon */}
             <div className="bg-card border border-border rounded-2xl p-4">
               <p className="text-xs font-bold text-muted-foreground uppercase tracking-wider mb-3">{t("couponCode")}</p>
               {couponApplied ? (
@@ -206,9 +311,7 @@ export default function PostJob() {
               title={t("singlePost")}
               price="$35"
               desc={t("singlePostDesc")}
-              features={isSpanish
-                ? ["1 publicación", "En vivo al instante", "Gestión de solicitantes"]
-                : ["1 job post", "Instant live feed listing", "Applicant management"]}
+              features={isSpanish ? ["1 publicación", "En vivo al instante", "Gestión de solicitantes"] : ["1 job post", "Instant live feed listing", "Applicant management"]}
               onClick={() => purchaseMutation.mutate({ tier: "single", origin: window.location.origin })}
               loading={purchaseMutation.isPending}
               isSpanish={isSpanish}
@@ -218,9 +321,7 @@ export default function PostJob() {
               title={t("bundlePost")}
               price="$75"
               desc={t("bundlePostDesc")}
-              features={isSpanish
-                ? ["3 publicaciones", "Ahorra $30 vs individual", "Válido 30 días"]
-                : ["3 job posts", "Save $30 vs single", "30-day validity"]}
+              features={isSpanish ? ["3 publicaciones", "Ahorra $30 vs individual", "Válido 30 días"] : ["3 job posts", "Save $30 vs single", "30-day validity"]}
               highlighted
               onClick={() => purchaseMutation.mutate({ tier: "bundle3", origin: window.location.origin })}
               loading={purchaseMutation.isPending}
@@ -231,9 +332,7 @@ export default function PostJob() {
               title={t("monthlyUnlimited")}
               price="$99/mo"
               desc={t("monthlyUnlimitedDesc")}
-              features={isSpanish
-                ? ["Publicaciones ilimitadas", "Prioridad en el feed", "Analíticas e insights"]
-                : ["Unlimited posts", "Priority in feed", "Analytics & insights"]}
+              features={isSpanish ? ["Publicaciones ilimitadas", "Prioridad en el feed", "Analíticas e insights"] : ["Unlimited posts", "Priority in feed", "Analytics & insights"]}
               onClick={() => purchaseMutation.mutate({ tier: "subscription", origin: window.location.origin })}
               loading={purchaseMutation.isPending}
               isSpanish={isSpanish}
@@ -301,10 +400,50 @@ export default function PostJob() {
               </select>
             </FormField>
 
-            {/* Address */}
+            {/* Address with autocomplete */}
             <FormField label={`${t("locationLabel")} *`}>
-              <input value={location} onChange={(e) => setLocation(e.target.value)} placeholder={t("locationPlaceholder")} className="sc-input" />
+              <AddressAutocomplete
+                value={location}
+                onChange={(v) => {
+                  setLocation(v);
+                  // Clear coords if they manually edit after picking
+                  setLatitude(null);
+                  setLongitude(null);
+                }}
+                onSelect={(address, lat, lng) => {
+                  setLocation(address);
+                  setLatitude(lat);
+                  setLongitude(lng);
+                }}
+                placeholder={t("locationPlaceholder")}
+              />
+              {latitude && longitude && (
+                <p className="text-[10px] text-emerald-400 mt-1 flex items-center gap-1">
+                  <Check size={10} strokeWidth={2.5} /> Location pinned on map
+                </p>
+              )}
             </FormField>
+
+            {/* Contact info */}
+            <div className="grid grid-cols-2 gap-3">
+              <FormField label="Contact name">
+                <input
+                  value={contactName}
+                  onChange={(e) => setContactName(e.target.value)}
+                  placeholder="Manager name"
+                  className="sc-input"
+                />
+              </FormField>
+              <FormField label="Contact phone">
+                <input
+                  type="tel"
+                  value={contactPhone}
+                  onChange={(e) => setContactPhone(e.target.value)}
+                  placeholder="(512) 555-0100"
+                  className="sc-input"
+                />
+              </FormField>
+            </div>
 
             {/* Min rating */}
             <FormField label={t("minimumRating")}>
