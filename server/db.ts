@@ -105,7 +105,6 @@ export async function getLiveJobs(city: string) {
   const db = await getDb();
   if (!db) return [];
   const now = Date.now();
-  // Auto-expire jobs whose shift has ended
   await db
     .update(jobs)
     .set({ status: "expired" })
@@ -307,6 +306,7 @@ export async function getEmployerPostCredits(employerId: number) {
 }
 
 // ─── Admin Stats ──────────────────────────────────────────────────────────────
+
 export async function getUserByStripeCustomerId(customerId: string) {
   const db = await getDb();
   if (!db) return undefined;
@@ -365,6 +365,7 @@ export async function getAdminRecentJobs(limit = 20) {
 }
 
 // ─── Coupons ──────────────────────────────────────────────────────────────────
+
 export async function createCoupon(data: typeof coupons.$inferInsert) {
   const db = await getDb();
   if (!db) return;
@@ -405,7 +406,6 @@ export async function getAdminRecentRatings(limit = 10) {
     .from(ratings)
     .orderBy(desc(ratings.createdAt))
     .limit(limit);
-  // Enrich with user names
   const enriched = await Promise.all(
     rows.map(async (r) => {
       const [from] = await db!.select({ name: users.name }).from(users).where(eq(users.id, r.fromUserId)).limit(1);
@@ -417,14 +417,13 @@ export async function getAdminRecentRatings(limit = 10) {
 }
 
 // ─── Activity Stats ───────────────────────────────────────────────────────────
+
 export async function getActivityStats(city: string) {
   const db = await getDb();
   if (!db) return { recentJobsCount: 0, availableWorkersCount: 0 };
   const now = Date.now();
-  const nowDate = new Date(now);
   const threeHoursAgoDate = new Date(now - 3 * 60 * 60 * 1000);
 
-  // Jobs posted in the last 3 hours in this city that are still live
   const [jobRow] = await db
     .select({ count: sql<number>`count(*)` })
     .from(jobs)
@@ -437,7 +436,6 @@ export async function getActivityStats(city: string) {
       )
     );
 
-  // Active available workers in this city
   const [workerRow] = await db
     .select({ count: sql<number>`count(*)` })
     .from(availability)
@@ -454,17 +452,43 @@ export async function getActivityStats(city: string) {
     availableWorkersCount: Number(workerRow?.count ?? 0),
   };
 }
-import {
-  createJob,
-  getEmployerJobs,
-  getJobById,
-  getLiveJobs,
-  getActivityStats,
-  getUserById,
-  updateJob,
-  updateUser,
-  getApplicationById,
-  updateApplication,
-  cancelOverlappingApplications,
-  sendEmail,
-} from "../db";
+
+// ─── Cancel overlapping applications ─────────────────────────────────────────
+
+export async function cancelOverlappingApplications(
+  workerId: number,
+  startTime: number,
+  endTime: number,
+  excludeJobId: number
+) {
+  const db = await getDb();
+  if (!db) return;
+  const workerApps = await db
+    .select()
+    .from(applications)
+    .where(and(eq(applications.workerId, workerId), eq(applications.status, "pending")));
+  for (const app of workerApps) {
+    if (app.jobId === excludeJobId) continue;
+    const job = await getJobById(app.jobId);
+    if (!job) continue;
+    const overlaps = job.startTime < endTime && job.endTime > startTime;
+    if (overlaps) await updateApplication(app.id, { status: "cancelled" });
+  }
+}
+
+// ─── Email ────────────────────────────────────────────────────────────────────
+
+export async function sendEmail({ to, subject, html }: { to: string; subject: string; html: string }) {
+  try {
+    const apiKey = process.env.RESEND_API_KEY;
+    if (!apiKey) { console.log(`[Email] To: ${to} | Subject: ${subject}`); return; }
+    const res = await fetch("https://api.resend.com/emails", {
+      method: "POST",
+      headers: { "Authorization": `Bearer ${apiKey}`, "Content-Type": "application/json" },
+      body: JSON.stringify({ from: "ShiftChef <notifications@shiftchef.co>", to, subject, html }),
+    });
+    if (!res.ok) console.warn(`[Email] Failed: ${res.status}`);
+  } catch (err) {
+    console.warn("[Email] Error:", err);
+  }
+}
