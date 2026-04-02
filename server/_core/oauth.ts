@@ -4,14 +4,12 @@ import * as db from "../db";
 import { getSessionCookieOptions } from "./cookies";
 import { sdk } from "./sdk";
 
-// Verify Firebase ID token using Firebase Admin REST API
 async function verifyFirebaseToken(idToken: string): Promise<{
   uid: string;
   phone_number?: string;
   name?: string;
 } | null> {
   try {
-    const projectId = process.env.FIREBASE_PROJECT_ID || "shiftchef-c9854";
     const res = await fetch(
       `https://identitytoolkit.googleapis.com/v1/accounts:lookup?key=${process.env.FIREBASE_API_KEY}`,
       {
@@ -20,10 +18,7 @@ async function verifyFirebaseToken(idToken: string): Promise<{
         body: JSON.stringify({ idToken }),
       }
     );
-    if (!res.ok) {
-      console.warn("[Firebase] Token lookup failed:", res.status);
-      return null;
-    }
+    if (!res.ok) return null;
     const data = await res.json();
     const user = data.users?.[0];
     if (!user) return null;
@@ -39,7 +34,6 @@ async function verifyFirebaseToken(idToken: string): Promise<{
 }
 
 export function registerOAuthRoutes(app: Express) {
-  // Firebase phone auth callback — called from frontend after phone verification
   app.post("/api/auth/firebase", async (req: Request, res: Response) => {
     const { idToken, name, phone } = req.body;
 
@@ -49,7 +43,6 @@ export function registerOAuthRoutes(app: Express) {
     }
 
     try {
-      // Verify the Firebase token
       const firebaseUser = await verifyFirebaseToken(idToken);
       if (!firebaseUser) {
         res.status(401).json({ error: "Invalid Firebase token" });
@@ -58,27 +51,32 @@ export function registerOAuthRoutes(app: Express) {
 
       const openId = `firebase:${firebaseUser.uid}`;
       const phoneNumber = phone || firebaseUser.phone_number || null;
-      const displayName = name || null;
+      const displayName = name || firebaseUser.name || null;
 
-      // Upsert user in DB
+      // Upsert user — save name if provided
       await db.upsertUser({
         openId,
         name: displayName,
         email: null,
         loginMethod: "phone",
         lastSignedIn: new Date(),
-        ...(phoneNumber ? { phone: phoneNumber } : {}),
       });
+
+      // If phone provided, update that too
+      if (phoneNumber) {
+        const existing = await db.getUserByOpenId(openId);
+        if (existing) {
+          await db.updateUser(existing.id, { phone: phoneNumber });
+        }
+      }
 
       const user = await db.getUserByOpenId(openId);
 
-      // Create session token
       const sessionToken = await sdk.createSessionToken(openId, {
         name: displayName || phoneNumber || "",
         expiresInMs: ONE_YEAR_MS,
       });
 
-      // Set session cookie
       const cookieOptions = getSessionCookieOptions(req);
       res.cookie(COOKIE_NAME, sessionToken, {
         ...cookieOptions,
@@ -94,7 +92,6 @@ export function registerOAuthRoutes(app: Express) {
           phone: phoneNumber,
           userType: user?.userType,
           profileComplete: user?.profileComplete,
-          verificationStatus: user?.verificationStatus,
         },
       });
     } catch (err) {
@@ -103,13 +100,29 @@ export function registerOAuthRoutes(app: Express) {
     }
   });
 
-  // Legacy OAuth callback — redirect to home with error
+  // Save name after verification — called from Login name step
+  app.post("/api/auth/set-name", async (req: Request, res: Response) => {
+    const { name } = req.body;
+    if (!name || name.trim().length < 2) {
+      res.status(400).json({ error: "Name is required" });
+      return;
+    }
+
+    try {
+      const user = await (await import("./sdk")).sdk.authenticateRequest(req);
+      await db.updateUser(user.id, { name: name.trim() });
+      res.json({ success: true });
+    } catch (err) {
+      console.error("[Set name] Error:", err);
+      res.status(401).json({ error: "Not authenticated" });
+    }
+  });
+
   app.get("/api/oauth/callback", (_req: Request, res: Response) => {
     res.redirect("/?error=legacy_auth");
   });
 
-  // Health check
-  app.get("/api/auth/status", (req: Request, res: Response) => {
+  app.get("/api/auth/status", (_req: Request, res: Response) => {
     res.json({ status: "ok", auth: "firebase" });
   });
 }
