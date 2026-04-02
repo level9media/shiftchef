@@ -30,7 +30,7 @@ const ROLE_LABELS_ES: Record<string, string> = {
 function getStatusConfig(isSpanish: boolean): Record<string, { label: string; color: string; bg: string }> {
   return {
     pending:   { label: isSpanish ? "Pendiente" : "Pending",   color: "text-yellow-400", bg: "bg-yellow-400/10" },
-    accepted:  { label: isSpanish ? "Aceptado" : "Accepted",  color: "text-emerald-400", bg: "bg-emerald-400/10" },
+    accepted:  { label: isSpanish ? "Aceptado" : "Accepted",   color: "text-emerald-400", bg: "bg-emerald-400/10" },
     rejected:  { label: isSpanish ? "Rechazado" : "Rejected",  color: "text-red-400",    bg: "bg-red-400/10" },
     confirmed: { label: isSpanish ? "Confirmado" : "Confirmed", color: "text-blue-400",   bg: "bg-blue-400/10" },
     completed: { label: isSpanish ? "Completado" : "Completed", color: "text-muted-foreground", bg: "bg-secondary" },
@@ -62,7 +62,7 @@ export default function Applications() {
   const utils = trpc.useUtils();
 
   const { data: myApps, isLoading: appsLoading } = trpc.applications.myApplications.useQuery(
-    undefined, { enabled: isAuthenticated }
+    undefined, { enabled: isAuthenticated, refetchInterval: 30000 }
   );
   const { data: myJobs, isLoading: jobsLoading } = trpc.jobs.myJobs.useQuery(
     undefined, { enabled: isAuthenticated }
@@ -77,17 +77,7 @@ export default function Applications() {
     onError: (e) => toast.error(e.message),
   });
   const acceptAndPayMutation = trpc.payments.acceptAndPay.useMutation({
-    onSuccess: (data) => {
-      // Direct navigation — mobile browsers block window.open popups
-      window.location.href = data.url;
-    },
-    onError: (e) => toast.error(e.message),
-  });
-  // Legacy payForJob kept for backward compat with existing held-payment jobs
-  const payMutation = trpc.payments.payForJob.useMutation({
-    onSuccess: (data) => {
-      window.location.href = data.url;
-    },
+    onSuccess: (data) => { window.location.href = data.url; },
     onError: (e) => toast.error(e.message),
   });
   const completeMutation = trpc.jobs.complete.useMutation({
@@ -118,9 +108,10 @@ export default function Applications() {
 
   return (
     <AppShell>
-      <SEOHead title="My Shifts & Applications — ShiftChef" description="Manage your shift applications, track accepted jobs, check in and clock out. ShiftChef hospitality staffing." canonicalPath="/applications" />
+      <SEOHead title="My Shifts & Applications — ShiftChef" description="Manage your shift applications, track accepted jobs, check in and clock out." canonicalPath="/applications" />
       <div className="max-w-lg mx-auto">
-        {/* ── Pending Ratings Banner ──────────────────────────────────── */}
+
+        {/* ── Pending Ratings Banner ─────────────────────────────────────── */}
         {pendingRatings && pendingRatings.length > 0 && (
           <div className="mx-4 mt-3 mb-1">
             <button
@@ -132,9 +123,9 @@ export default function Applications() {
               </div>
               <div className="text-left flex-1">
                 <p className="text-sm font-bold text-foreground">
-                  {pendingRatings.length} {isSpanish ? `turno${pendingRatings.length !== 1 ? "s" : ""} esperando tu calificación` : `shift${pendingRatings.length !== 1 ? "s" : ""} waiting for your rating`}
+                  {pendingRatings.length} shift{pendingRatings.length !== 1 ? "s" : ""} waiting for your rating
                 </p>
-                <p className="text-xs text-muted-foreground">{isSpanish ? "Toca para calificar y construir tu reputación" : "Tap to rate and build your reputation"}</p>
+                <p className="text-xs text-muted-foreground">Tap to rate and build your reputation</p>
               </div>
               <ChevronRight size={14} className="text-primary flex-shrink-0" />
             </button>
@@ -144,11 +135,7 @@ export default function Applications() {
         {/* ── Sticky Tabs ───────────────────────────────────────────────── */}
         <div
           className="sticky z-30 border-b border-border px-4 py-3"
-          style={{
-            top: "calc(3.5rem + var(--sat))",
-            background: "oklch(0.06 0 0 / 0.95)",
-            backdropFilter: "blur(16px)",
-          }}
+          style={{ top: "calc(3.5rem + var(--sat))", background: "oklch(0.06 0 0 / 0.95)", backdropFilter: "blur(16px)" }}
         >
           <div className="flex gap-1 bg-secondary rounded-xl p-1">
             {isWorker && (
@@ -176,7 +163,7 @@ export default function Applications() {
           </div>
         </div>
 
-        {/* ── Worker: My Applications ───────────────────────────────────── */}
+        {/* ── Worker Tab ────────────────────────────────────────────────── */}
         {tab === "worker" && (
           <div className="px-4 py-4 space-y-3">
             {appsLoading ? (
@@ -185,62 +172,142 @@ export default function Applications() {
               <EmptyState
                 icon={<ChefHat size={36} className="text-muted-foreground/30" />}
                 title={t("noApplications")}
-                desc={isSpanish ? "Explora el feed y aplica a turnos" : "Browse the live feed and apply to shifts"}
-                action={{ label: isSpanish ? "Ver Turnos" : "Browse Shifts", onClick: () => navigate("/feed") }}
+                desc="Browse the live feed and apply to shifts"
+                action={{ label: "Browse Shifts", onClick: () => navigate("/feed") }}
               />
             ) : (
               myApps.map((app: any) => {
                 const status = STATUS_CONFIG[app.status] ?? STATUS_CONFIG.pending;
                 const job = app.job;
                 const hours = job ? ((job.endTime - job.startTime) / 3600000).toFixed(1) : "?";
-                const pay = job ? (parseFloat(job.payRate) * parseFloat(hours) * 0.9).toFixed(0) : "?";
+                const estimatedPay = job
+                  ? (parseFloat(job.payRate) * parseFloat(hours) * 0.9).toFixed(0)
+                  : "?";
+
                 return (
-                  <div
-                    key={app.id}
-                    className="bg-card rounded-2xl border border-border p-4 card-press"
-                    onClick={() => job && navigate(`/jobs/${job.id}`)}
-                  >
-                    <div className="flex items-start justify-between mb-2">
-                      <div>
-                        <p className="font-black text-sm text-foreground">
-                          {job ? (ROLE_LABELS[job.role] ?? job.role) : "Shift"}
-                        </p>
-                        {job?.restaurantName && (
-                          <p className="text-xs text-muted-foreground mt-0.5">{job.restaurantName}</p>
-                        )}
+                  <div key={app.id} className="bg-card rounded-2xl border border-border overflow-hidden">
+
+                    {/* ── Card header ──────────────────────────────────── */}
+                    <div className="p-4">
+                      <div className="flex items-start justify-between mb-2">
+                        <div>
+                          <p className="font-black text-sm text-foreground">
+                            {job ? (ROLE_LABELS[job.role] ?? job.role) : "Shift"}
+                          </p>
+                          {job?.restaurantName && (
+                            <p className="text-xs text-muted-foreground mt-0.5">{job.restaurantName}</p>
+                          )}
+                        </div>
+                        <span className={cn("text-[10px] font-black px-2.5 py-1 rounded-full flex-shrink-0", status.bg, status.color)}>
+                          {status.label}
+                        </span>
                       </div>
-                      <span className={cn("text-[10px] font-black px-2.5 py-1 rounded-full flex-shrink-0", status.bg, status.color)}>
-                        {status.label}
-                      </span>
+
+                      {job && (
+                        <div className="flex flex-wrap gap-1.5">
+                          <MetaPill icon={<Clock size={9} />}>
+                            {formatDate(job.startTime)} · {formatTime(job.startTime)}–{formatTime(job.endTime)}
+                          </MetaPill>
+                          <MetaPill icon={<DollarSign size={9} />}>~${estimatedPay} earned</MetaPill>
+                        </div>
+                      )}
                     </div>
 
-                    {job && (
-                      <div className="flex flex-wrap gap-1.5 mb-2">
-                        <MetaPill icon={<Clock size={9} />}>
-                          {formatDate(job.startTime)} · {formatTime(job.startTime)}–{formatTime(job.endTime)}
-                        </MetaPill>
-                        <MetaPill icon={<DollarSign size={9} />}>~${pay} earned</MetaPill>
-                      </div>
-                    )}
-
-                    {app.status === "accepted" && !app.checkInAt && (
-                      <div className="mt-2 p-3 bg-emerald-500/10 border border-emerald-500/30 rounded-xl">
-                        <div className="flex items-center gap-2 mb-1">
+                    {/* ── ACCEPTED: show full shift details ────────────── */}
+                    {app.status === "accepted" && !app.checkInAt && job && (
+                      <div className="mx-4 mb-3 p-3 bg-emerald-500/10 border border-emerald-500/30 rounded-xl space-y-2.5">
+                        <div className="flex items-center gap-2">
                           <CheckCircle size={13} className="text-emerald-400 flex-shrink-0" />
-                          <p className="text-xs text-emerald-400 font-black">{isSpanish ? "¡Conseguiste el turno!" : "You got the shift!"}</p>
+                          <p className="text-xs text-emerald-400 font-black">You got the shift!</p>
                         </div>
-                        <p className="text-xs text-muted-foreground">
-                          {isSpanish ? "Llega a tiempo y regístra tu entrada al llegar. El pago se retiene de forma segura y se libera después del turno." : "Show up on time and check in when you arrive. Payment is held securely and releases after the shift."}
-                        </p>
+
+                        <div className="flex items-start gap-2 text-xs">
+                          <Clock size={11} className="text-primary mt-0.5 flex-shrink-0" />
+                          <span className="text-foreground">
+                            <span className="font-bold">{formatDate(job.startTime)} · {formatTime(job.startTime)} – {formatTime(job.endTime)}</span>
+                            <span className="text-muted-foreground ml-1">({hours}h)</span>
+                          </span>
+                        </div>
+
+                        <div className="flex items-start gap-2 text-xs">
+                          <CalendarDays size={11} className="text-primary mt-0.5 flex-shrink-0" />
+                          <span className="text-foreground">
+                            Arrive by{" "}
+                            <span className="font-bold">
+                              {new Date(job.startTime - 10 * 60 * 1000).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
+                            </span>
+                            <span className="text-muted-foreground"> (10 min early)</span>
+                          </span>
+                        </div>
+
+                        {job.location && (
+                          <div className="flex items-start gap-2 text-xs">
+                            <MapPin size={11} className="text-primary mt-0.5 flex-shrink-0" />
+                            <div>
+                              <span className="text-foreground">
+                                {job.restaurantName ? `${job.restaurantName} · ` : ""}{job.location}
+                              </span>
+                              <a
+                                href={`https://maps.google.com/?q=${encodeURIComponent([job.restaurantName, job.location, job.city].filter(Boolean).join(", "))}`}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="block text-primary underline decoration-dotted mt-0.5"
+                                onClick={(e) => e.stopPropagation()}
+                              >
+                                Open in Google Maps
+                              </a>
+                            </div>
+                          </div>
+                        )}
+
+                        {(job.contactName || job.contactPhone) && (
+                          <div className="flex items-start gap-2 text-xs">
+                            <UserCheck size={11} className="text-primary mt-0.5 flex-shrink-0" />
+                            <div>
+                              <span className="text-muted-foreground">Contact: </span>
+                              {job.contactName && <span className="text-foreground font-bold">{job.contactName}</span>}
+                              {job.contactPhone && (
+                                <a
+                                  href={`tel:${job.contactPhone}`}
+                                  className="block text-primary underline decoration-dotted mt-0.5"
+                                  onClick={(e) => e.stopPropagation()}
+                                >
+                                  {job.contactPhone}
+                                </a>
+                              )}
+                            </div>
+                          </div>
+                        )}
+
+                        <div className="flex items-center gap-2 text-xs text-muted-foreground pt-1 border-t border-emerald-500/20">
+                          <DollarSign size={11} className="text-emerald-400 flex-shrink-0" />
+                          <span>~${estimatedPay} estimated after shift</span>
+                        </div>
                       </div>
                     )}
 
+                    {/* ── ACCEPTED: check in button ─────────────────────── */}
+                    {app.status === "accepted" && !app.checkInAt && (
+                      <div className="px-4 pb-4">
+                        <Button
+                          size="sm"
+                          className="w-full rounded-xl text-xs font-bold bg-emerald-600 hover:bg-emerald-700"
+                          disabled={checkInMutation.isPending}
+                          onClick={(e) => { e.stopPropagation(); checkInMutation.mutate({ applicationId: app.id }); }}
+                        >
+                          <LogIn size={11} className="mr-1.5" />
+                          {checkInMutation.isPending ? "Checking in..." : "Start Shift"}
+                        </Button>
+                      </div>
+                    )}
+
+                    {/* ── CHECKED IN: clock out button ──────────────────── */}
                     {app.status === "accepted" && app.checkInAt && !app.checkOutAt && (
-                      <div className="mt-2 p-3 bg-blue-500/10 border border-blue-500/30 rounded-xl">
-                        <div className="flex items-center gap-2 mb-2">
+                      <div className="mx-4 mb-3 p-3 bg-blue-500/10 border border-blue-500/30 rounded-xl space-y-2">
+                        <div className="flex items-center gap-2">
                           <Clock size={12} className="text-blue-400" />
                           <p className="text-xs text-blue-400 font-bold">
-                            Checked in at {new Date(Number(app.checkInAt)).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
+                            Shift started at {new Date(Number(app.checkInAt)).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
                           </p>
                         </div>
                         <Button
@@ -250,37 +317,35 @@ export default function Applications() {
                           onClick={(e) => { e.stopPropagation(); clockOutMutation.mutate({ applicationId: app.id }); }}
                         >
                           <LogOut size={11} className="mr-1.5" />
-                          {clockOutMutation.isPending ? (isSpanish ? "Registrando salida..." : "Clocking out...") : (isSpanish ? "Registrar Salida" : "Clock Out")}
+                          {clockOutMutation.isPending ? "Ending shift..." : "End Shift"}
                         </Button>
                       </div>
                     )}
 
-                    {app.status === "accepted" && !app.checkInAt && (
-                      <div className="mt-1">
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          className="w-full rounded-xl text-xs font-bold border-emerald-500/40 text-emerald-400 hover:bg-emerald-500/10"
-                          disabled={checkInMutation.isPending}
-                          onClick={(e) => { e.stopPropagation(); checkInMutation.mutate({ applicationId: app.id }); }}
-                        >
-                          <LogIn size={11} className="mr-1.5" />
-                          {checkInMutation.isPending ? (isSpanish ? "Registrando entrada..." : "Checking in...") : (isSpanish ? "Registrar Entrada" : "Check In")}
-                        </Button>
-                      </div>
-                    )}
-
-                    {app.status === "confirmed" && (
-                      <div className="mt-2 p-3 bg-blue-500/10 border border-blue-500/30 rounded-xl">
-                        <p className="text-xs text-blue-400 font-bold flex items-center gap-1.5">
-                          <CheckCircle size={12} /> {isSpanish ? "Turno confirmado — ¡preséntate y cobra!" : "Shift confirmed — show up and get paid!"}
+                    {/* ── COMPLETED ─────────────────────────────────────── */}
+                    {app.status === "completed" && (
+                      <div className="mx-4 mb-3 p-3 bg-secondary rounded-xl">
+                        <p className="text-xs text-muted-foreground flex items-center gap-1.5">
+                          <CheckCircle size={11} className="text-emerald-400" />
+                          Shift complete · Payment releasing soon
                         </p>
                       </div>
                     )}
 
-                    <p className="text-[10px] text-muted-foreground mt-2">
-                      Applied {formatDistanceToNow(new Date(app.createdAt), { addSuffix: true })}
-                    </p>
+                    {/* ── REJECTED ──────────────────────────────────────── */}
+                    {app.status === "rejected" && (
+                      <div className="mx-4 mb-3 p-3 bg-red-500/10 border border-red-500/20 rounded-xl">
+                        <p className="text-xs text-red-400">
+                          This position was filled. Keep applying — the right shift is out there!
+                        </p>
+                      </div>
+                    )}
+
+                    <div className="px-4 pb-3">
+                      <p className="text-[10px] text-muted-foreground">
+                        Applied {formatDistanceToNow(new Date(app.createdAt), { addSuffix: true })}
+                      </p>
+                    </div>
                   </div>
                 );
               })
@@ -288,7 +353,7 @@ export default function Applications() {
           </div>
         )}
 
-        {/* ── Employer: My Jobs ─────────────────────────────────────────── */}
+        {/* ── Employer Tab ──────────────────────────────────────────────── */}
         {tab === "employer" && (
           <div className="px-4 py-4 space-y-3">
             <button
@@ -299,7 +364,7 @@ export default function Applications() {
                 <div className="w-9 h-9 rounded-xl bg-primary flex items-center justify-center">
                   <Zap size={15} className="text-primary-foreground" strokeWidth={2.5} />
                 </div>
-                <span className="font-bold text-sm text-foreground">{isSpanish ? "Publicar Nuevo Turno" : "Post a New Shift"}</span>
+                <span className="font-bold text-sm text-foreground">Post a New Shift</span>
               </div>
               <ArrowRight size={15} className="text-primary" />
             </button>
@@ -309,8 +374,8 @@ export default function Applications() {
             ) : !myJobs?.length ? (
               <EmptyState
                 icon={<Briefcase size={36} className="text-muted-foreground/30" />}
-                title={isSpanish ? "Sin turnos publicados aún" : "No shifts posted yet"}
-                desc={isSpanish ? "Publica tu primer turno para recibir solicitudes" : "Post your first shift to start receiving applications"}
+                title="No shifts posted yet"
+                desc="Post your first shift to start receiving applications"
               />
             ) : (
               myJobs.map((job: any) => (
@@ -334,27 +399,14 @@ export default function Applications() {
   );
 }
 
-// ── Hire Confirmation Modal ──────────────────────────────────────────────────
+// ── Hire Confirm Modal ────────────────────────────────────────────────────────
 function HireConfirmModal({ open, onClose, onConfirm, app, job, loading, isSpanish }: {
-  open: boolean;
-  onClose: () => void;
-  onConfirm: () => void;
-  app: any;
-  job: any;
-  loading: boolean;
-  isSpanish: boolean;
+  open: boolean; onClose: () => void; onConfirm: () => void;
+  app: any; job: any; loading: boolean; isSpanish: boolean;
 }) {
   if (!open || !app || !job) return null;
   const ROLE_LABELS = isSpanish ? ROLE_LABELS_ES : ROLE_LABELS_EN;
   const roleLabel = ROLE_LABELS[job.role] ?? job.role;
-  const startDate = new Date(job.startTime).toLocaleString("en-US", {
-    weekday: "short", month: "short", day: "numeric",
-    hour: "2-digit", minute: "2-digit",
-  });
-  const arrivalTime = new Date(job.startTime - 10 * 60 * 1000).toLocaleString("en-US", {
-    hour: "2-digit", minute: "2-digit",
-  });
-  const endTime = new Date(job.endTime).toLocaleString("en-US", { hour: "2-digit", minute: "2-digit" });
   const hours = ((job.endTime - job.startTime) / 3600000).toFixed(1);
   const totalPay = (parseFloat(hours) * parseFloat(job.payRate)).toFixed(2);
   const mapsUrl = [job.restaurantName, job.location, job.city].filter(Boolean).join(", ");
@@ -367,24 +419,16 @@ function HireConfirmModal({ open, onClose, onConfirm, app, job, loading, isSpani
         className="relative w-full max-w-lg bg-card rounded-t-3xl border-t border-border p-5 pb-8 max-h-[85vh] overflow-y-auto"
         onClick={(e) => e.stopPropagation()}
       >
-        {/* Header */}
         <div className="flex items-center gap-3 mb-4">
           <div className="w-10 h-10 rounded-2xl bg-emerald-500/20 flex items-center justify-center flex-shrink-0">
             <UserCheck size={18} className="text-emerald-400" />
           </div>
           <div>
-            <p className="font-black text-base text-foreground">
-              {isSpanish ? "Confirmar Contratación" : "Confirm Hire"}
-            </p>
-            <p className="text-xs text-muted-foreground">
-              {isSpanish
-                ? `${app.worker?.name ?? "Worker"} recibirá los detalles del turno`
-                : `${app.worker?.name ?? "Worker"} will receive shift details`}
-            </p>
+            <p className="font-black text-base text-foreground">Confirm Hire</p>
+            <p className="text-xs text-muted-foreground">{app.worker?.name ?? "Worker"} will receive shift details by email</p>
           </div>
         </div>
 
-        {/* Worker info */}
         <div className="flex items-center gap-3 bg-secondary rounded-2xl p-3 mb-4">
           {app.worker?.profileImage ? (
             <img src={app.worker.profileImage} alt="" className="w-10 h-10 rounded-xl object-cover" />
@@ -404,59 +448,35 @@ function HireConfirmModal({ open, onClose, onConfirm, app, job, loading, isSpani
           </div>
         </div>
 
-        {/* What worker will receive */}
-        <p className="text-xs font-bold text-muted-foreground uppercase tracking-wider mb-2">
-          {isSpanish ? "El trabajador recibirá:" : "Worker will receive:"}
-        </p>
+        <p className="text-xs font-bold text-muted-foreground uppercase tracking-wider mb-2">Worker will receive:</p>
         <div className="space-y-2 mb-5">
           <div className="flex items-start gap-2.5 text-xs text-foreground">
             <CalendarDays size={13} className="text-primary mt-0.5 flex-shrink-0" />
-            <div>
-              <span className="font-semibold">{isSpanish ? "Turno:" : "Shift:"}</span> {roleLabel} · {startDate}
-              <br />
-              <span className="text-muted-foreground">
-                {isSpanish ? "Llegar a las" : "Arrive by"} {arrivalTime} · {isSpanish ? "Termina" : "Ends"} {endTime} · {hours}h
-              </span>
-            </div>
+            <span>{roleLabel} · {formatDate(job.startTime)} · {formatTime(job.startTime)}–{formatTime(job.endTime)} · {hours}h</span>
           </div>
-          <div className="flex items-start gap-2.5 text-xs text-foreground">
-            <MapPin size={13} className="text-primary mt-0.5 flex-shrink-0" />
-            <div>
-              <span className="font-semibold">{isSpanish ? "Ubicación:" : "Location:"}</span> {job.restaurantName ?? ""}{job.location ? " · " + job.location : ""}
-              {mapsLink && (
-                <a href={mapsLink} target="_blank" rel="noopener noreferrer" className="ml-1 text-primary underline">
-                  {isSpanish ? "Ver mapa" : "View map"}
-                </a>
-              )}
+          {job.location && (
+            <div className="flex items-start gap-2.5 text-xs text-foreground">
+              <MapPin size={13} className="text-primary mt-0.5 flex-shrink-0" />
+              <span>{job.restaurantName ?? ""}{job.location ? " · " + job.location : ""}</span>
             </div>
-          </div>
+          )}
           <div className="flex items-start gap-2.5 text-xs text-foreground">
             <CreditCard size={13} className="text-primary mt-0.5 flex-shrink-0" />
-            <span>
-              <span className="font-semibold">{isSpanish ? "Pago:" : "Pay:"}</span> ${job.payRate}/hr · ~${totalPay} {isSpanish ? "total" : "total"}
-            </span>
-          </div>
-          <div className="flex items-start gap-2.5 text-xs text-muted-foreground">
-            <CheckCircle size={13} className="text-emerald-400 mt-0.5 flex-shrink-0" />
-            <span>{isSpanish ? "Instrucciones de llegada, info de contacto y enlace de Google Maps" : "Arrival instructions, your contact info, and Google Maps link"}</span>
+            <span>${job.payRate}/hr · ~${totalPay} total</span>
           </div>
         </div>
 
-        {/* Actions */}
         <div className="flex gap-2">
-          <Button variant="outline" className="flex-1 rounded-2xl" onClick={onClose} disabled={loading}>
-            {isSpanish ? "Cancelar" : "Cancel"}
-          </Button>
+          <Button variant="outline" className="flex-1 rounded-2xl" onClick={onClose} disabled={loading}>Cancel</Button>
           <Button className="flex-1 rounded-2xl btn-glow" onClick={onConfirm} disabled={loading}>
             {loading ? (
               <span className="flex items-center gap-1.5">
                 <span className="w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                {isSpanish ? "Procesando..." : "Processing..."}
+                Processing...
               </span>
             ) : (
               <span className="flex items-center gap-1.5">
-                <UserCheck size={14} />
-                {isSpanish ? "Contratar y Notificar" : "Hire & Notify Worker"}
+                <UserCheck size={14} /> Hire & Notify Worker
               </span>
             )}
           </Button>
@@ -466,16 +486,12 @@ function HireConfirmModal({ open, onClose, onConfirm, app, job, loading, isSpani
   );
 }
 
+// ── Employer Job Card ─────────────────────────────────────────────────────────
 function EmployerJobCard({ job, onAccept, onAcceptAndPay, onReject, onMarkComplete, onRelease, responding, releasing }: {
-  job: any;
-  onAccept: (id: number) => void;
-  onAcceptAndPay: (id: number) => void;
-  onReject: (id: number) => void;
-  onMarkComplete: (id: number) => void;
-  onRelease: (id: number) => void;
-  responding: boolean;
-  releasing: boolean;
-})  {
+  job: any; onAccept: (id: number) => void; onAcceptAndPay: (id: number) => void;
+  onReject: (id: number) => void; onMarkComplete: (id: number) => void;
+  onRelease: (id: number) => void; responding: boolean; releasing: boolean;
+}) {
   const [expanded, setExpanded] = useState(false);
   const [selectedWorker, setSelectedWorker] = useState<any | null>(null);
   const [hireTarget, setHireTarget] = useState<any | null>(null);
@@ -484,19 +500,6 @@ function EmployerJobCard({ job, onAccept, onAcceptAndPay, onReject, onMarkComple
   const STATUS_CONFIG = getStatusConfig(isSpanish);
   const { data: apps, refetch: refetchApps } = trpc.applications.forJob.useQuery({ jobId: job.id }, { enabled: expanded });
   const hours = ((job.endTime - job.startTime) / 3600000).toFixed(1);
-  const confirmedApp = apps?.find((a: any) => a.status === "confirmed" || a.status === "completed" || a.status === "accepted");
-
-  const markStartedMutation = trpc.shifts.markStarted.useMutation({
-    onSuccess: () => { toast.success("Shift started!"); refetchApps(); },
-    onError: (e) => toast.error(e.message),
-  });
-  const markEndedMutation = trpc.shifts.markEnded.useMutation({
-    onSuccess: (data) => {
-      toast.success(`Shift ended! ${data.hoursWorked}h worked · $${data.totalWagesOwed} total wages`);
-      refetchApps();
-    },
-    onError: (e) => toast.error(e.message),
-  });
 
   return (
     <div className="bg-card rounded-2xl border border-border overflow-hidden">
@@ -508,9 +511,7 @@ function EmployerJobCard({ job, onAccept, onAcceptAndPay, onReject, onMarkComple
               {job.restaurantName && <span className="text-muted-foreground font-normal"> · {job.restaurantName}</span>}
             </p>
             <div className="flex flex-wrap gap-1.5 mt-1.5">
-              <MetaPill icon={<Clock size={9} />}>
-                {formatDate(job.startTime)} · {hours}h
-              </MetaPill>
+              <MetaPill icon={<Clock size={9} />}>{formatDate(job.startTime)} · {hours}h</MetaPill>
               <MetaPill icon={<DollarSign size={9} />}>${job.payRate}/hr</MetaPill>
               <span className={cn(
                 "text-[10px] font-black px-2 py-0.5 rounded-full",
@@ -534,7 +535,7 @@ function EmployerJobCard({ job, onAccept, onAcceptAndPay, onReject, onMarkComple
               <div className="w-5 h-5 border-2 border-primary border-t-transparent rounded-full animate-spin" />
             </div>
           ) : apps.length === 0 ? (
-            <p className="p-4 text-xs text-muted-foreground text-center">{isSpanish ? "Sin solicitudes aún" : "No applications yet"}</p>
+            <p className="p-4 text-xs text-muted-foreground text-center">No applications yet</p>
           ) : (
             <div className="divide-y divide-border">
               {apps.map((app: any) => {
@@ -545,7 +546,6 @@ function EmployerJobCard({ job, onAccept, onAcceptAndPay, onReject, onMarkComple
                       <button
                         className="flex items-center gap-2 text-left hover:opacity-75 transition-opacity"
                         onClick={() => setSelectedWorker(app.worker ? { ...app.worker, avatarUrl: app.worker.profileImage } : null)}
-                        title="View worker profile"
                       >
                         {app.worker?.profileImage ? (
                           <img src={app.worker.profileImage} alt="" className="w-9 h-9 rounded-xl object-cover" />
@@ -576,14 +576,8 @@ function EmployerJobCard({ job, onAccept, onAcceptAndPay, onReject, onMarkComple
                     <div className="flex gap-2">
                       {app.status === "pending" && (
                         <>
-                          <Button
-                            size="sm"
-                            className="flex-1 rounded-xl text-xs btn-glow"
-                            disabled={responding}
-                            onClick={() => setHireTarget(app)}
-                          >
-                            <UserCheck size={11} className="mr-1" />
-                            {isSpanish ? "Contratar" : "Hire"}
+                          <Button size="sm" className="flex-1 rounded-xl text-xs btn-glow" disabled={responding} onClick={() => setHireTarget(app)}>
+                            <UserCheck size={11} className="mr-1" /> Hire
                           </Button>
                           <Button size="sm" variant="outline" className="flex-shrink-0 rounded-xl text-xs" disabled={responding} onClick={() => onReject(app.id)}>
                             <XCircle size={11} />
@@ -592,13 +586,12 @@ function EmployerJobCard({ job, onAccept, onAcceptAndPay, onReject, onMarkComple
                       )}
                       {app.status === "accepted" && (
                         <div className="flex items-center gap-1.5 text-xs text-emerald-400 font-semibold">
-                          <CheckCircle size={12} />
-                          {isSpanish ? "Trabajador aceptado — depósito retenido" : "Worker accepted — escrow held"}
+                          <CheckCircle size={12} /> Worker hired — awaiting shift
                         </div>
                       )}
                       {app.status === "completed" && (
                         <Button size="sm" className="flex-1 rounded-xl text-xs btn-glow" disabled={releasing} onClick={() => onRelease(app.jobId ?? job.id)}>
-                          {releasing ? (isSpanish ? "Liberando..." : "Releasing...") : (isSpanish ? "Liberar Pago" : "Release Payment")}
+                          {releasing ? "Releasing..." : "Release Payment"}
                         </Button>
                       )}
                     </div>
@@ -609,20 +602,12 @@ function EmployerJobCard({ job, onAccept, onAcceptAndPay, onReject, onMarkComple
           )}
         </div>
       )}
-      <WorkerProfileModal
-        worker={selectedWorker}
-        open={!!selectedWorker}
-        onClose={() => setSelectedWorker(null)}
-      />
+
+      <WorkerProfileModal worker={selectedWorker} open={!!selectedWorker} onClose={() => setSelectedWorker(null)} />
       <HireConfirmModal
         open={!!hireTarget}
         onClose={() => setHireTarget(null)}
-        onConfirm={() => {
-          if (hireTarget) {
-            onAcceptAndPay(hireTarget.id);
-            setHireTarget(null);
-          }
-        }}
+        onConfirm={() => { if (hireTarget) { onAcceptAndPay(hireTarget.id); setHireTarget(null); } }}
         app={hireTarget}
         job={job}
         loading={responding}
@@ -663,9 +648,7 @@ function EmptyState({ icon, title, desc, action }: {
       <div className="mb-4">{icon}</div>
       <p className="font-bold text-foreground mb-1">{title}</p>
       <p className="text-sm text-muted-foreground max-w-xs mb-4">{desc}</p>
-      {action && (
-        <Button size="sm" className="rounded-xl" onClick={action.onClick}>{action.label}</Button>
-      )}
+      {action && <Button size="sm" className="rounded-xl" onClick={action.onClick}>{action.label}</Button>}
     </div>
   );
 }
