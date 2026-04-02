@@ -32,13 +32,14 @@ export const applicationsRouter = router({
       if (!job) throw new TRPCError({ code: "NOT_FOUND", message: "Job not found" });
       if (job.status !== "live") throw new TRPCError({ code: "BAD_REQUEST", message: "Job is no longer available" });
 
-      // Block if not verified (server-side enforcement — cannot be bypassed by UI)
+      // Block if not verified
       if (worker.verificationStatus && worker.verificationStatus !== "verified") {
         throw new TRPCError({
           code: "FORBIDDEN",
           message: "Your ID must be verified before applying. Complete verification in your profile.",
         });
       }
+
       // Block if contract not signed
       if (worker.contractSigned === false) {
         throw new TRPCError({
@@ -75,19 +76,17 @@ export const applicationsRouter = router({
         status: "pending",
       });
 
-      // Notify owner of new application
       notifyOwner({
         title: "ShiftChef: New Applicant",
-        content: `${worker.name ?? "A worker"} applied to ${job.role} at ${job.restaurantName ?? "your restaurant"}. Review in the Jobs tab.`,
+        content: `${worker.name ?? "A worker"} applied to ${job.role} at ${job.restaurantName ?? "your restaurant"}.`,
       }).catch(() => {});
 
       return { success: true };
     }),
 
-  // Worker: get their applications
+  // Worker: get their applications (enriched with job data)
   myApplications: protectedProcedure.query(async ({ ctx }) => {
     const apps = await getApplicationsByWorker(ctx.user.id);
-    // Enrich with job data
     const enriched = await Promise.all(
       apps.map(async (app) => {
         const job = await getJobById(app.jobId);
@@ -117,7 +116,7 @@ export const applicationsRouter = router({
       return enriched;
     }),
 
-  // Employer: accept an application
+  // Employer: accept (hire) a worker — no payment required upfront
   accept: protectedProcedure
     .input(z.object({ applicationId: z.number() }))
     .mutation(async ({ ctx, input }) => {
@@ -127,14 +126,8 @@ export const applicationsRouter = router({
 
       const job = await getJobById(app.jobId);
       if (!job) throw new TRPCError({ code: "NOT_FOUND" });
-      if (job.status !== "live") throw new TRPCError({ code: "BAD_REQUEST", message: "Job is no longer available" });
-
-      // Payment must be made before confirmation
-      if (job.paymentStatus !== "held") {
-        throw new TRPCError({
-          code: "BAD_REQUEST",
-          message: "Payment must be completed before accepting a worker",
-        });
+      if (job.status !== "live") {
+        throw new TRPCError({ code: "BAD_REQUEST", message: "Job is no longer available" });
       }
 
       // Accept this application
@@ -151,7 +144,7 @@ export const applicationsRouter = router({
       // Mark job as filled
       await updateJob(app.jobId, { status: "filled", acceptedWorkerId: app.workerId });
 
-      // Notify owner + send rich hire notification to worker
+      // Send hire notification email to worker
       const worker = await getUserById(app.workerId);
       const employer = await getUserById(ctx.user.id);
       sendHireNotification({
@@ -171,6 +164,11 @@ export const applicationsRouter = router({
         description: job.description,
       }).catch(() => {});
 
+      notifyOwner({
+        title: "ShiftChef: Worker Hired",
+        content: `${worker?.name ?? "Worker"} hired for ${job.role} at ${job.restaurantName ?? "restaurant"}.`,
+      }).catch(() => {});
+
       return { success: true };
     }),
 
@@ -185,15 +183,37 @@ export const applicationsRouter = router({
       return { success: true };
     }),
 
-  // Worker: withdraw application
+  // Worker: withdraw a pending application
   withdraw: protectedProcedure
     .input(z.object({ applicationId: z.number() }))
     .mutation(async ({ ctx, input }) => {
       const app = await getApplicationById(input.applicationId);
       if (!app) throw new TRPCError({ code: "NOT_FOUND" });
       if (app.workerId !== ctx.user.id) throw new TRPCError({ code: "FORBIDDEN" });
-      if (app.status !== "pending") throw new TRPCError({ code: "BAD_REQUEST", message: "Can only withdraw pending applications" });
+      if (app.status !== "pending") {
+        throw new TRPCError({ code: "BAD_REQUEST", message: "Can only withdraw pending applications" });
+      }
       await updateApplication(input.applicationId, { status: "cancelled" });
       return { success: true };
     }),
+
+  // Employer: get all applications across all their jobs (for dashboard)
+  allForEmployer: protectedProcedure.query(async ({ ctx }) => {
+    const allJobs = await import("../db").then(db => db.getEmployerJobs(ctx.user.id));
+    const result = await Promise.all(
+      allJobs.map(async (job) => {
+        const apps = await getApplicationsByJob(job.id);
+        const enriched = await Promise.all(
+          apps.map(async (app) => {
+            const worker = await getUserById(app.workerId);
+            if (!worker) return { ...app, worker: null, job };
+            const { stripeAccountId, stripeCustomerId, subscriptionId, openId, ...pub } = worker;
+            return { ...app, worker: pub, job };
+          })
+        );
+        return enriched;
+      })
+    );
+    return result.flat();
+  }),
 });
