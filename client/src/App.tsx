@@ -29,6 +29,7 @@ import { PWAInstallPrompt } from "./components/PWAInstallPrompt";
 import AdminCoupons from "./pages/AdminCoupons";
 import PrivacyPolicy from "./pages/PrivacyPolicy";
 import EmployerDashboard from "./pages/EmployerDashboard";
+import PayShift from "./pages/PayShift";
 
 function Router() {
   return (
@@ -56,6 +57,7 @@ function Router() {
       <Route path="/faq" component={FAQ} />
       <Route path="/privacy" component={PrivacyPolicy} />
       <Route path="/employer-dashboard" component={EmployerDashboard} />
+      <Route path="/pay-shift/:applicationId" component={PayShift} />
       <Route path="/404" component={NotFound} />
       <Route component={NotFound} />
     </Switch>
