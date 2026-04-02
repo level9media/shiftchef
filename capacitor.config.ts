@@ -5,10 +5,8 @@ const config: CapacitorConfig = {
   appName: 'ShiftChef',
   webDir: 'dist/public',
   server: {
-    // For production: remove androidScheme and use the built dist
-    // For development: uncomment below to point to your live URL
-    // url: 'https://shiftchef.co',
-    // cleartext: false,
+    url: 'https://shiftchef-production.up.railway.app',
+    cleartext: false,
   },
   ios: {
     contentInset: 'automatic',
