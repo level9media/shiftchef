@@ -536,4 +536,113 @@ export const paymentsRouter = router({
       mode: val.mode,
     }));
   }),
-});
+// ── Employer: Pay worker after shift completes (Option A flow) ──────────────
+  payAfterShift: protectedProcedure
+    .input(z.object({
+      applicationId: z.number(),
+      tipAmount: z.number().optional(),
+      origin: z.string(),
+    }))
+    .mutation(async ({ ctx, input }) => {
+      const stripe = getStripe();
+      const { getApplicationById } = await import("../db");
+      const app = await getApplicationById(input.applicationId);
+      if (!app) throw new TRPCError({ code: "NOT_FOUND" });
+      if (app.employerId !== ctx.user.id) throw new TRPCError({ code: "FORBIDDEN" });
+      if (app.status !== "completed") {
+        throw new TRPCError({ code: "BAD_REQUEST", message: "Shift must be completed before payment" });
+      }
+
+      const job = await getJobById(app.jobId);
+      if (!job) throw new TRPCError({ code: "NOT_FOUND" });
+
+      const user = await getUserById(ctx.user.id);
+      if (!user) throw new TRPCError({ code: "NOT_FOUND" });
+
+      const hoursWorked = parseFloat(app.hoursWorked ?? "0") || 0;
+      const payRate = parseFloat(job.payRate as string);
+      const baseWagesCents = Math.round(hoursWorked * payRate * 100);
+      const tipCents = Math.round((input.tipAmount ?? 0) * 100);
+      const totalCents = baseWagesCents + tipCents;
+      const platformFeeCents = Math.round(baseWagesCents * 0.10);
+      const workerPayoutCents = baseWagesCents - platformFeeCents + tipCents;
+
+      // Ensure Stripe customer exists
+      let customerId = user.stripeCustomerId ?? undefined;
+      if (!customerId) {
+        const customer = await stripe.customers.create({
+          email: user.email ?? undefined,
+          name: user.name ?? undefined,
+          metadata: { userId: String(ctx.user.id) },
+        });
+        customerId = customer.id;
+        await updateUser(ctx.user.id, { stripeCustomerId: customerId });
+      }
+
+      const worker = await getUserById(app.workerId);
+      const lineItems = [
+        {
+          price_data: {
+            currency: "usd",
+            product_data: {
+              name: `ShiftChef — ${job.role} at ${job.restaurantName ?? "venue"}`,
+              description: `${hoursWorked.toFixed(2)}h × $${payRate.toFixed(2)}/hr · Worker: ${worker?.name ?? "Worker"}`,
+            },
+            unit_amount: baseWagesCents,
+          },
+          quantity: 1,
+        },
+      ];
+
+      if (tipCents > 0) {
+        lineItems.push({
+          price_data: {
+            currency: "usd",
+            product_data: {
+              name: "Tip / Bonus",
+              description: `Extra for ${worker?.name ?? "worker"}`,
+            },
+            unit_amount: tipCents,
+          },
+          quantity: 1,
+        });
+      }
+
+      const session = await stripe.checkout.sessions.create({
+        mode: "payment",
+        customer: customerId,
+        line_items: lineItems,
+        payment_intent_data: {
+          metadata: {
+            jobId: String(app.jobId),
+            applicationId: String(input.applicationId),
+            workerId: String(app.workerId),
+            type: "post_shift_payment",
+          },
+        },
+        success_url: `${sanitizeOrigin(input.origin)}/applications?paid=success&appId=${input.applicationId}`,
+        cancel_url: `${sanitizeOrigin(input.origin)}/pay-shift/${input.applicationId}`,
+        client_reference_id: String(ctx.user.id),
+        metadata: {
+          jobId: String(app.jobId),
+          applicationId: String(input.applicationId),
+          workerId: String(app.workerId),
+          type: "post_shift_payment",
+          customer_email: user.email ?? "",
+        },
+      });
+
+      // Create payment record
+      await createPayment({
+        jobId: app.jobId,
+        employerId: ctx.user.id,
+        workerId: app.workerId,
+        amount: totalCents,
+        platformFee: platformFeeCents,
+        workerPayout: workerPayoutCents,
+        stripePaymentIntentId: null,
+        status: "pending",
+      });
+
+      return { url: session.url!, sessionId: session.id, amount: totalCents };
+    }),});
