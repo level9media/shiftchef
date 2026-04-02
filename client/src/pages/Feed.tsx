@@ -1,20 +1,27 @@
-import { SEOHead } from "@/components/SEOHead";
 import { useAuth } from "@/_core/hooks/useAuth";
 import { trpc } from "@/lib/trpc";
 import AppShell from "@/components/AppShell";
 import { useLocation } from "wouter";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import {
-  MapPin, Clock, Star, TrendingUp, Flag,
-  Zap, Plus, RefreshCw, User, ChefHat, ArrowRight, ShieldCheck,
-  Search, SlidersHorizontal, X, Navigation
+  MapPin, Clock, Star, DollarSign, X, ChefHat,
+  Zap, Plus, User, ArrowRight, Navigation, List, Map
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
-import { formatDistanceToNow } from "date-fns";
-import { useLanguage } from "@/contexts/LanguageContext";
 
-const CITIES = ["Austin, TX", "Phoenix, AZ", "Mesa, AZ", "Houston, TX", "Dallas, TX", "San Antonio, TX", "New York, NY", "Chicago, IL"];
+// ─── Token ────────────────────────────────────────────────────────────────────
+const MAPBOX_TOKEN = "pk.eyJ1Ijoic2hpZnRjaGVmIiwiYSI6ImNtbmgwcHFjczBmOXMycHEwYjBtMnRzZG8ifQ.kc9hWsTXbrzZej2fIo1b5g";
+
+// ─── Constants ────────────────────────────────────────────────────────────────
+const CITIES: Record<string, { lat: number; lng: number; label: string }> = {
+  "Austin, TX":      { lat: 30.2672, lng: -97.7431, label: "Austin" },
+  "Houston, TX":     { lat: 29.7604, lng: -95.3698, label: "Houston" },
+  "Dallas, TX":      { lat: 32.7767, lng: -96.7970, label: "Dallas" },
+  "San Antonio, TX": { lat: 29.4241, lng: -98.4936, label: "San Antonio" },
+  "New York, NY":    { lat: 40.7128, lng: -74.0060, label: "New York" },
+  "Chicago, IL":     { lat: 41.8781, lng: -87.6298, label: "Chicago" },
+};
 
 const ROLE_LABELS: Record<string, string> = {
   cook: "Cook", sous_chef: "Sous Chef", prep: "Prep Cook",
@@ -42,582 +49,513 @@ function formatDate(ms: number) {
 function calcHours(start: number, end: number) {
   return ((end - start) / (1000 * 60 * 60)).toFixed(1);
 }
-
-// Urgency badge helper — module-level so JobCard can access it
-function getUrgencyBadge(job: any): { label: string; color: string } | null {
-  const now = Date.now();
-  const start = job.startTime;
-  const msUntilStart = start - now;
-  const today = new Date();
-  const shiftDay = new Date(start);
-  const isTonight = shiftDay.toDateString() === today.toDateString();
-  if (msUntilStart > 0 && msUntilStart < 2 * 60 * 60 * 1000) {
-    const mins = Math.round(msUntilStart / 60000);
-    return { label: `Expires in ${mins}m`, color: "bg-red-500" };
-  }
-  if (isTonight && msUntilStart > 0) return { label: "TONIGHT", color: "bg-amber-500" };
-  if (parseFloat(job.payRate) >= 35) return { label: "HIGH PAY", color: "bg-emerald-600" };
-  return null;
+function calcPay(payRate: string, start: number, end: number) {
+  const hours = (end - start) / (1000 * 60 * 60);
+  return (parseFloat(payRate) * hours * 0.9).toFixed(0);
 }
 
+// ─── Mapbox loader ────────────────────────────────────────────────────────────
+let mapboxLoaded = false;
+let mapboxLoading = false;
+const mapboxCallbacks: (() => void)[] = [];
+
+function loadMapbox(cb: () => void) {
+  if (mapboxLoaded) { cb(); return; }
+  mapboxCallbacks.push(cb);
+  if (mapboxLoading) return;
+  mapboxLoading = true;
+
+  const css = document.createElement("link");
+  css.rel = "stylesheet";
+  css.href = "https://api.mapbox.com/mapbox-gl-js/v3.3.0/mapbox-gl.css";
+  document.head.appendChild(css);
+
+  const script = document.createElement("script");
+  script.src = "https://api.mapbox.com/mapbox-gl-js/v3.3.0/mapbox-gl.js";
+  script.onload = () => {
+    mapboxLoaded = true;
+    mapboxCallbacks.forEach(fn => fn());
+    mapboxCallbacks.length = 0;
+  };
+  document.head.appendChild(script);
+}
+
+// ─── Main Feed ────────────────────────────────────────────────────────────────
 export default function Feed() {
   const { isAuthenticated } = useAuth();
   const [, navigate] = useLocation();
   const [city, setCity] = useState("Austin, TX");
-  const [tab, setTab] = useState<"jobs" | "workers">("jobs");
-  const [isRefreshing, setIsRefreshing] = useState(false);
-  const [searchQuery, setSearchQuery] = useState("");
-  const [filterRole, setFilterRole] = useState("");
-  const [filterMinPay, setFilterMinPay] = useState("");
-  const [showFilters, setShowFilters] = useState(false);
-  const [isGeolocating, setIsGeolocating] = useState(false);
+  const [view, setView] = useState<"map" | "list">("map");
+  const [selectedJob, setSelectedJob] = useState<any>(null);
+  const [mapReady, setMapReady] = useState(false);
+  const mapRef = useRef<any>(null);
+  const mapContainerRef = useRef<HTMLDivElement>(null);
+  const markersRef = useRef<any[]>([]);
 
-  // Auto-detect city on mount
-  useEffect(() => {
-    if (!navigator.geolocation) return;
-    navigator.geolocation.getCurrentPosition((pos) => {
-      const { latitude: lat, longitude: lng } = pos.coords;
-      if (lat > 29.5 && lat < 30.8 && lng > -98.2 && lng < -97.2) setCity("Austin, TX");
-      else if (lat > 33.2 && lat < 33.8 && lng > -112.4 && lng < -111.6) setCity("Phoenix, AZ");
-      else if (lat > 33.3 && lat < 33.5 && lng > -111.9 && lng < -111.5) setCity("Mesa, AZ");
-      else if (lat > 29.0 && lat < 30.1 && lng > -96.0 && lng < -94.8) setCity("Houston, TX");
-      else if (lat > 32.5 && lat < 33.3 && lng > -97.2 && lng < -96.2) setCity("Dallas, TX");
-      else if (lat > 29.1 && lat < 29.8 && lng > -98.8 && lng < -98.1) setCity("San Antonio, TX");
-      else if (lat > 40.4 && lat < 40.9 && lng > -74.3 && lng < -73.6) setCity("New York, NY");
-      else if (lat > 41.6 && lat < 42.1 && lng > -88.0 && lng < -87.4) setCity("Chicago, IL");
-    }, () => {});
-  }, []);
+  const { data: profile } = trpc.profile.get.useQuery(undefined, {
+    enabled: isAuthenticated, retry: false,
+  });
 
-  const handleGeolocate = () => {
-    if (!navigator.geolocation) { toast.error("Geolocation not supported"); return; }
-    setIsGeolocating(true);
-    navigator.geolocation.getCurrentPosition(
-      (pos) => {
-        const { latitude: lat, longitude: lng } = pos.coords;
-        let detected = "Austin, TX";
-        if (lat > 29.5 && lat < 30.8 && lng > -98.2 && lng < -97.2) detected = "Austin, TX";
-        else if (lat > 33.2 && lat < 33.8 && lng > -112.4 && lng < -111.6) detected = "Phoenix, AZ";
-        else if (lat > 33.3 && lat < 33.5 && lng > -111.9 && lng < -111.5) detected = "Mesa, AZ";
-        else if (lat > 29.0 && lat < 30.1 && lng > -96.0 && lng < -94.8) detected = "Houston, TX";
-        else if (lat > 32.5 && lat < 33.3 && lng > -97.2 && lng < -96.2) detected = "Dallas, TX";
-        else if (lat > 29.1 && lat < 29.8 && lng > -98.8 && lng < -98.1) detected = "San Antonio, TX";
-        else if (lat > 40.4 && lat < 40.9 && lng > -74.3 && lng < -73.6) detected = "New York, NY";
-        else if (lat > 41.6 && lat < 42.1 && lng > -88.0 && lng < -87.4) detected = "Chicago, IL";
-        setCity(detected);
-        setIsGeolocating(false);
-        toast.success(`Showing shifts near you in ${detected}`);
-      },
-      () => { setIsGeolocating(false); toast.error("Could not detect location"); }
-    );
-  };
-
-  const { data: profile } = trpc.profile.get.useQuery(undefined, { enabled: isAuthenticated, retry: false });
-  const { data: activityStats } = trpc.jobs.activityStats.useQuery(
+  const { data: jobs, refetch: refetchJobs } = trpc.jobs.list.useQuery(
     { city },
     { refetchInterval: 60000 }
   );
-  const { data: jobs, isLoading: jobsLoading, refetch: refetchJobs } = trpc.jobs.list.useQuery(
-    { city }, { refetchInterval: 30000 }
-  );
-  const { data: availableWorkers, isLoading: workersLoading, refetch: refetchWorkers } = trpc.availability.list.useQuery(
-    { city }, { refetchInterval: 30000 }
-  );
 
-  const isEmployer = profile?.userType === "employer" || profile?.userType === "both";
+  const applyMutation = trpc.applications.apply.useMutation({
+    onSuccess: () => {
+      toast.success("Application sent!");
+      setSelectedJob(null);
+    },
+    onError: (e) => toast.error(e.message),
+  });
+
   const isWorker = !profile?.userType || profile.userType === "worker" || profile.userType === "both";
+  const isEmployer = profile?.userType === "employer" || profile?.userType === "both";
 
-  // Client-side filtering
-  const filteredJobs = (jobs ?? []).filter((job: any) => {
-    if (filterRole && job.role !== filterRole) return false;
-    if (filterMinPay && parseFloat(job.payRate) < parseFloat(filterMinPay)) return false;
-    if (searchQuery) {
-      const q = searchQuery.toLowerCase();
-      const roleLabel = (ROLE_LABELS[job.role] ?? job.role ?? "").toLowerCase();
-      const desc = (job.description ?? "").toLowerCase();
-      const loc = (job.location ?? "").toLowerCase();
-      if (!roleLabel.includes(q) && !desc.includes(q) && !loc.includes(q)) return false;
-    }
-    return true;
-  });
+  // ── Init Mapbox ─────────────────────────────────────────────────────────────
+  useEffect(() => {
+    if (view !== "map") return;
+    loadMapbox(() => {
+      if (!mapContainerRef.current || mapRef.current) return;
+      const mbx = (window as any).mapboxgl;
+      mbx.accessToken = MAPBOX_TOKEN;
 
-  const filteredWorkers = (availableWorkers ?? []).filter((w: any) => {
-    if (searchQuery) {
-      const q = searchQuery.toLowerCase();
-      const roles = (w.roles ?? "").toLowerCase();
-      const bio = (w.bio ?? "").toLowerCase();
-      const name = (w.workerName ?? "").toLowerCase();
-      if (!roles.includes(q) && !bio.includes(q) && !name.includes(q)) return false;
-    }
-    return true;
-  });
+      const map = new mbx.Map({
+        container: mapContainerRef.current,
+        style: "mapbox://styles/mapbox/dark-v11",
+        center: [CITIES[city].lng, CITIES[city].lat],
+        zoom: 12,
+      });
 
-  const activeFilterCount = [filterRole, filterMinPay].filter(Boolean).length;
+      map.on("load", () => {
+        mapRef.current = map;
+        setMapReady(true);
+      });
+    });
+  }, [view]);
 
-  const handleRefresh = async () => {
-    setIsRefreshing(true);
-    await Promise.all([refetchJobs(), refetchWorkers()]);
-    setIsRefreshing(false);
-    toast.success("Feed updated");
-  };
+  // ── Update markers when jobs change ─────────────────────────────────────────
+  useEffect(() => {
+    if (!mapReady || !mapRef.current || !jobs) return;
+    const mbx = (window as any).mapboxgl;
 
-  const { t, isSpanish } = useLanguage();
+    // Clear old markers
+    markersRef.current.forEach(m => m.remove());
+    markersRef.current = [];
+
+    jobs.forEach((job: any) => {
+      if (!job.latitude || !job.longitude) return;
+
+      const el = document.createElement("div");
+      el.className = "shift-marker";
+      el.innerHTML = `
+        <div style="
+          background: #FF6B00;
+          color: white;
+          border-radius: 20px;
+          padding: 4px 10px;
+          font-size: 12px;
+          font-weight: 700;
+          white-space: nowrap;
+          box-shadow: 0 2px 8px rgba(0,0,0,0.4);
+          cursor: pointer;
+          border: 2px solid rgba(255,255,255,0.2);
+          transition: transform 0.15s;
+        ">
+          $${job.payRate}/hr
+        </div>
+      `;
+      el.addEventListener("mouseenter", () => {
+        el.querySelector("div")!.style.transform = "scale(1.1)";
+      });
+      el.addEventListener("mouseleave", () => {
+        el.querySelector("div")!.style.transform = "scale(1)";
+      });
+      el.addEventListener("click", () => setSelectedJob(job));
+
+      const marker = new mbx.Marker({ element: el, anchor: "bottom" })
+        .setLngLat([job.longitude, job.latitude])
+        .addTo(mapRef.current);
+
+      markersRef.current.push(marker);
+    });
+  }, [mapReady, jobs]);
+
+  // ── Fly to city when changed ─────────────────────────────────────────────────
+  useEffect(() => {
+    if (!mapRef.current || !mapReady) return;
+    mapRef.current.flyTo({
+      center: [CITIES[city].lng, CITIES[city].lat],
+      zoom: 12,
+      duration: 1200,
+    });
+  }, [city, mapReady]);
+
+  const handleApply = useCallback((job: any) => {
+    if (!isAuthenticated) { navigate("/"); return; }
+    applyMutation.mutate({ jobId: job.id });
+  }, [isAuthenticated, applyMutation]);
 
   return (
     <AppShell>
-      <SEOHead
-        title="Live Kitchen Shifts — Austin, Phoenix & Mesa Hospitality Jobs"
-        description="Browse live kitchen and FOH shifts in Austin TX, Phoenix AZ, and Mesa AZ. Cook, sous chef, prep, dishwasher, server, bartender jobs available now. Apply in seconds."
-        canonicalPath="/feed"
-      />
-      <div className="max-w-lg mx-auto">
-        {/* ── Sticky sub-header ─────────────────────────────────────────── */}
+      <div className="flex flex-col h-[calc(100vh-3.5rem-var(--sab))]">
+
+        {/* ── Top bar ────────────────────────────────────────────────────── */}
         <div
-          className="sticky z-30 border-b border-border px-4 py-3"
-          style={{
-            top: "calc(3.5rem + var(--sat))",
-            background: "oklch(0.06 0 0 / 0.95)",
-            backdropFilter: "blur(16px)",
-            WebkitBackdropFilter: "blur(16px)",
-          }}
+          className="flex-shrink-0 border-b border-border px-4 py-2.5"
+          style={{ background: "oklch(0.06 0 0 / 0.97)", backdropFilter: "blur(16px)" }}
         >
-          {/* Search bar row */}
-          <div className="flex items-center gap-2 mb-2.5">
-            <div className="flex-1 relative">
-              <Search size={13} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
-              <input
-                type="text"
-                placeholder={isSpanish ? "Buscar roles, ubicaciones..." : "Search roles, locations..."}
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-full pl-8 pr-8 py-2 rounded-xl bg-secondary border border-border text-xs text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-primary transition-colors"
-              />
-              {searchQuery && (
-                <button onClick={() => setSearchQuery("")} className="absolute right-2.5 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground">
-                  <X size={11} />
-                </button>
-              )}
-            </div>
-            {/* Filter toggle */}
-            <button
-              onClick={() => setShowFilters((v) => !v)}
-              className={cn(
-                "relative flex-shrink-0 w-9 h-9 rounded-xl flex items-center justify-center transition-colors",
-                showFilters || activeFilterCount > 0 ? "bg-primary text-primary-foreground" : "bg-secondary text-muted-foreground hover:text-foreground"
-              )}
-            >
-              <SlidersHorizontal size={14} />
-              {activeFilterCount > 0 && (
-                <span className="absolute -top-1 -right-1 w-4 h-4 rounded-full bg-orange-500 text-white text-[9px] font-black flex items-center justify-center">{activeFilterCount}</span>
-              )}
-            </button>
-            {/* Geolocate */}
-            <button
-              onClick={handleGeolocate}
-              className="flex-shrink-0 w-9 h-9 rounded-xl bg-secondary flex items-center justify-center text-muted-foreground hover:text-foreground transition-colors"
-            >
-              <Navigation size={14} className={cn(isGeolocating && "animate-pulse text-primary")} />
-            </button>
-            <button
-              onClick={handleRefresh}
-              className="flex-shrink-0 w-8 h-8 rounded-xl bg-secondary flex items-center justify-center text-muted-foreground hover:text-foreground transition-colors"
-            >
-              <RefreshCw size={13} className={cn(isRefreshing && "animate-spin")} />
-            </button>
-          </div>
-
-          {/* Filter panel */}
-          {showFilters && (
-            <div className="mb-2.5 p-3 bg-secondary/60 rounded-xl border border-border space-y-2">
-              <div className="flex items-center gap-2">
-                <div className="flex-1">
-                  <label className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider mb-1 block">{isSpanish ? "Rol" : "Role"}</label>
-                  <select
-                    value={filterRole}
-                    onChange={(e) => setFilterRole(e.target.value)}
-                    className="w-full px-2.5 py-1.5 rounded-lg bg-card border border-border text-xs text-foreground focus:outline-none focus:border-primary"
-                  >
-                    <option value="">{isSpanish ? "Todos los Roles" : "All Roles"}</option>
-                    {Object.entries(ROLE_LABELS).map(([val, label]) => (
-                      <option key={val} value={val}>{label}</option>
-                    ))}
-                  </select>
-                </div>
-                <div className="flex-1">
-                  <label className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider mb-1 block">{isSpanish ? "Pago Mínimo" : "Min Pay"}</label>
-                  <select
-                    value={filterMinPay}
-                    onChange={(e) => setFilterMinPay(e.target.value)}
-                    className="w-full px-2.5 py-1.5 rounded-lg bg-card border border-border text-xs text-foreground focus:outline-none focus:border-primary"
-                  >
-                    <option value="">Any</option>
-                    <option value="15">$15+/hr</option>
-                    <option value="18">$18+/hr</option>
-                    <option value="20">$20+/hr</option>
-                    <option value="25">$25+/hr</option>
-                    <option value="30">$30+/hr</option>
-                  </select>
-                </div>
-              </div>
-              {activeFilterCount > 0 && (
-                <button
-                  onClick={() => { setFilterRole(""); setFilterMinPay(""); }}
-                  className="text-[10px] text-primary font-bold hover:underline"
-                >
-                  {isSpanish ? "Limpiar filtros" : "Clear filters"}
-                </button>
-              )}
-            </div>
-          )}
-
           {/* City chips */}
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 mb-2.5">
             <div className="flex-1 overflow-x-auto scrollbar-none">
               <div className="flex gap-1.5">
-                {CITIES.map((c) => (
+                {Object.entries(CITIES).map(([key, val]) => (
                   <button
-                    key={c}
-                    onClick={() => setCity(c)}
+                    key={key}
+                    onClick={() => setCity(key)}
                     className={cn(
-                      "flex-shrink-0 px-3 py-1.5 rounded-full text-xs font-bold transition-all duration-150 whitespace-nowrap",
-                      city === c
+                      "flex-shrink-0 px-3 py-1 rounded-full text-xs font-bold transition-all whitespace-nowrap",
+                      city === key
                         ? "bg-primary text-primary-foreground"
-                        : "bg-secondary text-muted-foreground hover:text-foreground border border-border"
+                        : "bg-secondary text-muted-foreground border border-border"
                     )}
                   >
-                    {c.split(",")[0]}
+                    {val.label}
                   </button>
                 ))}
               </div>
             </div>
-          </div>
 
-          {/* Live activity banner */}
-          {activityStats && (activityStats.recentJobsCount > 0 || activityStats.availableWorkersCount > 0) && (
-            <div className="flex items-center justify-center gap-4 py-1.5 mb-2 rounded-xl bg-primary/10 border border-primary/20">
-              {activityStats.recentJobsCount > 0 && (
-                <span className="flex items-center gap-1.5 text-[11px] font-bold text-primary">
-                  <Zap size={10} strokeWidth={3} className="text-primary" />
-                  {activityStats.recentJobsCount} {isSpanish ? "turnos publicados en las últimas 3h" : "shifts posted in last 3h"}
-                </span>
-              )}
-              {activityStats.recentJobsCount > 0 && activityStats.availableWorkersCount > 0 && (
-                <span className="text-primary/40 text-xs">|</span>
-              )}
-              {activityStats.availableWorkersCount > 0 && (
-                <span className="flex items-center gap-1.5 text-[11px] font-bold text-emerald-400">
-                  <User size={10} strokeWidth={3} />
-                  {activityStats.availableWorkersCount} {isSpanish ? "trabajadores disponibles ahora" : "workers available now"}
-                </span>
-              )}
-            </div>
-          )}
-          {/* Tabs */}
-          <div className="flex gap-1 mt-2.5 bg-secondary rounded-xl p-1">
-            {(["jobs", "workers"] as const).map((t) => (
+            {/* Map / List toggle */}
+            <div className="flex-shrink-0 flex gap-0.5 bg-secondary rounded-lg p-0.5">
               <button
-                key={t}
-                onClick={() => setTab(t)}
+                onClick={() => setView("map")}
                 className={cn(
-                  "flex-1 flex items-center justify-center gap-1.5 py-2 rounded-lg text-xs font-bold transition-all duration-150",
-                  tab === t ? "bg-card text-foreground shadow-sm" : "text-muted-foreground"
+                  "flex items-center gap-1 px-2.5 py-1.5 rounded-md text-xs font-bold transition-all",
+                  view === "map" ? "bg-card text-foreground" : "text-muted-foreground"
                 )}
               >
-                {t === "jobs" ? <Zap size={11} strokeWidth={2.5} /> : <User size={11} strokeWidth={2.5} />}
-                {t === "jobs" ? (isSpanish ? "Turnos en Vivo" : "Live Shifts") : (isSpanish ? "Disponibles Ahora" : "Available Now")}
-                {t === "jobs" && filteredJobs.length > 0 && (
-                  <span className="bg-primary text-primary-foreground text-[9px] font-black px-1.5 py-0.5 rounded-full leading-none">
-                    {filteredJobs.length}
-                  </span>
-                )}
-                {t === "workers" && filteredWorkers.length > 0 && (
-                  <span className="bg-emerald-500 text-white text-[9px] font-black px-1.5 py-0.5 rounded-full leading-none">
-                    {filteredWorkers.length}
-                  </span>
-                )}
+                <Map size={11} /> Map
               </button>
-            ))}
+              <button
+                onClick={() => setView("list")}
+                className={cn(
+                  "flex items-center gap-1 px-2.5 py-1.5 rounded-md text-xs font-bold transition-all",
+                  view === "list" ? "bg-card text-foreground" : "text-muted-foreground"
+                )}
+              >
+                <List size={11} /> List
+              </button>
+            </div>
+          </div>
+
+          {/* Stats row */}
+          <div className="flex items-center gap-3">
+            <span className="text-xs text-muted-foreground">
+              <span className="text-primary font-bold">{jobs?.length ?? 0}</span> open shifts in {CITIES[city].label}
+            </span>
+            <span className="text-[10px] text-muted-foreground/50">· updates every 60s</span>
+            {isEmployer && (
+              <button
+                onClick={() => navigate("/post-job")}
+                className="ml-auto flex items-center gap-1 bg-primary text-primary-foreground text-xs font-bold px-3 py-1.5 rounded-full"
+              >
+                <Plus size={11} strokeWidth={2.5} /> Post shift
+              </button>
+            )}
           </div>
         </div>
 
-        {/* ── Feed content ──────────────────────────────────────────────── */}
-        <div className="px-4 py-4 space-y-3">
-          {tab === "jobs" ? (
-            <>
-              {isEmployer && (
-                <button
-                  onClick={() => navigate("/post-job")}
-                  className="w-full flex items-center justify-between bg-primary/10 border border-primary/30 rounded-2xl p-4 card-press"
-                >
-                  <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-xl bg-primary flex items-center justify-center">
-                      <Plus size={18} className="text-primary-foreground" strokeWidth={2.5} />
-                    </div>
-                    <div className="text-left">
-                      <p className="font-bold text-sm text-foreground">{isSpanish ? "Publicar un Turno" : "Post a Shift"}</p>
-                      <p className="text-xs text-muted-foreground">{isSpanish ? "Desde $35 · Consigue candidatos rápido" : "From $35 · Get applicants fast"}</p>
-                    </div>
-                  </div>
-                  <ArrowRight size={15} className="text-primary" />
-                </button>
-              )}
+        {/* ── Map view ───────────────────────────────────────────────────── */}
+        {view === "map" && (
+          <div className="relative flex-1 overflow-hidden">
+            <div ref={mapContainerRef} className="w-full h-full" />
 
-              {jobsLoading ? (
-                <JobSkeletons />
-              ) : !filteredJobs.length ? (
-                <EmptyState
-                  icon={<Zap size={36} className="text-muted-foreground/30" />}
-                  title={searchQuery || activeFilterCount > 0 ? (isSpanish ? "Sin resultados" : "No matches") : (isSpanish ? "Sin turnos en vivo" : "No live shifts")}
-                  desc={searchQuery || activeFilterCount > 0 ? (isSpanish ? "Ajusta tu búsqueda o filtros." : "Try adjusting your search or filters.") : (isSpanish ? `No hay turnos en ${city.split(",")[0]} ahora. Vuelve pronto.` : `No shifts posted in ${city.split(",")[0]} right now. Check back soon.`)}
+            {!mapReady && (
+              <div className="absolute inset-0 flex items-center justify-center bg-background/80">
+                <div className="flex flex-col items-center gap-3">
+                  <div className="w-8 h-8 border-2 border-primary border-t-transparent rounded-full animate-spin" />
+                  <p className="text-xs text-muted-foreground">Loading map...</p>
+                </div>
+              </div>
+            )}
+
+            {/* No jobs on map state */}
+            {mapReady && jobs?.length === 0 && (
+              <div className="absolute top-4 left-1/2 -translate-x-1/2">
+                <div className="bg-card border border-border rounded-2xl px-4 py-3 text-center shadow-lg">
+                  <p className="text-sm font-bold text-foreground">No open shifts in {CITIES[city].label}</p>
+                  <p className="text-xs text-muted-foreground mt-0.5">Check back soon or try another city</p>
+                </div>
+              </div>
+            )}
+
+            {/* Hint */}
+            {mapReady && (jobs?.length ?? 0) > 0 && !selectedJob && (
+              <div className="absolute bottom-4 left-1/2 -translate-x-1/2 pointer-events-none">
+                <div className="bg-card/90 border border-border rounded-full px-4 py-2 backdrop-blur-sm">
+                  <p className="text-xs text-muted-foreground">Tap a shift to see details</p>
+                </div>
+              </div>
+            )}
+
+            {/* Slide-up job card */}
+            {selectedJob && (
+              <div className="absolute bottom-0 left-0 right-0 z-10">
+                <JobSlideCard
+                  job={selectedJob}
+                  onClose={() => setSelectedJob(null)}
+                  onApply={() => handleApply(selectedJob)}
+                  applying={applyMutation.isPending}
+                  isWorker={isWorker}
+                  navigate={navigate}
                 />
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* ── List view ──────────────────────────────────────────────────── */}
+        {view === "list" && (
+          <div className="flex-1 overflow-y-auto">
+            <div className="px-4 py-3 space-y-3 max-w-lg mx-auto">
+              {!jobs ? (
+                <ListSkeletons />
+              ) : jobs.length === 0 ? (
+                <div className="flex flex-col items-center justify-center py-20 text-center">
+                  <ChefHat size={40} className="text-muted-foreground/20 mb-4" />
+                  <p className="font-bold text-foreground mb-1">No open shifts</p>
+                  <p className="text-sm text-muted-foreground">Check another city or come back soon</p>
+                </div>
               ) : (
-                filteredJobs.map((job: any, i: number) => (
-                  <JobCard key={job.id} job={job} index={i} onClick={() => navigate(`/jobs/${job.id}`)} />
+                jobs.map((job: any) => (
+                  <JobListCard
+                    key={job.id}
+                    job={job}
+                    onApply={() => handleApply(job)}
+                    applying={applyMutation.isPending}
+                    isWorker={isWorker}
+                    navigate={navigate}
+                  />
                 ))
               )}
-            </>
-          ) : (
-            <>
-              {isWorker && (
-                <button
-                  onClick={() => navigate("/availability")}
-                  className="w-full flex items-center justify-between bg-emerald-500/10 border border-emerald-500/30 rounded-2xl p-4 card-press"
-                >
-                  <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-xl bg-emerald-500/20 flex items-center justify-center">
-                      <Zap size={18} className="text-emerald-400" strokeWidth={2.5} />
-                    </div>
-                    <div className="text-left">
-                  <p className="font-bold text-sm text-foreground">{isSpanish ? "Publicar Disponibilidad" : "Post Availability"}</p>
-                  <p className="text-xs text-muted-foreground">{isSpanish ? "Deja que los empleadores te encuentren" : "Let employers find you now"}</p>
-                    </div>
-                  </div>
-                  <ArrowRight size={15} className="text-emerald-400" />
-                </button>
-              )}
-
-              {workersLoading ? (
-                <WorkerSkeletons />
-              ) : !filteredWorkers.length ? (
-                <EmptyState
-                  icon={<User size={36} className="text-muted-foreground/30" />}
-                  title={searchQuery ? (isSpanish ? "Sin resultados" : "No matches") : (isSpanish ? "Sin trabajadores disponibles" : "No workers available")}
-                  desc={searchQuery ? (isSpanish ? "Prueba otro término de búsqueda." : "Try a different search term.") : (isSpanish ? `No hay trabajadores disponibles en ${city.split(",")[0]} ahora.` : `No workers posted availability in ${city.split(",")[0]} right now.`)}
-                />
-              ) : (
-                filteredWorkers.map((post: any, i: number) => (
-                  <WorkerCard key={post.id} post={post} index={i} />
-                ))
-              )}
-            </>
-          )}
-        </div>
+            </div>
+          </div>
+        )}
       </div>
     </AppShell>
   );
 }
 
-/* ── Job Card ──────────────────────────────────────────────────────────────── */
-function JobCard({ job, index, onClick }: { job: any; index: number; onClick: () => void }) {
+// ─── Slide-up card (map view) ─────────────────────────────────────────────────
+function JobSlideCard({ job, onClose, onApply, applying, isWorker, navigate }: {
+  job: any; onClose: () => void; onApply: () => void;
+  applying: boolean; isWorker: boolean; navigate: any;
+}) {
   const hours = calcHours(job.startTime, job.endTime);
-  const totalPay = job.totalPay ? parseFloat(job.totalPay) : parseFloat(job.payRate) * parseFloat(hours);
-  const urgency = getUrgencyBadge(job);
+  const workerPay = calcPay(job.payRate, job.startTime, job.endTime);
+
   return (
     <div
-      onClick={onClick}
-      className={cn(
-        "bg-card rounded-2xl border border-border overflow-hidden card-press fade-in-up",
-        `card-${Math.min(index + 1, 5)}`
-      )}
+      className="bg-card border-t border-border rounded-t-3xl p-5 shadow-2xl"
+      style={{ animation: "slideUp 0.25s ease-out" }}
     >
-      {/* Visual header */}
-      <div className="relative h-36 bg-secondary flex items-center justify-center overflow-hidden">
-        {job.restaurantImage ? (
-          <img src={job.restaurantImage} alt="" className="w-full h-full object-cover" />
-        ) : (
-          <span className="text-5xl">{ROLE_EMOJI[job.role] ?? "🍽️"}</span>
-        )}
-        <div className="absolute inset-0 bg-gradient-to-t from-card/90 via-card/20 to-transparent" />
+      <style>{`@keyframes slideUp { from { transform: translateY(100%); opacity: 0; } to { transform: translateY(0); opacity: 1; } }`}</style>
 
-        {/* Type badge */}
-        <div className="absolute top-3 left-3 flex flex-col gap-1">
-          {job.isPermanent ? (
-            <span className="flex items-center gap-1 bg-emerald-500 text-white text-[10px] font-black px-2.5 py-1 rounded-full">
-              <TrendingUp size={9} strokeWidth={3} /> Perm Potential
-            </span>
-          ) : (
-            <span className="flex items-center gap-1 bg-orange-500 text-white text-[10px] font-black px-2.5 py-1 rounded-full">
-              <Flag size={9} strokeWidth={3} /> Temp
-            </span>
-          )}
-          {urgency && (
-            <span className={cn("flex items-center gap-1 text-white text-[10px] font-black px-2.5 py-1 rounded-full", urgency.color)}>
-              <Zap size={9} strokeWidth={3} /> {urgency.label}
-            </span>
-          )}
+      {/* Handle + close */}
+      <div className="flex items-center justify-between mb-4">
+        <div className="w-10 h-1 bg-border rounded-full mx-auto absolute left-1/2 -translate-x-1/2 top-3" />
+        <div className="flex items-center gap-2">
+          <span className="text-2xl">{ROLE_EMOJI[job.role] ?? "💼"}</span>
+          <div>
+            <p className="font-black text-base text-foreground">{ROLE_LABELS[job.role] ?? job.role}</p>
+            {job.restaurantName && <p className="text-xs text-muted-foreground">{job.restaurantName}</p>}
+          </div>
         </div>
-
-        {/* Pay rate */}
-        <div className="absolute bottom-3 right-3 bg-background/90 backdrop-blur-sm rounded-xl px-3 py-1.5">
-          <span className="text-xl font-black text-primary">${job.payRate}</span>
-          <span className="text-xs text-muted-foreground">/hr</span>
-        </div>
+        <button
+          onClick={onClose}
+          className="w-8 h-8 rounded-full bg-secondary flex items-center justify-center text-muted-foreground"
+        >
+          <X size={14} />
+        </button>
       </div>
 
-      {/* Body */}
-      <div className="p-4">
+      {/* Stats grid */}
+      <div className="grid grid-cols-3 gap-2 mb-4">
+        <StatBox icon={<DollarSign size={13} />} label="Pay" value={`$${job.payRate}/hr`} />
+        <StatBox icon={<Clock size={13} />} label="Hours" value={`${hours}h`} />
+        <StatBox icon={<DollarSign size={13} />} label="You earn" value={`~$${workerPay}`} accent />
+      </div>
+
+      {/* Time + location */}
+      <div className="space-y-2 mb-4">
+        <div className="flex items-center gap-2 text-xs text-muted-foreground">
+          <Clock size={12} className="text-primary flex-shrink-0" />
+          <span>{formatDate(job.startTime)} · {formatTime(job.startTime)} – {formatTime(job.endTime)}</span>
+        </div>
+        {job.location && (
+          <div className="flex items-center gap-2 text-xs text-muted-foreground">
+            <MapPin size={12} className="text-primary flex-shrink-0" />
+            <span>{job.location}</span>
+          </div>
+        )}
+        {job.minRating && job.minRating > 1 && (
+          <div className="flex items-center gap-2 text-xs text-muted-foreground">
+            <Star size={12} className="text-yellow-400 flex-shrink-0" />
+            <span>Min rating {job.minRating.toFixed(1)} required</span>
+          </div>
+        )}
+      </div>
+
+      {/* Description */}
+      {job.description && (
+        <p className="text-xs text-muted-foreground mb-4 line-clamp-2">{job.description}</p>
+      )}
+
+      {/* CTA */}
+      {isWorker ? (
+        <button
+          onClick={onApply}
+          disabled={applying}
+          className="w-full h-12 bg-primary text-primary-foreground font-black text-sm rounded-2xl flex items-center justify-center gap-2 disabled:opacity-60"
+        >
+          {applying ? (
+            <div className="w-4 h-4 border-2 border-white/40 border-t-white rounded-full animate-spin" />
+          ) : (
+            <><Zap size={15} strokeWidth={2.5} /> Apply Now</>
+          )}
+        </button>
+      ) : (
+        <button
+          onClick={() => navigate("/feed")}
+          className="w-full h-12 bg-secondary text-foreground font-bold text-sm rounded-2xl"
+        >
+          Sign in as worker to apply
+        </button>
+      )}
+    </div>
+  );
+}
+
+// ─── List card ────────────────────────────────────────────────────────────────
+function JobListCard({ job, onApply, applying, isWorker, navigate }: {
+  job: any; onApply: () => void; applying: boolean;
+  isWorker: boolean; navigate: any;
+}) {
+  const hours = calcHours(job.startTime, job.endTime);
+  const workerPay = calcPay(job.payRate, job.startTime, job.endTime);
+
+  return (
+    <div className="bg-card rounded-2xl border border-border overflow-hidden">
+      {/* Header */}
+      <div className="p-4 pb-3">
         <div className="flex items-start justify-between mb-3">
-          <div>
-            <h3 className="font-black text-base text-foreground">{ROLE_LABELS[job.role] ?? job.role}</h3>
-            {job.restaurantName && <p className="text-xs text-muted-foreground mt-0.5">{job.restaurantName}</p>}
+          <div className="flex items-center gap-3">
+            <div className="w-11 h-11 rounded-xl bg-primary/15 flex items-center justify-center text-xl">
+              {ROLE_EMOJI[job.role] ?? "💼"}
+            </div>
+            <div>
+              <p className="font-black text-sm text-foreground">{ROLE_LABELS[job.role] ?? job.role}</p>
+              {job.restaurantName && (
+                <p className="text-xs text-muted-foreground mt-0.5">{job.restaurantName}</p>
+              )}
+            </div>
           </div>
           <div className="text-right">
-            <p className="text-sm font-black text-foreground">~${totalPay.toFixed(0)}</p>
-            <p className="text-[10px] text-muted-foreground">total</p>
+            <p className="font-black text-base text-primary">${job.payRate}<span className="text-xs font-normal text-muted-foreground">/hr</span></p>
+            <p className="text-[10px] text-muted-foreground">~${workerPay} total</p>
           </div>
         </div>
 
-        <div className="flex flex-wrap gap-1.5">
-          <MetaPill icon={<Clock size={10} />}>
-            {formatDate(job.startTime)} · {formatTime(job.startTime)}–{formatTime(job.endTime)} ({hours}h)
-          </MetaPill>
-          {job.city && <MetaPill icon={<MapPin size={10} />}>{job.city.split(",")[0]}</MetaPill>}
-          {job.minRating > 0 && <MetaPill icon={<Star size={10} />}>{job.minRating}★ min</MetaPill>}
+        <div className="space-y-1.5">
+          <div className="flex items-center gap-2 text-xs text-muted-foreground">
+            <Clock size={11} className="text-primary/70" />
+            <span>{formatDate(job.startTime)} · {formatTime(job.startTime)} – {formatTime(job.endTime)} · {hours}h</span>
+          </div>
+          {job.location && (
+            <div className="flex items-center gap-2 text-xs text-muted-foreground">
+              <MapPin size={11} className="text-primary/70" />
+              <span className="truncate">{job.location}</span>
+            </div>
+          )}
+          {job.minRating && job.minRating > 1 && (
+            <div className="flex items-center gap-2 text-xs text-muted-foreground">
+              <Star size={11} className="text-yellow-400/70" />
+              <span>Min {job.minRating.toFixed(1)} rating</span>
+            </div>
+          )}
         </div>
+      </div>
 
-        <div className="mt-3 pt-3 border-t border-border flex items-center justify-between">
-          <span className="text-xs text-muted-foreground">
-            Worker earns <span className="text-emerald-400 font-bold">${(totalPay * 0.9).toFixed(0)}</span>
-          </span>
-          <span className="text-xs font-bold text-primary flex items-center gap-1">
-            View & Apply <ArrowRight size={11} />
+      {/* Footer */}
+      <div className="border-t border-border px-4 py-3 flex items-center justify-between">
+        <div className="flex items-center gap-1.5">
+          {job.isPermanent && (
+            <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-500/15 text-emerald-400">
+              Perm potential
+            </span>
+          )}
+          <span className="text-[10px] text-muted-foreground">
+            {job.applicationCount ?? 0} applied
           </span>
         </div>
+        {isWorker ? (
+          <button
+            onClick={onApply}
+            disabled={applying}
+            className="flex items-center gap-1.5 bg-primary text-primary-foreground text-xs font-black px-4 py-2 rounded-xl disabled:opacity-60"
+          >
+            <Zap size={11} strokeWidth={2.5} />
+            Apply
+          </button>
+        ) : (
+          <button
+            onClick={() => navigate("/")}
+            className="text-xs font-bold text-primary"
+          >
+            Sign in →
+          </button>
+        )}
       </div>
     </div>
   );
 }
 
-/* ── Worker Card ───────────────────────────────────────────────────────────── */
-function WorkerCard({ post, index }: { post: any; index: number }) {
-  const skills: string[] = (() => {
-    try { return JSON.parse(post.skills || "[]"); } catch { return []; }
-  })();
-
+// ─── Helpers ──────────────────────────────────────────────────────────────────
+function StatBox({ icon, label, value, accent }: {
+  icon: React.ReactNode; label: string; value: string; accent?: boolean;
+}) {
   return (
-    <div className={cn("bg-card rounded-2xl border border-border p-4 card-press fade-in-up", `card-${Math.min(index + 1, 5)}`)}>
-      <div className="flex items-start gap-3">
-        <div className="relative flex-shrink-0">
-          {post.worker?.profileImage ? (
-            <img src={post.worker.profileImage} alt="" className="w-12 h-12 rounded-2xl object-cover" />
-          ) : (
-            <div className="w-12 h-12 rounded-2xl bg-primary/15 flex items-center justify-center">
-              <ChefHat size={20} className="text-primary" />
-            </div>
-          )}
-          <div className="absolute -bottom-1 -right-1 w-4 h-4 bg-emerald-500 rounded-full border-2 border-card" />
-          {post.worker?.verificationStatus === "verified" && (
-            <div className="absolute -top-1 -left-1 w-4 h-4 bg-blue-500 rounded-full border-2 border-card flex items-center justify-center">
-              <ShieldCheck size={8} className="text-white" strokeWidth={3} />
-            </div>
-          )}
-        </div>
-
-        <div className="flex-1 min-w-0">
-          <div className="flex items-center justify-between mb-1">
-            <p className="font-bold text-sm text-foreground truncate">{post.worker?.name ?? "Chef"}</p>
-            {post.worker?.rating && (
-              <span className="flex items-center gap-0.5 text-xs text-yellow-400 font-bold">
-                <Star size={10} strokeWidth={2.5} />
-                {parseFloat(post.worker.rating).toFixed(1)}
-              </span>
-            )}
-          </div>
-
-          <div className="flex flex-wrap gap-1 mb-2">
-            {skills.slice(0, 3).map((s: string) => (
-              <span key={s} className="text-[10px] bg-secondary text-muted-foreground px-2 py-0.5 rounded-full font-medium">
-                {ROLE_LABELS[s] ?? s}
-              </span>
-            ))}
-            {skills.length > 3 && <span className="text-[10px] text-muted-foreground">+{skills.length - 3}</span>}
-          </div>
-
-          <div className="flex items-center flex-wrap gap-2 text-[10px] text-muted-foreground">
-            <span className="flex items-center gap-0.5"><MapPin size={9} />{post.city?.split(",")[0] ?? "Austin"}</span>
-            {post.worker?.yearsExperience > 0 && (
-              <span className="text-purple-400 font-semibold">{post.worker.yearsExperience}yr exp</span>
-            )}
-            {post.worker?.specialty && (
-              <span className="text-orange-400 font-semibold">{post.worker.specialty}</span>
-            )}
-            <span className="flex items-center gap-0.5"><Clock size={9} />{formatDistanceToNow(new Date(post.createdAt), { addSuffix: true })}</span>
-          </div>
-        </div>
-      </div>
-
-      {post.note && (
-        <p className="mt-3 text-xs text-muted-foreground italic border-t border-border pt-3">"{post.note}"</p>
-      )}
+    <div className={cn(
+      "flex flex-col items-center justify-center gap-0.5 rounded-xl py-2.5 px-2",
+      accent ? "bg-primary/15 border border-primary/30" : "bg-secondary"
+    )}>
+      <span className={cn("text-[10px]", accent ? "text-primary" : "text-muted-foreground")}>
+        {label}
+      </span>
+      <span className={cn("text-sm font-black", accent ? "text-primary" : "text-foreground")}>
+        {value}
+      </span>
     </div>
   );
 }
 
-/* ── Skeletons ─────────────────────────────────────────────────────────────── */
-function JobSkeletons() {
+function ListSkeletons() {
   return (
     <div className="space-y-3">
-      {[1, 2, 3].map((i) => (
-        <div key={i} className="bg-card rounded-2xl border border-border overflow-hidden">
-          <div className="skeleton h-36 rounded-none" />
-          <div className="p-4 space-y-2">
-            <div className="skeleton h-5 w-2/3" />
-            <div className="skeleton h-3 w-1/2" />
-            <div className="flex gap-2 mt-3">
-              <div className="skeleton h-5 w-28 rounded-full" />
-              <div className="skeleton h-5 w-16 rounded-full" />
+      {[1, 2, 3, 4].map(i => (
+        <div key={i} className="bg-card rounded-2xl border border-border p-4 space-y-3 animate-pulse">
+          <div className="flex gap-3">
+            <div className="w-11 h-11 rounded-xl bg-secondary" />
+            <div className="flex-1 space-y-2">
+              <div className="h-4 bg-secondary rounded w-1/2" />
+              <div className="h-3 bg-secondary rounded w-1/3" />
             </div>
           </div>
+          <div className="h-3 bg-secondary rounded w-2/3" />
+          <div className="h-3 bg-secondary rounded w-1/2" />
         </div>
       ))}
-    </div>
-  );
-}
-
-function WorkerSkeletons() {
-  return (
-    <div className="space-y-3">
-      {[1, 2, 3].map((i) => (
-        <div key={i} className="bg-card rounded-2xl border border-border p-4 flex gap-3">
-          <div className="skeleton w-12 h-12 rounded-2xl flex-shrink-0" />
-          <div className="flex-1 space-y-2">
-            <div className="skeleton h-4 w-1/3" />
-            <div className="flex gap-1">
-              <div className="skeleton h-4 w-14 rounded-full" />
-              <div className="skeleton h-4 w-14 rounded-full" />
-            </div>
-            <div className="skeleton h-3 w-1/2" />
-          </div>
-        </div>
-      ))}
-    </div>
-  );
-}
-
-/* ── Helpers ───────────────────────────────────────────────────────────────── */
-function MetaPill({ icon, children }: { icon: React.ReactNode; children: React.ReactNode }) {
-  return (
-    <span className="flex items-center gap-1 text-[10px] text-muted-foreground bg-secondary px-2 py-1 rounded-full">
-      {icon}{children}
-    </span>
-  );
-}
-
-function EmptyState({ icon, title, desc }: { icon: React.ReactNode; title: string; desc: string }) {
-  return (
-    <div className="flex flex-col items-center justify-center py-16 text-center">
-      <div className="mb-4">{icon}</div>
-      <p className="font-bold text-foreground mb-1">{title}</p>
-      <p className="text-sm text-muted-foreground max-w-xs">{desc}</p>
     </div>
   );
 }
