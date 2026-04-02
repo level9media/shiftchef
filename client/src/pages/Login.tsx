@@ -19,7 +19,7 @@ export default function Login() {
   const [verifying, setVerifying] = useState(false);
   const [saving, setSaving] = useState(false);
   const [confirmationResult, setConfirmationResult] = useState<any>(null);
-  const [idToken, setIdToken] = useState<string>("");
+  const [savedIdToken, setSavedIdToken] = useState<string>("");
   const recaptchaRef = useRef<any>(null);
   const base = getApiBase();
 
@@ -70,7 +70,7 @@ export default function Login() {
     try {
       const result = await confirmationResult.confirm(code);
       const token = await result.user.getIdToken();
-      setIdToken(token);
+      setSavedIdToken(token);
 
       const res = await fetch(`${base}/api/auth/firebase`, {
         method: "POST",
@@ -83,10 +83,8 @@ export default function Login() {
       const data = await res.json();
 
       if (!data.user?.name) {
-        // New user — collect name
         setStep("name");
       } else {
-        // Existing user — go straight in
         await refresh();
         navigate("/onboarding");
       }
@@ -103,29 +101,22 @@ export default function Login() {
     setError("");
     setSaving(true);
     try {
-      // Save name via the set-name endpoint (cookie is already set)
-      const res = await fetch(`${base}/api/auth/set-name`, {
+      // Re-call firebase auth with name included — this updates the user record
+      await fetch(`${base}/api/auth/firebase`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         credentials: "include",
-        body: JSON.stringify({ name: name.trim() }),
+        body: JSON.stringify({
+          idToken: savedIdToken,
+          name: name.trim(),
+          phone: getE164(phone),
+        }),
       });
-
-      if (!res.ok) {
-        // Fallback — re-auth with name included
-        await fetch(`${base}/api/auth/firebase`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          credentials: "include",
-          body: JSON.stringify({ idToken, name: name.trim(), phone: getE164(phone) }),
-        });
-      }
 
       await refresh();
       navigate("/onboarding");
     } catch (err) {
       console.error("[Login] Save name error:", err);
-      // Navigate anyway — name can be set later in profile
       await refresh();
       navigate("/onboarding");
     } finally {
