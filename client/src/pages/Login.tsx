@@ -54,6 +54,7 @@ export default function Login() {
       const result = await signInWithPhoneNumber(auth, getE164(phone), recaptchaRef.current);
       setConfirmationResult(result);
       setStep("code");
+    if (recaptchaRef.current) { recaptchaRef.current.clear(); recaptchaRef.current = null; }
     } catch (err: any) {
       console.error("[Login] Send error:", err);
       setError("Failed to send code. Please try again.");

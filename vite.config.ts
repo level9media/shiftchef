@@ -266,7 +266,13 @@ export default defineConfig({
     emptyOutDir: true,
   },
   server: {
-    host: true,
+  host: true,
+    proxy: {
+      "/api": {
+        target: "http://localhost:3000",
+        changeOrigin: true,
+      },
+    },
     hmr: true,
     allowedHosts: [
       ".manuspre.computer",
