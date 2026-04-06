@@ -5,7 +5,7 @@ import type { Request } from "express";
 import { SignJWT, jwtVerify } from "jose";
 import type { User } from "../../drizzle/schema";
 import * as db from "../db";
-import { ENV } from "./env";
+import { env } from "./env";
 
 export type SessionPayload = {
   openId: string;
@@ -21,7 +21,7 @@ class SDKServer {
   }
 
   private getSessionSecret() {
-    const secret = process.env.JWT_SECRET || ENV.cookieSecret;
+    const secret = process.env.JWT_SECRET || env.cookieSecret;
     if (!secret) throw new Error("JWT_SECRET is not configured");
     return new TextEncoder().encode(secret);
   }

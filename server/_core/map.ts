@@ -7,7 +7,7 @@
  * See API examples below the type definitions for usage patterns.
  */
 
-import { ENV } from "./env";
+import { env } from "./env";
 
 // ============================================================================
 // Configuration

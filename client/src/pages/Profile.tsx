@@ -9,7 +9,7 @@ import { useLanguage } from "@/contexts/LanguageContext";
 import {
   Star, MapPin, ChefHat, LogOut,
   Edit3, Check, X, Shield, ChevronRight, Camera,
-  ShieldCheck, FileText, MessageSquare, Plus, Trash2, Award, Briefcase
+  ShieldCheck, FileText, MessageSquare, Plus, Trash2, Award, Briefcase, Gift
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
@@ -35,6 +35,57 @@ const CITIES = [
 
 type PastJob = { place: string; role: string };
 
+const GIVEAWAY_END = new Date("2025-07-04T23:59:59");
+
+function GiveawayCard({ userId }: { userId: number }) {
+  const [timeLeft, setTimeLeft] = useState("");
+  const entryId = String(userId).slice(-4).padStart(4, "0");
+
+  useEffect(() => {
+    function update() {
+      const now = new Date();
+      const diff = GIVEAWAY_END.getTime() - now.getTime();
+      if (diff <= 0) { setTimeLeft("ended"); return; }
+      const days = Math.floor(diff / (1000 * 60 * 60 * 24));
+      const hours = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+      const mins = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+      setTimeLeft(`${days}d ${hours}h ${mins}m`);
+    }
+    update();
+    const interval = setInterval(update, 60000);
+    return () => clearInterval(interval);
+  }, []);
+
+  if (timeLeft === "ended") return null;
+  if (new Date() > GIVEAWAY_END) return null;
+
+  return (
+    <div className="px-4 mt-3">
+      <div className="rounded-2xl border border-orange-500/30 bg-orange-500/10 p-4">
+        <div className="flex items-center gap-2 mb-3">
+          <Gift size={16} className="text-orange-400" />
+          <p className="text-xs font-bold text-orange-400 uppercase tracking-wider">$100 Amazon Gift Card Giveaway</p>
+        </div>
+        <div className="flex items-center justify-between mb-3">
+          <div>
+            <p className="text-xs text-white/50 mb-0.5">Your Entry ID</p>
+            <p className="text-2xl font-black text-white tracking-widest">#{entryId}</p>
+          </div>
+          <div className="text-right">
+            <p className="text-xs text-white/50 mb-0.5">Ends in</p>
+            <p className="text-sm font-bold text-orange-400">{timeLeft}</p>
+          </div>
+        </div>
+        <div className="rounded-xl bg-black/20 border border-white/5 p-3">
+          <p className="text-xs text-white/60 leading-relaxed">
+            🎉 You're entered! One winner will be selected on <span className="text-white font-semibold">July 4th, 2025</span> and notified by text. Keep your phone on.
+          </p>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export default function Profile() {
   const { isAuthenticated, loading: authLoading, logout } = useAuth();
   const [, navigate] = useLocation();
@@ -46,7 +97,6 @@ export default function Profile() {
     retry: false,
   });
 
-  // Form state
   const [name, setName] = useState("");
   const [bio, setBio] = useState("");
   const [city, setCity] = useState("Austin, TX");
@@ -89,11 +139,6 @@ export default function Profile() {
     },
     onError: (e) => toast.error(e.message),
     onSettled: () => setPhotoUploading(false),
-  });
-
-  const setRoleMutation = trpc.profile.setRole.useMutation({
-    onSuccess: () => { toast.success("Role updated!"); refetch(); },
-    onError: (e) => toast.error(e.message),
   });
 
   const handlePhotoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -145,8 +190,8 @@ export default function Profile() {
     );
   }
 
-  const isWorker = !profile?.userType || profile?.userType === "worker" || profile?.userType === "both";
-  const isEmployer = profile?.userType === "employer" || profile?.userType === "both";
+  const isWorker = !profile?.userType || profile?.userType === "worker";
+  const isEmployer = profile?.userType === "employer";
   const skills: string[] = (() => {
     try { return JSON.parse(profile?.skills ?? "[]"); } catch { return []; }
   })();
@@ -164,13 +209,12 @@ export default function Profile() {
     <AppShell>
       <SEOHead title="My Profile" description="Manage your ShiftChef worker or employer profile, skills, ratings, and verification status." canonicalPath="/profile" />
       <div className="max-w-lg mx-auto">
-        {/* ── Hero banner ───────────────────────────────────────────────── */}
+        {/* Hero banner */}
         <div className="relative">
           <div
             className="h-28"
             style={{ background: "linear-gradient(135deg, oklch(0.68 0.22 38 / 0.25), oklch(0.60 0.18 250 / 0.15))" }}
           />
-          {/* Avatar with photo upload */}
           <div className="absolute bottom-0 left-4 translate-y-1/2">
             <div className="relative">
               {(profileImage || profile?.profileImage) ? (
@@ -184,7 +228,6 @@ export default function Profile() {
                   <ChefHat size={30} className="text-primary-foreground" />
                 </div>
               )}
-              {/* Camera overlay — always visible for easy photo change */}
               <button
                 onClick={() => photoInputRef.current?.click()}
                 disabled={photoUploading}
@@ -203,7 +246,6 @@ export default function Profile() {
               />
             </div>
           </div>
-          {/* Edit button */}
           <div className="absolute bottom-0 right-4 translate-y-1/2 flex gap-2">
             {editing ? (
               <>
@@ -222,7 +264,7 @@ export default function Profile() {
           </div>
         </div>
 
-        {/* ── Name & badges ─────────────────────────────────────────────── */}
+        {/* Name & badges */}
         <div className="mt-14 px-4 pb-2">
           {editing ? (
             <Input value={name} onChange={(e) => setName(e.target.value)} className="text-xl font-black bg-transparent border-0 border-b border-border rounded-none px-0 h-auto focus-visible:ring-0 text-foreground" placeholder="Your name" />
@@ -266,7 +308,7 @@ export default function Profile() {
           )}
         </div>
 
-        {/* ── Stats row ─────────────────────────────────────────────────── */}
+        {/* Stats row */}
         {isWorker && (
           <div className="px-4 mt-4 grid grid-cols-3 gap-2">
             <StatCard label={isSpanish ? "Calificación" : "Rating"} value={rating ? `${rating.toFixed(1)}★` : "—"} color="text-yellow-400" />
@@ -275,10 +317,12 @@ export default function Profile() {
           </div>
         )}
 
-        {/* ── Edit form ─────────────────────────────────────────────────── */}
+        {/* Giveaway card — workers only */}
+        {isWorker && profile?.id && <GiveawayCard userId={profile.id} />}
+
+        {/* Edit form */}
         {editing && (
           <div className="px-4 mt-4 space-y-3">
-            {/* Basic info */}
             <div className="bg-card rounded-2xl border border-border p-4 space-y-3">
               <p className="text-xs font-bold text-muted-foreground uppercase tracking-wider">{t("bio")}</p>
               <textarea value={bio} onChange={(e) => setBio(e.target.value)} className="w-full bg-secondary border border-border rounded-xl px-3 py-2.5 text-sm text-foreground resize-none focus:outline-none focus:ring-1 focus:ring-primary" rows={3} placeholder={t("bioPlaceholder")} />
@@ -290,15 +334,12 @@ export default function Profile() {
               <Input value={location} onChange={(e) => setLocation(e.target.value)} placeholder="East Austin, TX" className="bg-secondary border-border text-sm h-9" />
             </div>
 
-            {/* Worker experience fields */}
             {isWorker && (
               <>
                 <div className="bg-card rounded-2xl border border-border p-4 space-y-3">
                   <p className="text-xs font-bold text-muted-foreground uppercase tracking-wider">
                     {isSpanish ? "Experiencia" : "Experience"}
                   </p>
-
-                  {/* Years of experience */}
                   <div className="flex items-center gap-3">
                     <label className="text-sm text-muted-foreground whitespace-nowrap">
                       {isSpanish ? "Años de experiencia" : "Years of experience"}
@@ -312,8 +353,6 @@ export default function Profile() {
                       className="w-20 bg-secondary border border-border rounded-xl px-3 py-2 text-sm text-foreground text-center focus:outline-none focus:ring-1 focus:ring-primary"
                     />
                   </div>
-
-                  {/* Primary specialty */}
                   <p className="text-xs font-bold text-muted-foreground uppercase tracking-wider mt-1">
                     {isSpanish ? "Especialidad Principal" : "Primary Specialty"}
                   </p>
@@ -327,33 +366,27 @@ export default function Profile() {
                   </select>
                 </div>
 
-                {/* Past jobs builder */}
                 <div className="bg-card rounded-2xl border border-border p-4 space-y-3">
                   <div className="flex items-center justify-between">
                     <p className="text-xs font-bold text-muted-foreground uppercase tracking-wider">
                       {isSpanish ? "Trabajos Anteriores" : "Past Jobs"}
                     </p>
-                    <button
-                      onClick={addPastJob}
-                      className="flex items-center gap-1 text-xs font-bold text-primary"
-                    >
+                    <button onClick={addPastJob} className="flex items-center gap-1 text-xs font-bold text-primary">
                       <Plus size={12} />{isSpanish ? "Agregar" : "Add"}
                     </button>
                   </div>
-
                   {pastJobs.length === 0 && (
                     <p className="text-xs text-muted-foreground italic">
                       {isSpanish ? "Agrega tus trabajos anteriores para que los empleadores puedan verte." : "Add your past jobs so employers can see your experience."}
                     </p>
                   )}
-
                   {pastJobs.map((job, i) => (
                     <div key={i} className="flex gap-2 items-start">
                       <div className="flex-1 space-y-1.5">
                         <Input
                           value={job.place}
                           onChange={(e) => updatePastJob(i, "place", e.target.value)}
-                          placeholder={isSpanish ? "Nombre del lugar (ej. Loro Asian Smokehouse)" : "Place name (e.g. Loro Asian Smokehouse)"}
+                          placeholder={isSpanish ? "Nombre del lugar" : "Place name"}
                           className="bg-secondary border-border text-sm h-9"
                         />
                         <select
@@ -365,17 +398,13 @@ export default function Profile() {
                           {ROLE_OPTIONS.map((r) => <option key={r} value={r}>{r}</option>)}
                         </select>
                       </div>
-                      <button
-                        onClick={() => removePastJob(i)}
-                        className="mt-1 w-8 h-8 rounded-lg bg-destructive/10 flex items-center justify-center flex-shrink-0"
-                      >
+                      <button onClick={() => removePastJob(i)} className="mt-1 w-8 h-8 rounded-lg bg-destructive/10 flex items-center justify-center flex-shrink-0">
                         <Trash2 size={13} className="text-destructive" />
                       </button>
                     </div>
                   ))}
                 </div>
 
-                {/* Skills & Roles */}
                 <div className="bg-card rounded-2xl border border-border p-4 space-y-3">
                   <p className="text-xs font-bold text-muted-foreground uppercase tracking-wider">
                     {isSpanish ? "Habilidades y Roles" : "Skills & Roles"}
@@ -398,10 +427,9 @@ export default function Profile() {
           </div>
         )}
 
-        {/* ── Skills display (view mode) ─────────────────────────────────── */}
+        {/* Skills display (view mode) */}
         {!editing && (skills.length > 0 || displayPastJobs.length > 0 || profileYearsExp > 0) && (
           <div className="px-4 mt-4 space-y-3">
-            {/* Experience summary card */}
             {isWorker && (profileYearsExp > 0 || profileSpecialty || displayPastJobs.length > 0) && (
               <div className="bg-card rounded-2xl border border-border p-4">
                 <div className="flex items-center gap-2 mb-3">
@@ -436,8 +464,6 @@ export default function Profile() {
                 )}
               </div>
             )}
-
-            {/* Skills chips */}
             {skills.length > 0 && (
               <div className="bg-card rounded-2xl border border-border p-4">
                 <p className="text-xs font-bold text-muted-foreground uppercase tracking-wider mb-3">
@@ -455,7 +481,7 @@ export default function Profile() {
           </div>
         )}
 
-        {/* ── Location ──────────────────────────────────────────────────── */}
+        {/* Location */}
         {!editing && (profile?.location || profile?.city) && (
           <div className="px-4 mt-3">
             <div className="bg-card rounded-2xl border border-border p-4">
@@ -467,30 +493,10 @@ export default function Profile() {
           </div>
         )}
 
-        {/* ── Recent Reviews ───────────────────────────────────────── */}
+        {/* Recent Reviews */}
         {profile?.id && <RecentReviews userId={profile.id} onViewAll={() => navigate("/ratings")} />}
 
-        {/* ── Account type ───────────────────────────────────────────── */}
-        <div className="px-4 mt-3">
-          <div className="bg-card rounded-2xl border border-border overflow-hidden">
-            <p className="text-xs font-bold text-muted-foreground uppercase tracking-wider px-4 pt-4 pb-2">Switch Role</p>
-            {(["worker", "employer", "both"] as const).map((type) => (
-              <button key={type} onClick={() => setRoleMutation.mutate({ userType: type })}
-                className={cn("w-full flex items-center justify-between px-4 py-3 border-t border-border transition-colors",
-                  profile?.userType === type ? "bg-primary/10" : "hover:bg-secondary"
-                )}>
-                <span className="text-sm font-medium text-foreground capitalize">
-                  {type === "worker" ? "Worker only" : type === "employer" ? "Employer only" : "Both roles"}
-                </span>
-                {profile?.userType === type
-                  ? <Check size={14} className="text-primary" strokeWidth={2.5} />
-                  : <ChevronRight size={14} className="text-muted-foreground" />}
-              </button>
-            ))}
-          </div>
-        </div>
-
-        {/* ── Employer credits ──────────────────────────────────────────── */}
+        {/* Employer credits */}
         {isEmployer && (
           <div className="px-4 mt-3">
             <div className="bg-card rounded-2xl border border-border p-4">
@@ -507,7 +513,7 @@ export default function Profile() {
           </div>
         )}
 
-        {/* ── Worker compliance ───────────────────────────────────── */}
+        {/* Worker compliance */}
         {isWorker && (
           <div className="px-4 mt-3">
             <div className="bg-card rounded-2xl border border-border overflow-hidden">
@@ -542,7 +548,7 @@ export default function Profile() {
           </div>
         )}
 
-        {/* ── Logout ────────────────────────────────────────────────────── */}
+        {/* Logout */}
         <div className="px-4 mt-3 pb-6">
           <button onClick={logout} className="w-full flex items-center justify-center gap-2 h-12 rounded-2xl border border-destructive/30 text-destructive text-sm font-semibold hover:bg-destructive/10 transition-colors">
             <LogOut size={15} />Sign Out

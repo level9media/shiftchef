@@ -9,7 +9,7 @@ type Step = "phone" | "code" | "name";
 
 export default function Login() {
   const [, navigate] = useLocation();
-  const { isAuthenticated, loading, refresh } = useAuth();
+  const { isAuthenticated, loading, refresh, user } = useAuth();
   const [step, setStep] = useState<Step>("phone");
   const [phone, setPhone] = useState("");
   const [code, setCode] = useState("");
@@ -21,13 +21,28 @@ export default function Login() {
   const [confirmationResult, setConfirmationResult] = useState<any>(null);
   const [savedIdToken, setSavedIdToken] = useState<string>("");
   const recaptchaRef = useRef<any>(null);
+  const recaptchaContainerRef = useRef<HTMLDivElement>(null);
   const base = getApiBase();
 
   useEffect(() => {
-    if (!loading && isAuthenticated) {
-      navigate("/onboarding");
+    if (!loading && isAuthenticated && user) {
+      if (!user.userType) {
+        navigate("/onboarding");
+      } else {
+        navigate("/feed");
+      }
     }
-  }, [isAuthenticated, loading]);
+  }, [isAuthenticated, loading, user]);
+
+  // Cleanup reCAPTCHA on unmount
+  useEffect(() => {
+    return () => {
+      if (recaptchaRef.current) {
+        try { recaptchaRef.current.clear(); } catch {}
+        recaptchaRef.current = null;
+      }
+    };
+  }, []);
 
   const formatPhone = (val: string) => {
     const digits = val.replace(/\D/g, "");
@@ -38,27 +53,37 @@ export default function Login() {
 
   const getE164 = (val: string) => `+1${val.replace(/\D/g, "")}`;
 
+  const clearRecaptcha = () => {
+    if (recaptchaRef.current) {
+      try { recaptchaRef.current.clear(); } catch {}
+      recaptchaRef.current = null;
+    }
+    // Clear the container DOM
+    if (recaptchaContainerRef.current) {
+      recaptchaContainerRef.current.innerHTML = "";
+    }
+  };
+
   const handleSendCode = async () => {
     const digits = phone.replace(/\D/g, "");
     if (digits.length !== 10) { setError("Please enter a valid 10-digit phone number"); return; }
     setError("");
     setSending(true);
     try {
+      clearRecaptcha();
       const { auth, RecaptchaVerifier, signInWithPhoneNumber } = await loadFirebase();
-      if (!recaptchaRef.current) {
-        recaptchaRef.current = new RecaptchaVerifier(auth, "recaptcha-container", {
-          size: "invisible",
-          callback: () => {},
-        });
-      }
+      recaptchaRef.current = new RecaptchaVerifier(auth, recaptchaContainerRef.current!, {
+        size: "invisible",
+        callback: () => {},
+      });
       const result = await signInWithPhoneNumber(auth, getE164(phone), recaptchaRef.current);
       setConfirmationResult(result);
       setStep("code");
-    if (recaptchaRef.current) { recaptchaRef.current.clear(); recaptchaRef.current = null; }
+      clearRecaptcha();
     } catch (err: any) {
       console.error("[Login] Send error:", err);
       setError("Failed to send code. Please try again.");
-      recaptchaRef.current = null;
+      clearRecaptcha();
     } finally {
       setSending(false);
     }
@@ -87,7 +112,11 @@ export default function Login() {
         setStep("name");
       } else {
         await refresh();
-        navigate("/onboarding");
+        if (!data.user?.userType) {
+          navigate("/onboarding");
+        } else {
+          navigate("/feed");
+        }
       }
     } catch (err: any) {
       console.error("[Login] Verify error:", err);
@@ -102,7 +131,6 @@ export default function Login() {
     setError("");
     setSaving(true);
     try {
-      // Re-call firebase auth with name included — this updates the user record
       await fetch(`${base}/api/auth/firebase`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -113,7 +141,6 @@ export default function Login() {
           phone: getE164(phone),
         }),
       });
-
       await refresh();
       navigate("/onboarding");
     } catch (err) {
@@ -135,7 +162,7 @@ export default function Login() {
 
   return (
     <div className="min-h-screen bg-background flex flex-col" style={{ paddingTop: "var(--sat)" }}>
-      <div id="recaptcha-container" />
+      <div ref={recaptchaContainerRef} id="recaptcha-container" />
 
       <div className="flex items-center px-5 pt-4 pb-2">
         <div className="flex items-center gap-2">
@@ -149,7 +176,6 @@ export default function Login() {
       </div>
 
       <div className="flex-1 flex flex-col px-6 pt-6 pb-10 max-w-sm mx-auto w-full">
-
         {step === "phone" && (
           <>
             <div className="mb-8">
@@ -202,7 +228,7 @@ export default function Login() {
 
         {step === "code" && (
           <>
-            <button onClick={() => { setStep("phone"); setCode(""); setError(""); }} className="flex items-center gap-2 text-muted-foreground mb-8 text-sm">
+            <button onClick={() => { setStep("phone"); setCode(""); setError(""); clearRecaptcha(); }} className="flex items-center gap-2 text-muted-foreground mb-8 text-sm">
               <ArrowLeft size={16} /> Back
             </button>
             <div className="mb-8">
@@ -227,7 +253,7 @@ export default function Login() {
               >
                 {verifying ? <div className="w-5 h-5 border-2 border-white/40 border-t-white rounded-full animate-spin" /> : <>Verify <ArrowRight size={18} /></>}
               </button>
-              <button onClick={() => { setStep("phone"); setCode(""); setError(""); recaptchaRef.current = null; }} className="w-full text-center text-sm text-muted-foreground py-2">
+              <button onClick={() => { setStep("phone"); setCode(""); setError(""); clearRecaptcha(); }} className="w-full text-center text-sm text-muted-foreground py-2">
                 Didn't get a code? Go back
               </button>
             </div>

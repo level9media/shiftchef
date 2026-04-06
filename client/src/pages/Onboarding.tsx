@@ -4,12 +4,12 @@ import { trpc } from "@/lib/trpc";
 import { Button } from "@/components/ui/button";
 import { useLocation } from "wouter";
 import { useEffect, useState } from "react";
-import { ChefHat, Briefcase, Users, ArrowRight, CheckCircle2 } from "lucide-react";
+import { ChefHat, Briefcase, ArrowRight, CheckCircle2 } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { useLanguage } from "@/contexts/LanguageContext";
 
-type UserType = "worker" | "employer" | "both";
+type UserType = "worker" | "employer";
 
 export default function Onboarding() {
   const { isAuthenticated, loading } = useAuth();
@@ -42,24 +42,12 @@ export default function Onboarding() {
         ? ["🎁 Primera publicación GRATIS", "Calificaciones de trabajadores verificados", "Pagos seguros en custodia"]
         : ["🎁 First shift post is FREE", "Verified worker ratings", "Secure escrow payments"],
     },
-    {
-      value: "both" as UserType,
-      icon: <Users size={26} strokeWidth={1.8} />,
-      label: isSpanish ? "Ambos" : "Both",
-      desc: isSpanish ? "Cambia entre contratar y trabajar en cualquier momento" : "Switch between hiring and working anytime",
-      color: "oklch(0.55 0.15 155 / 0.12)",
-      borderActive: "oklch(0.55 0.15 155 / 0.5)",
-      iconColor: "text-emerald-400",
-      perks: isSpanish
-        ? ["Acceso completo como trabajador", "Acceso completo como empleador", "Cambia de rol en cualquier momento"]
-        : ["Full worker access", "Full employer access", "Switch roles anytime"],
-    },
   ];
 
   const setRole = trpc.profile.setRole.useMutation({
     onSuccess: (_data, vars) => {
       toast.success(isSpanish ? "¡Bienvenido a ShiftChef!" : "Welcome to ShiftChef!");
-      if (vars.userType === "employer" || vars.userType === "both") {
+      if (vars.userType === "employer") {
         navigate("/employer-onboarding");
       } else {
         navigate("/feed");
@@ -100,7 +88,7 @@ export default function Onboarding() {
             {isSpanish ? "¿Cómo usarás ShiftChef?" : "How will you use ShiftChef?"}
           </h1>
           <p className="text-muted-foreground text-sm mb-4">
-            {isSpanish ? "Siempre puedes cambiar desde tu perfil." : "You can always switch later from your profile."}
+            {isSpanish ? "Elige tu rol para comenzar." : "Choose your role to get started."}
           </p>
 
           {/* Promo banners */}

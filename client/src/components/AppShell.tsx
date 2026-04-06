@@ -1,6 +1,6 @@
 import { useAuth } from "@/_core/hooks/useAuth";
 import { Link, useLocation } from "wouter";
-import { Zap, Briefcase, User, DollarSign, Star, Bell, ChefHat, ShieldCheck, CheckCircle, X, BriefcaseBusiness, Languages, BarChart3 } from "lucide-react";
+import { Zap, Briefcase, User, DollarSign, Star, Bell, ChefHat, CheckCircle, X, BarChart3, Map } from "lucide-react";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { cn } from "@/lib/utils";
 import { trpc } from "@/lib/trpc";
@@ -16,8 +16,6 @@ interface NavItem {
   employerOnly?: boolean;
 }
 
-// In-app notification store (client-side, session-based)
-// We build notifications from real data: pending applications, pending ratings, verification status
 function useInAppNotifications(isAuthenticated: boolean) {
   const { data: profile } = trpc.profile.get.useQuery(undefined, { enabled: isAuthenticated, retry: false });
   const { data: myApps } = trpc.applications.myApplications.useQuery(undefined, { enabled: isAuthenticated, retry: false });
@@ -25,7 +23,6 @@ function useInAppNotifications(isAuthenticated: boolean) {
 
   const notifications: Array<{ id: string; icon: string; title: string; body: string; time: Date; type: string }> = [];
 
-  // Accepted applications
   if (myApps) {
     const accepted = myApps.filter((a: any) => a.status === "accepted");
     accepted.forEach((a: any) => {
@@ -51,7 +48,6 @@ function useInAppNotifications(isAuthenticated: boolean) {
     });
   }
 
-  // Pending ratings
   if (pendingRatings && pendingRatings.length > 0) {
     notifications.push({
       id: "pending-ratings",
@@ -63,7 +59,6 @@ function useInAppNotifications(isAuthenticated: boolean) {
     });
   }
 
-  // Verification status
   if (profile?.verificationStatus === "pending") {
     notifications.push({
       id: "verif-pending",
@@ -95,7 +90,6 @@ function useInAppNotifications(isAuthenticated: boolean) {
     });
   }
 
-  // Contract not signed
   if (profile?.userType === "worker" && !profile?.contractSigned) {
     notifications.push({
       id: "contract-unsigned",
@@ -107,7 +101,6 @@ function useInAppNotifications(isAuthenticated: boolean) {
     });
   }
 
-  // Sort by time descending
   notifications.sort((a, b) => b.time.getTime() - a.time.getTime());
   return notifications;
 }
@@ -129,7 +122,6 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
   const visibleNotifications = allNotifications.filter((n) => !dismissed.has(n.id));
   const unreadCount = visibleNotifications.length;
 
-  // Close bell dropdown on outside click
   useEffect(() => {
     function handleClick(e: MouseEvent) {
       if (bellRef.current && !bellRef.current.contains(e.target as Node)) {
@@ -140,21 +132,30 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
     return () => document.removeEventListener("mousedown", handleClick);
   }, [bellOpen]);
 
-  const isWorker = !profile?.userType || profile.userType === "worker" || profile.userType === "both";
-  const isEmployer = profile?.userType === "employer" || profile?.userType === "both";
+  const isWorker = !profile?.userType || profile.userType === "worker";
+  const isEmployer = profile?.userType === "employer";
 
   const navItems: NavItem[] = [
     {
       href: "/feed",
       icon: <Zap size={22} strokeWidth={1.8} />,
       activeIcon: <Zap size={22} strokeWidth={2.5} />,
-      label: isSpanish ? "En Vivo" : "Live",
+      label: "Feed",
+      workerOnly: true,
+    },
+    {
+      href: "/map",
+      icon: <Map size={22} strokeWidth={1.8} />,
+      activeIcon: <Map size={22} strokeWidth={2.5} />,
+      label: "Map",
+      workerOnly: true,
     },
     {
       href: "/applications",
       icon: <Briefcase size={22} strokeWidth={1.8} />,
       activeIcon: <Briefcase size={22} strokeWidth={2.5} />,
       label: isSpanish ? "Trabajos" : "Jobs",
+      workerOnly: true,
     },
     {
       href: "/earnings",
@@ -167,14 +168,15 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
       href: "/employer-dashboard",
       icon: <BarChart3 size={22} strokeWidth={1.8} />,
       activeIcon: <BarChart3 size={22} strokeWidth={2.5} />,
-      label: isSpanish ? "Historial" : "History",
+      label: isSpanish ? "Turnos" : "Shifts",
       employerOnly: true,
     },
     {
-      href: "/ratings",
-      icon: <Star size={22} strokeWidth={1.8} />,
-      activeIcon: <Star size={22} strokeWidth={2.5} />,
-      label: t("ratings"),
+      href: "/feed",
+      icon: <Zap size={22} strokeWidth={1.8} />,
+      activeIcon: <Zap size={22} strokeWidth={2.5} />,
+      label: "Feed",
+      employerOnly: true,
     },
     {
       href: "/profile",
@@ -190,7 +192,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
     return true;
   });
 
-  const isAuthPage = location === "/" || location === "/onboarding";
+  const isAuthPage = location === "/" || location === "/onboarding" || location === "/job-posted";
 
   const notifTypeColor: Record<string, string> = {
     success: "border-l-emerald-500",
@@ -201,7 +203,6 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
 
   return (
     <div className="min-h-screen bg-background flex flex-col">
-      {/* ── Top header ──────────────────────────────────────────────────── */}
       {!isAuthPage && (
         <header
           className="sticky top-0 z-40 border-b border-border"
@@ -213,7 +214,6 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
           }}
         >
           <div className="flex items-center justify-between px-4 h-14">
-            {/* Logo */}
             <Link href="/feed">
               <div className="flex items-center gap-2">
                 <div className="w-8 h-8 rounded-xl bg-primary flex items-center justify-center">
@@ -225,18 +225,12 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
               </div>
             </Link>
 
-            {/* Right: language toggle + role badge + bell + avatar */}
             <div className="flex items-center gap-2.5">
-              {/* Language toggle with flag icon */}
               <button
                 onClick={() => setLanguage(language === "en" ? "es" : "en")}
                 className="flex items-center gap-1.5 text-[11px] font-bold px-2.5 py-1 rounded-full bg-secondary border border-border text-muted-foreground hover:text-foreground hover:border-primary/50 transition-all"
-                title={language === "en" ? "Cambiar a Español" : "Switch to English"}
               >
-                {/* Show the flag of the CURRENT language (tap to switch) */}
-                <span className="text-base leading-none" aria-hidden="true">
-                  {language === "en" ? "🇺🇸" : "🇲🇽"}
-                </span>
+                <span className="text-base leading-none">{language === "en" ? "🇺🇸" : "🇲🇽"}</span>
                 <span className="text-[10px]">{language === "en" ? "EN" : "ES"}</span>
               </button>
               {profile && (
@@ -245,7 +239,6 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
                 </span>
               )}
 
-              {/* Notification bell with dropdown */}
               <div className="relative" ref={bellRef}>
                 <button
                   onClick={() => setBellOpen((v) => !v)}
@@ -259,7 +252,6 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
                   )}
                 </button>
 
-                {/* Dropdown panel */}
                 {bellOpen && (
                   <div
                     className="absolute right-0 top-11 w-80 max-h-96 overflow-y-auto rounded-2xl border border-border shadow-2xl z-50"
@@ -313,15 +305,10 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
                 )}
               </div>
 
-              {/* Avatar */}
               {profile && (
                 <Link href="/profile">
                   {profile.profileImage ? (
-                    <img
-                      src={profile.profileImage}
-                      alt={profile.name ?? ""}
-                      className="w-9 h-9 rounded-xl object-cover border-2 border-border"
-                    />
+                    <img src={profile.profileImage} alt={profile.name ?? ""} className="w-9 h-9 rounded-xl object-cover border-2 border-border" />
                   ) : (
                     <div className="w-9 h-9 rounded-xl bg-primary flex items-center justify-center text-primary-foreground text-sm font-bold">
                       {(profile.name ?? "U")[0].toUpperCase()}
@@ -334,12 +321,10 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
         </header>
       )}
 
-      {/* ── Main content ────────────────────────────────────────────────── */}
       <main className={cn("flex-1", !isAuthPage && "pb-safe")}>
         {children}
       </main>
 
-      {/* ── Bottom navigation ───────────────────────────────────────────── */}
       {!isAuthPage && isAuthenticated && (
         <nav
           className="fixed bottom-0 left-0 right-0 z-50 border-t border-border bottom-nav-safe"
@@ -353,7 +338,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
             {visibleNav.map((item) => {
               const isActive = location === item.href || location.startsWith(item.href + "/");
               return (
-                <Link key={item.href} href={item.href} className="flex-1">
+                <Link key={item.href + item.label} href={item.href} className="flex-1">
                   <div
                     className={cn(
                       "flex flex-col items-center justify-center gap-0.5 h-full rounded-xl mx-0.5 transition-all duration-150",

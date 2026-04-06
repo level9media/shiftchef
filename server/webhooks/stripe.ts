@@ -16,11 +16,6 @@ import {
   getJobById,
 } from "../db";
 
-/**
- * Register Stripe webhook at POST /api/stripe/webhook
- * MUST be registered BEFORE express.json() middleware so raw body is preserved.
- * Always returns HTTP 200 with { verified: true } — Stripe requires this.
- */
 export function registerStripeWebhook(app: Express) {
   app.post(
     "/api/stripe/webhook",
@@ -29,7 +24,6 @@ export function registerStripeWebhook(app: Express) {
       const sig = req.headers["stripe-signature"] as string | undefined;
       const rawBody = req.body as Buffer;
 
-      // ── Parse body ───────────────────────────────────────────────────────
       let parsed: any;
       try {
         parsed = JSON.parse(rawBody.toString("utf8"));
@@ -38,13 +32,11 @@ export function registerStripeWebhook(app: Express) {
         return res.status(200).json({ verified: true });
       }
 
-      // ── Test event shortcut (Stripe CLI / dashboard test events) ────────
       if (typeof parsed?.id === "string" && parsed.id.startsWith("evt_test_")) {
         console.log("[Webhook] Test event detected:", parsed.id);
         return res.status(200).json({ verified: true });
       }
 
-      // ── Signature verification ───────────────────────────────────────────
       const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET;
       let event: any = parsed;
 
@@ -54,14 +46,12 @@ export function registerStripeWebhook(app: Express) {
           event = stripe.webhooks.constructEvent(rawBody, sig, webhookSecret);
         } catch (err: any) {
           console.error("[Webhook] Signature verification failed:", err.message);
-          // Return 200 even on failure — prevents Stripe retry loops
           return res.status(200).json({ verified: true });
         }
       } else {
         console.warn("[Webhook] No webhook secret or signature — processing without verification");
       }
 
-      // ── Respond immediately, process async ──────────────────────────────
       res.status(200).json({ verified: true });
 
       console.log(`[Webhook] Processing: ${event.type} (${event.id})`);
@@ -76,16 +66,53 @@ async function handleStripeEvent(event: any) {
   const obj = event.data?.object ?? {};
 
   switch (event.type) {
+
+    // ── Stripe Identity: verification session completed ───────────────────
+    case "identity.verification_session.verified": {
+      const userId = parseInt(obj.metadata?.userId ?? "0");
+      if (!userId) {
+        console.warn("[Webhook] identity.verified — no userId in metadata");
+        break;
+      }
+      const { getDb } = await import("../db");
+      const { users } = await import("../../drizzle/schema");
+      const { eq } = await import("drizzle-orm");
+      const db = await getDb();
+      if (!db) break;
+      await db.update(users).set({
+        verificationStatus: "verified",
+        verifiedAt: new Date(),
+      }).where(eq(users.id, userId));
+      console.log(`[Webhook] ✅ Stripe Identity verified for user ${userId}`);
+      break;
+    }
+
+    // ── Stripe Identity: verification failed ─────────────────────────────
+    case "identity.verification_session.requires_input": {
+      const userId = parseInt(obj.metadata?.userId ?? "0");
+      if (!userId) break;
+      const { getDb } = await import("../db");
+      const { users } = await import("../../drizzle/schema");
+      const { eq } = await import("drizzle-orm");
+      const db = await getDb();
+      if (!db) break;
+      const reason = obj.last_error?.reason ?? "Verification could not be completed";
+      await db.update(users).set({
+        verificationStatus: "rejected",
+        verificationNote: reason,
+      }).where(eq(users.id, userId));
+      console.log(`[Webhook] ❌ Stripe Identity failed for user ${userId}: ${reason}`);
+      break;
+    }
+
     // ── Job posting credits purchased OR shift payment authorized ─────────
     case "checkout.session.completed": {
       const meta = obj.metadata ?? {};
 
       if (meta.type === "shift_escrow") {
-        // Employer accepted a worker and paid escrow — accept the application
         const jobId = parseInt(meta.jobId ?? "0");
         const applicationId = parseInt(meta.applicationId ?? "0");
         if (jobId && applicationId) {
-          // Mark payment as held
           const payment = await getPaymentByJob(jobId);
           if (payment && payment.status === "pending") {
             await updatePayment(payment.id, {
@@ -93,21 +120,17 @@ async function handleStripeEvent(event: any) {
               stripePaymentIntentId: obj.payment_intent ?? null,
             });
           }
-          // Accept the chosen application
           const app = await getApplicationById(applicationId);
           if (app && app.status === "pending") {
             await updateApplication(applicationId, { status: "accepted" });
-            // Reject all other pending applications for this job
             const allApps = await getApplicationsByJob(jobId);
             for (const other of allApps) {
               if (other.id !== applicationId && other.status === "pending") {
                 await updateApplication(other.id, { status: "rejected" });
               }
             }
-            // Mark job as filled
             await updateJob(jobId, { status: "filled", acceptedWorkerId: app.workerId, paymentStatus: "held" });
             console.log(`[Webhook] ✅ Shift escrow held & worker accepted | job ${jobId} | app ${applicationId}`);
-            // Send rich hire notification
             const job = await getJobById(jobId);
             const worker = await getUserById(app.workerId);
             const employer = job ? await getUserById(job.employerId) : null;
@@ -132,7 +155,6 @@ async function handleStripeEvent(event: any) {
           }
         }
       } else if (meta.type === "shift_payment") {
-        // Legacy: Employer paid for a shift — mark payment as held in escrow
         const jobId = parseInt(meta.jobId ?? "0");
         if (jobId) {
           const payment = await getPaymentByJob(jobId);
@@ -145,7 +167,6 @@ async function handleStripeEvent(event: any) {
           }
         }
       } else if (meta.tier && meta.userId) {
-        // Employer bought posting credits
         const userId = parseInt(meta.userId);
         const tier = meta.tier as "single" | "bundle3" | "subscription";
         const credits = parseInt(meta.credits ?? "1");
@@ -167,7 +188,6 @@ async function handleStripeEvent(event: any) {
           console.log(`[Webhook] ✅ Credits unlocked: +${credits} for user ${userId} (total: ${newTotal})`);
         }
 
-        // Audit log in postCredits table
         await addPostCredits({
           employerId: userId,
           creditType: tier,
@@ -179,42 +199,28 @@ async function handleStripeEvent(event: any) {
       break;
     }
 
-    // ── Monthly subscription invoice paid (renewal) ───────────────────────
     case "invoice.paid": {
       const customerId = obj.customer as string;
       if (!customerId) break;
-
-      // Renew subscription: find user by Stripe customer ID and refresh credits
       const user = await getUserByStripeCustomerId(customerId);
       if (user) {
-        await updateUser(user.id, {
-          subscriptionStatus: "active",
-          postsRemaining: 999,
-        });
-        console.log(`[Webhook] ✅ Subscription renewed for user ${user.id} (customer: ${customerId})`);
-      } else {
-        console.warn(`[Webhook] ⚠️ No user found for Stripe customer ${customerId} on invoice.paid`);
+        await updateUser(user.id, { subscriptionStatus: "active", postsRemaining: 999 });
+        console.log(`[Webhook] ✅ Subscription renewed for user ${user.id}`);
       }
       break;
     }
 
-    // ── Subscription cancelled ────────────────────────────────────────────
     case "customer.subscription.deleted": {
       const customerId = obj.customer as string;
       if (!customerId) break;
-
       const user = await getUserByStripeCustomerId(customerId);
       if (user) {
-        await updateUser(user.id, {
-          subscriptionStatus: "cancelled",
-          postsRemaining: 0,
-        });
+        await updateUser(user.id, { subscriptionStatus: "cancelled", postsRemaining: 0 });
         console.log(`[Webhook] ✅ Subscription cancelled for user ${user.id}`);
       }
       break;
     }
 
-    // ── PaymentIntent authorized (manual capture — shift escrow) ─────────
     case "payment_intent.amount_capturable_updated": {
       const jobId = parseInt(obj.metadata?.jobId ?? "0");
       if (jobId) {
@@ -227,13 +233,10 @@ async function handleStripeEvent(event: any) {
       break;
     }
 
-    // ── Stripe Connect: account onboarding completed ─────────────────────
     case "account.updated": {
       const accountId = obj.id as string;
       if (!accountId) break;
-      // Find user with this stripeAccountId and mark onboarding complete
       if (obj.details_submitted && obj.charges_enabled) {
-        // Query users table for this stripeAccountId
         const { getDb } = await import("../db");
         const { users } = await import("../../drizzle/schema");
         const { eq } = await import("drizzle-orm");
@@ -242,22 +245,17 @@ async function handleStripeEvent(event: any) {
         const [user] = await db.select().from(users).where(eq(users.stripeAccountId, accountId)).limit(1);
         if (user && !user.stripeOnboardingComplete) {
           await updateUser(user.id, { stripeOnboardingComplete: true });
-          console.log(`[Webhook] ✅ Stripe Connect onboarding complete for user ${user.id} (account: ${accountId})`);
+          console.log(`[Webhook] ✅ Stripe Connect onboarding complete for user ${user.id}`);
         }
       }
       break;
     }
 
-    // ── Transfer to worker confirmed ──────────────────────────────────────
     case "transfer.created": {
       const jobId = parseInt(obj.metadata?.jobId ?? "0");
       const workerId = parseInt(obj.metadata?.workerId ?? "0");
       const amount = obj.amount ?? 0;
-      console.log(
-        `[Webhook] ✅ Transfer confirmed | job: ${jobId} | worker: ${workerId} | $${(amount / 100).toFixed(2)} | transfer: ${obj.id}`
-      );
-      // Payment status already updated to "released" by releasePayment procedure
-      // This event confirms the transfer reached Stripe — no additional DB update needed
+      console.log(`[Webhook] ✅ Transfer confirmed | job: ${jobId} | worker: ${workerId} | $${(amount / 100).toFixed(2)} | transfer: ${obj.id}`);
       break;
     }
 

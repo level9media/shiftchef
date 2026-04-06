@@ -101,7 +101,7 @@ export default function Feed() {
     { refetchInterval: 60000 }
   );
 
-  const applyMutation = trpc.applications.apply.useMutation({
+  const applyMutation = trpc.applications.applyToJob.useMutation({
     onSuccess: () => {
       toast.success("Application sent!");
       setSelectedJob(null);

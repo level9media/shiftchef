@@ -4,7 +4,7 @@ import { trpc } from "@/lib/trpc";
 import { Button } from "@/components/ui/button";
 import AppShell from "@/components/AppShell";
 import { useLocation } from "wouter";
-import { useState, useEffect, useRef } from "react";
+import { useState, useRef } from "react";
 import { ArrowLeft, Check, Zap, Crown, Package, MapPin } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
@@ -28,7 +28,6 @@ const CITIES = ["Austin, TX", "Phoenix, AZ", "Mesa, AZ", "Houston, TX", "Dallas,
 
 type Step = "pricing" | "form";
 
-// ─── Mapbox geocoder loader ───────────────────────────────────────────────────
 let geocoderLoaded = false;
 let geocoderLoading = false;
 const geocoderCallbacks: (() => void)[] = [];
@@ -38,12 +37,10 @@ function loadGeocoder(cb: () => void) {
   geocoderCallbacks.push(cb);
   if (geocoderLoading) return;
   geocoderLoading = true;
-
   const css = document.createElement("link");
   css.rel = "stylesheet";
   css.href = "https://api.mapbox.com/mapbox-gl-js/v3.3.0/mapbox-gl.css";
   document.head.appendChild(css);
-
   const script = document.createElement("script");
   script.src = "https://api.mapbox.com/mapbox-gl-js/v3.3.0/mapbox-gl.js";
   script.onload = () => {
@@ -54,7 +51,6 @@ function loadGeocoder(cb: () => void) {
   document.head.appendChild(script);
 }
 
-// ─── Address Autocomplete ─────────────────────────────────────────────────────
 function AddressAutocomplete({ value, onChange, onSelect, placeholder }: {
   value: string;
   onChange: (v: string) => void;
@@ -123,7 +119,6 @@ function AddressAutocomplete({ value, onChange, onSelect, placeholder }: {
   );
 }
 
-// ─── Main Component ───────────────────────────────────────────────────────────
 export default function PostJob() {
   const { isAuthenticated } = useAuth();
   const [, navigate] = useLocation();
@@ -155,7 +150,7 @@ export default function PostJob() {
     onSuccess: () => {
       toast.success(t("shiftIsLive"));
       utils.jobs.myJobs.invalidate();
-      navigate("/applications");
+      navigate("/job-posted");
     },
     onError: (e) => toast.error(e.message),
   });
@@ -223,7 +218,6 @@ export default function PostJob() {
     <AppShell>
       <SEOHead title="Post a Shift" description="Post a hospitality shift on ShiftChef. Reach verified Austin cooks, servers, bartenders and kitchen staff fast." canonicalPath="/post-job" />
       <div className="max-w-lg mx-auto px-4 py-4 pb-10">
-        {/* Header */}
         <div className="flex items-center gap-3 mb-6">
           <button
             onClick={() => step === "form" ? setStep("pricing") : navigate("/feed")}
@@ -239,7 +233,6 @@ export default function PostJob() {
           </div>
         </div>
 
-        {/* ── Step 1: Pricing ───────────────────────────────────────────── */}
         {step === "pricing" && (
           <div className="space-y-3">
             {hasCredits && (
@@ -273,7 +266,6 @@ export default function PostJob() {
               </div>
             )}
 
-            {/* Coupon */}
             <div className="bg-card border border-border rounded-2xl p-4">
               <p className="text-xs font-bold text-muted-foreground uppercase tracking-wider mb-3">{t("couponCode")}</p>
               {couponApplied ? (
@@ -340,10 +332,8 @@ export default function PostJob() {
           </div>
         )}
 
-        {/* ── Step 2: Form ──────────────────────────────────────────────── */}
         {step === "form" && (
           <div className="space-y-4">
-            {/* Role picker */}
             <div>
               <p className="text-xs font-bold text-muted-foreground uppercase tracking-wider mb-2">{t("roleNeeded")} *</p>
               <div className="grid grid-cols-3 gap-2">
@@ -365,12 +355,10 @@ export default function PostJob() {
               </div>
             </div>
 
-            {/* Venue name */}
             <FormField label={t("restaurantNameLabel")}>
               <input value={restaurantName} onChange={(e) => setRestaurantName(e.target.value)} placeholder={t("restaurantNamePlaceholder")} className="sc-input" />
             </FormField>
 
-            {/* Pay rate */}
             <FormField label={`${t("hourlyRate")} *`}>
               <div className="relative">
                 <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground text-sm">$</span>
@@ -378,12 +366,10 @@ export default function PostJob() {
               </div>
             </FormField>
 
-            {/* Date */}
             <FormField label={`${t("startDate")} *`}>
               <input type="date" value={startDate} onChange={(e) => setStartDate(e.target.value)} min={new Date().toISOString().split("T")[0]} className="sc-input" />
             </FormField>
 
-            {/* Times */}
             <div className="grid grid-cols-2 gap-3">
               <FormField label={`${t("startTime")} *`}>
                 <input type="time" value={startTime} onChange={(e) => setStartTime(e.target.value)} className="sc-input" />
@@ -393,20 +379,17 @@ export default function PostJob() {
               </FormField>
             </div>
 
-            {/* City */}
             <FormField label={`${t("city")} *`}>
               <select value={city} onChange={(e) => setCity(e.target.value)} className="sc-input">
                 {CITIES.map((c) => <option key={c} value={c}>{c}</option>)}
               </select>
             </FormField>
 
-            {/* Address with autocomplete */}
             <FormField label={`${t("locationLabel")} *`}>
               <AddressAutocomplete
                 value={location}
                 onChange={(v) => {
                   setLocation(v);
-                  // Clear coords if they manually edit after picking
                   setLatitude(null);
                   setLongitude(null);
                 }}
@@ -424,28 +407,15 @@ export default function PostJob() {
               )}
             </FormField>
 
-            {/* Contact info */}
             <div className="grid grid-cols-2 gap-3">
               <FormField label="Contact name">
-                <input
-                  value={contactName}
-                  onChange={(e) => setContactName(e.target.value)}
-                  placeholder="Manager name"
-                  className="sc-input"
-                />
+                <input value={contactName} onChange={(e) => setContactName(e.target.value)} placeholder="Manager name" className="sc-input" />
               </FormField>
               <FormField label="Contact phone">
-                <input
-                  type="tel"
-                  value={contactPhone}
-                  onChange={(e) => setContactPhone(e.target.value)}
-                  placeholder="(512) 555-0100"
-                  className="sc-input"
-                />
+                <input type="tel" value={contactPhone} onChange={(e) => setContactPhone(e.target.value)} placeholder="(512) 555-0100" className="sc-input" />
               </FormField>
             </div>
 
-            {/* Min rating */}
             <FormField label={t("minimumRating")}>
               <select value={minRating} onChange={(e) => setMinRating(e.target.value)} className="sc-input">
                 <option value="0">{t("noRatingReq")}</option>
@@ -456,12 +426,10 @@ export default function PostJob() {
               </select>
             </FormField>
 
-            {/* Description */}
             <FormField label={t("jobDescription")}>
               <textarea value={description} onChange={(e) => setDescription(e.target.value)} placeholder={t("descriptionPlaceholder")} className="sc-input h-24 resize-none" maxLength={2000} />
             </FormField>
 
-            {/* Permanent toggle */}
             <div className="flex items-center justify-between bg-card rounded-2xl p-4 border border-border">
               <div>
                 <p className="font-bold text-sm text-foreground">{t("permanentOpportunity")}</p>
@@ -475,7 +443,6 @@ export default function PostJob() {
               </button>
             </div>
 
-            {/* Pay preview */}
             {preview && (
               <div className="bg-primary/10 border border-primary/30 rounded-2xl p-4">
                 <p className="text-xs font-bold text-primary uppercase tracking-wider mb-2">{t("payPreview")}</p>

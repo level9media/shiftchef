@@ -6,27 +6,19 @@ import { httpBatchLink, TRPCClientError } from "@trpc/client";
 import { createRoot } from "react-dom/client";
 import superjson from "superjson";
 import App from "./App";
-import { getLoginUrl } from "./const";
 import { getApiBase, isNative } from "@/lib/platform";
 import { initDeepLinkHandler } from "@/lib/deepLink";
 import { LanguageProvider } from "@/contexts/LanguageContext";
 import "./index.css";
 
-// Initialize deep link handler for Capacitor iOS OAuth flow
-// Must be called before React renders so cold-start URLs are captured
 initDeepLinkHandler();
 
-// Hide the native splash screen after the React app has mounted
-// launchAutoHide is false so we control exactly when it disappears
 if (isNative()) {
   import('@capacitor/splash-screen').then(({ SplashScreen }) => {
-    // Give React 800ms to render the first meaningful frame before hiding
     setTimeout(() => {
       SplashScreen.hide({ fadeOutDuration: 400 });
     }, 800);
-  }).catch(() => {
-    // Silently ignore if plugin not available
-  });
+  }).catch(() => {});
 }
 
 const queryClient = new QueryClient();
@@ -34,16 +26,10 @@ const queryClient = new QueryClient();
 const redirectToLoginIfUnauthorized = (error: unknown) => {
   if (!(error instanceof TRPCClientError)) return;
   if (typeof window === "undefined") return;
-
   const isUnauthorized = error.message === UNAUTHED_ERR_MSG;
-
   if (!isUnauthorized) return;
-
-  try {
-    window.location.href = getLoginUrl();
-  } catch (err) {
-    console.error("[auth] Failed to redirect to login:", err);
-  }
+  if (window.location.pathname === "/") return;
+  window.location.href = "/";
 };
 
 queryClient.getQueryCache().subscribe(event => {

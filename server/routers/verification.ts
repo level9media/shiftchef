@@ -8,11 +8,10 @@ import { notifyOwner } from "../_core/notification";
 import { storagePut } from "../storage";
 
 export const verificationRouter = router({
-  // Worker submits ID for verification
   submit: protectedProcedure
     .input(z.object({
       legalName: z.string().min(2).max(256),
-      idImageBase64: z.string(), // base64 encoded image
+      idImageBase64: z.string(),
       selfieBase64: z.string().optional(),
       mimeType: z.string().default("image/jpeg"),
     }))
@@ -20,7 +19,6 @@ export const verificationRouter = router({
       const db = await getDb();
       if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "DB unavailable" });
 
-      // Upload ID image to S3
       const idBuffer = Buffer.from(input.idImageBase64.replace(/^data:image\/\w+;base64,/, ""), "base64");
       const idKey = `verifications/${ctx.user.id}-id-${Date.now()}.jpg`;
       const { url: idImageUrl } = await storagePut(idKey, idBuffer, input.mimeType);
@@ -33,7 +31,6 @@ export const verificationRouter = router({
         selfieUrl = url;
       }
 
-      // Create verification request
       await db.insert(verificationRequests).values({
         workerId: ctx.user.id,
         idImageUrl,
@@ -42,12 +39,10 @@ export const verificationRouter = router({
         status: "pending",
       });
 
-      // Update user status to pending
       await db.update(users)
         .set({ verificationStatus: "pending" })
         .where(eq(users.id, ctx.user.id));
 
-      // Notify owner
       await notifyOwner({
         title: "New Verification Request",
         content: `Worker ${ctx.user.name || ctx.user.email} (ID: ${ctx.user.id}) submitted ID verification. Legal name: ${input.legalName}. Review in Admin Dashboard.`,
@@ -56,7 +51,6 @@ export const verificationRouter = router({
       return { success: true, status: "pending" };
     }),
 
-  // Get current user's verification status
   myStatus: protectedProcedure.query(async ({ ctx }) => {
     const db = await getDb();
     if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR" });
@@ -72,7 +66,6 @@ export const verificationRouter = router({
     return user ?? null;
   }),
 
-  // Admin: get all pending verification requests
   adminQueue: protectedProcedure.query(async ({ ctx }) => {
     if (ctx.user.role !== "admin") throw new TRPCError({ code: "FORBIDDEN" });
     const db = await getDb();
@@ -99,7 +92,6 @@ export const verificationRouter = router({
     return requests;
   }),
 
-  // Admin: approve or reject a verification request
   adminReview: protectedProcedure
     .input(z.object({
       requestId: z.number(),
@@ -130,5 +122,17 @@ export const verificationRouter = router({
       }).where(eq(users.id, req.workerId));
 
       return { success: true, newStatus };
+    }),
+
+  createStripeSession: protectedProcedure
+    .mutation(async ({ ctx }) => {
+      const stripe = new (await import("stripe")).default(process.env.STRIPE_SECRET_KEY!);
+      const appUrl = process.env.APP_URL || "https://www.shiftchef.co";
+      const session = await stripe.identity.verificationSessions.create({
+        type: "document",
+        metadata: { userId: String(ctx.user.id) },
+        return_url: `${appUrl}/verify?stripe=complete`,
+      });
+      return { url: session.url };
     }),
 });

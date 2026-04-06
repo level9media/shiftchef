@@ -6,6 +6,8 @@ import ErrorBoundary from "./components/ErrorBoundary";
 import { ThemeProvider } from "./contexts/ThemeContext";
 import Login from "./pages/Login";
 import Feed from "./pages/Feed";
+import JobFeed from "./pages/JobFeed";
+import MapFeed from "./pages/MapFeed";
 import JobDetail from "./pages/JobDetail";
 import PostJob from "./pages/PostJob";
 import Profile from "./pages/Profile";
@@ -28,6 +30,7 @@ import { PWAInstallPrompt } from "./components/PWAInstallPrompt";
 import AdminCoupons from "./pages/AdminCoupons";
 import PrivacyPolicy from "./pages/PrivacyPolicy";
 import EmployerDashboard from "./pages/EmployerDashboard";
+import JobPosted from "./pages/JobPosted";
 
 function Router() {
   return (
@@ -35,7 +38,9 @@ function Router() {
       <Route path="/" component={Login} />
       <Route path="/login" component={Login} />
       <Route path="/onboarding" component={Onboarding} />
-      <Route path="/feed" component={Feed} />
+      <Route path="/feed" component={JobFeed} />
+      <Route path="/map" component={MapFeed} />
+      <Route path="/classic-feed" component={Feed} />
       <Route path="/jobs/:id" component={JobDetail} />
       <Route path="/post-job" component={PostJob} />
       <Route path="/profile" component={Profile} />
@@ -56,6 +61,7 @@ function Router() {
       <Route path="/faq" component={FAQ} />
       <Route path="/privacy" component={PrivacyPolicy} />
       <Route path="/employer-dashboard" component={EmployerDashboard} />
+      <Route path="/job-posted" component={JobPosted} />
       <Route path="/404" component={NotFound} />
       <Route component={NotFound} />
     </Switch>
