@@ -28,7 +28,7 @@ export const isCapacitor = (): boolean => {
  * In Capacitor WebView, all API calls must use the absolute URL because
  * relative paths resolve to capacitor://localhost/api/... which doesn't exist.
  */
-export const PRODUCTION_API_BASE = "https://www.shiftchef.co";
+export const PRODUCTION_API_BASE = "https://shiftchef-production.up.railway.app";
 
 /**
  * Returns the correct API base URL depending on the runtime environment.
