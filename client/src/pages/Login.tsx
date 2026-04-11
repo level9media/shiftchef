@@ -200,7 +200,7 @@ export default function Login() {
                     autoFocus
                   />
                 </div>
-                <p className="text-[11px] text-muted-foreground mt-2">By continuing you agree to our Terms & Privacy Policy.</p>
+                <p className="text-[11px] text-muted-foreground mt-2">By continuing you agree to our <a href="/terms" className="underline hover:text-foreground">Terms</a> &amp; <a href="/privacy" className="underline hover:text-foreground">Privacy Policy</a>.</p>
               </div>
               {error && <p className="text-sm text-red-400">{error}</p>}
               <button

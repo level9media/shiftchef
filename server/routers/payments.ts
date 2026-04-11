@@ -18,6 +18,7 @@ import { getStripe, STRIPE_PRODUCTS } from "../stripe";
 const ALLOWED_ORIGINS = [
   "https://shiftchef.co",
   "https://www.shiftchef.co",
+  "https://shiftchef-production.up.railway.app",
   "https://staffuphub-5xtewxhs.manus.space",
 ];
 

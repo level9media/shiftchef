@@ -29,6 +29,7 @@ import FAQ from "./pages/FAQ";
 import { PWAInstallPrompt } from "./components/PWAInstallPrompt";
 import AdminCoupons from "./pages/AdminCoupons";
 import PrivacyPolicy from "./pages/PrivacyPolicy";
+import TermsOfService from "./pages/TermsOfService";
 import EmployerDashboard from "./pages/EmployerDashboard";
 import JobPosted from "./pages/JobPosted";
 
@@ -60,6 +61,7 @@ function Router() {
       <Route path="/how-it-works" component={HowItWorks} />
       <Route path="/faq" component={FAQ} />
       <Route path="/privacy" component={PrivacyPolicy} />
+      <Route path="/terms" component={TermsOfService} />
       <Route path="/employer-dashboard" component={EmployerDashboard} />
       <Route path="/job-posted" component={JobPosted} />
       <Route path="/404" component={NotFound} />
