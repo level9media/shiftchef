@@ -21,6 +21,14 @@ workflows:
         VITE_FRONTEND_FORGE_API_KEY: ZokMKTeVAZLoS5fSEMvHMV
         VITE_APP_TITLE: ShiftChef - Find Food Service Jobs Fast!
 
+    triggering:
+      events:
+        - push
+      branch_patterns:
+        - pattern: main
+          include: true
+          source: true
+
     scripts:
       - name: Install pnpm via npm
         script: |
