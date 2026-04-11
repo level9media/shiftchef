@@ -29,7 +29,7 @@ const SKILLS = [
 const ROLE_OPTIONS = SKILLS.map((s) => s.label);
 
 const CITIES = [
-  "Austin, TX", "Phoenix, AZ", "Mesa, AZ", "Houston, TX",
+  "Austin, TX", "Las Vegas, NV", "Phoenix, AZ", "Mesa, AZ", "Houston, TX",
   "Dallas, TX", "San Antonio, TX", "New York, NY",
 ];
 

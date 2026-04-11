@@ -204,7 +204,7 @@ export default function Home() {
           <span className="opacity-30">|</span>
           <button onClick={() => navigate("/faq")} className="text-primary hover:underline font-semibold">FAQ</button>
         </div>
-        <p>Austin, TX &middot; Phoenix, AZ &middot; Mesa, AZ</p>
+        <p>Austin, TX &middot; Las Vegas, NV &middot; Phoenix, AZ &middot; Mesa, AZ</p>
       </div>
     </div>
   );

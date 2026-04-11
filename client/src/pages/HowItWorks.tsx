@@ -48,7 +48,7 @@ const WORKER_STEPS = [
     icon: <Search size={22} className="text-white" />,
     color: "#10B981",
     title: "Browse Open Shifts",
-    desc: "Filter by city, role, pay rate, and date. Every listing shows the total payout upfront — no surprises. Austin, Phoenix, and Mesa shifts available now.",
+    desc: "Filter by city, role, pay rate, and date. Every listing shows the total payout upfront — no surprises. Austin, Las Vegas, Phoenix, and Mesa shifts available now.",
   },
   {
     step: "02",
@@ -93,7 +93,7 @@ export default function HowItWorks() {
   ] : EMPLOYER_STEPS;
 
   const WORKER_STEPS_TRANSLATED = isSpanish ? [
-    { step: "01", icon: <Search size={22} className="text-white" />, color: "#10B981", title: "Explora Turnos Disponibles", desc: "Filtra por ciudad, rol, tarifa de pago y fecha. Cada publicación muestra el pago total por adelantado. Turnos disponibles en Austin, Phoenix y Mesa." },
+    { step: "01", icon: <Search size={22} className="text-white" />, color: "#10B981", title: "Explora Turnos Disponibles", desc: "Filtra por ciudad, rol, tarifa de pago y fecha. Cada publicación muestra el pago total por adelantado. Turnos disponibles en Austin, Las Vegas, Phoenix y Mesa." },
     { step: "02", icon: <FileText size={22} className="text-white" />, color: "#10B981", title: "Aplica en Segundos", desc: "Toca Aplicar, agrega una nota opcional y envía. Tu perfil, calificación y experiencia se envían al empleador automáticamente. Sin cargas de CV, sin formularios." },
     { step: "03", icon: <CheckCircle size={22} className="text-white" />, color: "#10B981", title: "Sé Contratado y Preséntate", desc: "¿Aceptado? Recibes una notificación instantánea con la dirección, persona de contacto e instrucciones de llegada. Llega 10 minutos antes y sé profesional." },
     { step: "04", icon: <Banknote size={22} className="text-white" />, color: "#10B981", title: "Cobra el Mismo Día", desc: "Registra tu salida cuando termina el turno. El empleador libera el pago a través del depósito Stripe. Transfiere directamente a tu cuenta bancaria o Apple Pay — el mismo día." },
@@ -110,7 +110,7 @@ export default function HowItWorks() {
     <AppShell>
       <SEOHead
         title="How It Works — ShiftChef | On-Demand Hospitality Staffing"
-        description="Post a shift in 60 seconds. Hire verified hospitality workers. Pay same day. ShiftChef connects Austin, Phoenix, and Mesa restaurants with on-demand staff."
+        description="Post a shift in 60 seconds. Hire verified hospitality workers. Pay same day. ShiftChef connects Austin, Las Vegas, Phoenix, and Mesa restaurants with on-demand staff."
         canonicalPath="/how-it-works"
       />
 

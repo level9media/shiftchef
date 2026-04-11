@@ -9,6 +9,7 @@ import { toast } from "sonner";
 
 const CITIES: Record<string, { label: string }> = {
   "Austin, TX":      { label: "Austin" },
+  "Las Vegas, NV":   { label: "Las Vegas" },
   "Houston, TX":     { label: "Houston" },
   "Dallas, TX":      { label: "Dallas" },
   "San Antonio, TX": { label: "San Antonio" },

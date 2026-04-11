@@ -33,7 +33,7 @@ const SKILLS_ES = [
   { value: "manager", label: "Gerente", emoji: "📋" },
 ];
 
-const CITIES = ["Austin, TX", "Phoenix, AZ", "Mesa, AZ", "Houston, TX", "Dallas, TX", "San Antonio, TX", "New York, NY", "Chicago, IL"];
+const CITIES = ["Austin, TX", "Las Vegas, NV", "Phoenix, AZ", "Mesa, AZ", "Houston, TX", "Dallas, TX", "San Antonio, TX", "New York, NY", "Chicago, IL"];
 
 export default function WorkerAvailability() {
   const { isAuthenticated } = useAuth();

@@ -16,6 +16,7 @@ const MAPBOX_TOKEN = "pk.eyJ1Ijoic2hpZnRjaGVmIiwiYSI6ImNtbmgwcHFjczBmOXMycHEwYjB
 // ─── Constants ────────────────────────────────────────────────────────────────
 const CITIES: Record<string, { lat: number; lng: number; label: string }> = {
   "Austin, TX":      { lat: 30.2672, lng: -97.7431, label: "Austin" },
+  "Las Vegas, NV":   { lat: 36.1699, lng: -115.1398, label: "Las Vegas" },
   "Houston, TX":     { lat: 29.7604, lng: -95.3698, label: "Houston" },
   "Dallas, TX":      { lat: 32.7767, lng: -96.7970, label: "Dallas" },
   "San Antonio, TX": { lat: 29.4241, lng: -98.4936, label: "San Antonio" },

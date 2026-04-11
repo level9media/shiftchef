@@ -77,7 +77,7 @@ const WORKER_FAQS_EN: FAQItem[] = [
   },
   {
     q: "What cities are available?",
-    a: "ShiftChef is currently live in Austin TX, Phoenix AZ, and Mesa AZ. We are expanding to additional cities — sign up and you'll be notified when your city goes live.",
+    a: "ShiftChef is currently live in Austin TX, Las Vegas NV, Phoenix AZ, and Mesa AZ. We are expanding to additional cities — sign up and you'll be notified when your city goes live.",
   },
   {
     q: "What if I get hired but can't make the shift?",
@@ -98,7 +98,7 @@ const WORKER_FAQS_ES: FAQItem[] = [
   { q: "¿Cómo funciona el pago el mismo día?", a: "Cuando termina tu turno y el empleador confirma la finalización, el depósito se libera a tu cuenta de ShiftChef. Desde allí, puedes transferir a tu cuenta bancaria vinculada o Apple Pay. La mayoría de las transferencias se completan en pocas horas." },
   { q: "¿Necesito verificar mi identidad?", a: "Sí. La verificación de identidad es obligatoria antes de solicitar turnos. Esto protege a los empleadores y garantiza que seas tratado como un profesional de confianza. La verificación toma unos 2 minutos." },
   { q: "¿Soy empleado o contratista?", a: "Eres un contratista independiente 1099. Tú eliges qué turnos solicitar, estableces tu propio horario y trabajas para múltiples empleadores. Eres responsable de tus propios impuestos." },
-  { q: "¿Qué ciudades están disponibles?", a: "ShiftChef está actualmente activo en Austin TX, Phoenix AZ y Mesa AZ. Nos estamos expandiendo a ciudades adicionales: regístrate y te notificaremos cuando tu ciudad esté disponible." },
+  { q: "¿Qué ciudades están disponibles?", a: "ShiftChef está actualmente activo en Austin TX, Las Vegas NV, Phoenix AZ y Mesa AZ. Nos estamos expandiendo a ciudades adicionales: regístrate y te notificaremos cuando tu ciudad esté disponible." },
   { q: "¿Qué pasa si me contratan pero no puedo asistir al turno?", a: "Si necesitas cancelar, házlo lo antes posible a través de la app. Las cancelaciones frecuentes después de ser contratado reducirán tu puntaje de confiabilidad, dificultando ser contratado en el futuro." },
   { q: "¿Qué debo traer y cómo debo llegar?", a: "Llega al menos 10 minutos antes. Vístete apropiadamente para el rol. Trae cualquier equipo o certificación requerida. Sé profesional, cortés y listo para trabajar." },
   { q: "¿Cómo funcionan las calificaciones?", a: "Después de cada turno completado, tú y el empleador se califican mutuamente del 1 al 5 estrellas. Tu calificación promedio y puntaje de confiabilidad son visibles para todos los empleadores." },
@@ -149,7 +149,7 @@ export default function FAQ() {
     <AppShell>
       <SEOHead
         title="FAQ — ShiftChef | Hospitality Staffing Questions Answered"
-        description="Answers to the most common questions about ShiftChef — for employers hiring hospitality staff and workers looking for on-demand shifts in Austin, Phoenix, and Mesa."
+        description="Answers to the most common questions about ShiftChef — for employers hiring hospitality staff and workers looking for on-demand shifts in Austin, Las Vegas, Phoenix, and Mesa."
         canonicalPath="/faq"
       />
 

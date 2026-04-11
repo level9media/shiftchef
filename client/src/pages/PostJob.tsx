@@ -24,7 +24,7 @@ const ROLE_KEYS = [
   { value: "manager", key: "manager" as const, emoji: "📋" },
 ] as const;
 
-const CITIES = ["Austin, TX", "Phoenix, AZ", "Mesa, AZ", "Houston, TX", "Dallas, TX", "San Antonio, TX", "New York, NY", "Chicago, IL"];
+const CITIES = ["Austin, TX", "Las Vegas, NV", "Phoenix, AZ", "Mesa, AZ", "Houston, TX", "Dallas, TX", "San Antonio, TX", "New York, NY", "Chicago, IL"];
 
 type Step = "pricing" | "form";
 

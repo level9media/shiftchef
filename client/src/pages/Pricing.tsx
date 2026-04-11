@@ -76,7 +76,7 @@ const WORKER_PERKS = [
   { icon: <Clock size={16} className="text-emerald-400" />, text: "Same-day pay after shift" },
   { icon: <Shield size={16} className="text-emerald-400" />, text: "Secure escrow — always get paid" },
   { icon: <Star size={16} className="text-emerald-400" />, text: "Build your rating and reputation" },
-  { icon: <ChefHat size={16} className="text-emerald-400" />, text: "Access Austin, Phoenix, Mesa shifts" },
+  { icon: <ChefHat size={16} className="text-emerald-400" />, text: "Access Austin, Las Vegas, Phoenix, Mesa shifts" },
   { icon: <Zap size={16} className="text-emerald-400" />, text: "Instant hire notifications" },
 ];
 
@@ -107,7 +107,7 @@ export default function Pricing() {
   return (
     <AppShell>
       <SEOHead
-        title="Pricing — ShiftChef | Hire Hospitality Staff in Austin, Phoenix & Mesa"
+        title="Pricing — ShiftChef | Hire Hospitality Staff in Austin, Las Vegas, Phoenix & Mesa"
         description="Post a shift for $35, get a 3-pack for $75, or go unlimited for $99/month. Workers always apply free. Same-day pay guaranteed."
         canonicalPath="/pricing"
       />
