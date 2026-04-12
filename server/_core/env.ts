@@ -8,4 +8,8 @@ export const env = {
   APP_URL: process.env.APP_URL || "http://localhost:3000",
   ownerOpenId: process.env.OWNER_OPEN_ID || "",
   cookieSecret: process.env.COOKIE_SECRET || process.env.JWT_SECRET!,
+  // Twilio SMS (optional — SMS silently skipped if not set)
+  TWILIO_ACCOUNT_SID: process.env.TWILIO_ACCOUNT_SID || "",
+  TWILIO_AUTH_TOKEN: process.env.TWILIO_AUTH_TOKEN || "",
+  TWILIO_FROM_NUMBER: process.env.TWILIO_FROM_NUMBER || "",
 } as const;

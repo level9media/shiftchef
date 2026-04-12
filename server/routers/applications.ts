@@ -1,7 +1,8 @@
 import { TRPCError } from "@trpc/server";
 import { z } from "zod";
 import { notifyOwner } from "../_core/notification";
-import { sendHireNotification } from "../_core/hireNotification";
+import { sendHireNotification, sendRejectionNotification } from "../_core/hireNotification";
+import { smsNewApplication, smsWorkerHired, smsWorkerRejected } from "../_core/sms";
 import {
   createApplication,
   getApplicationByJobAndWorker,
@@ -81,6 +82,16 @@ export const applicationsRouter = router({
         content: `${worker.name ?? "A worker"} applied to ${job.role} at ${job.restaurantName ?? "your restaurant"}.`,
       }).catch(() => {});
 
+      // SMS employer about new applicant
+      const employer = await getUserById(job.employerId);
+      smsNewApplication({
+        employerPhone: employer?.phone,
+        workerName: worker.name ?? "A worker",
+        role: job.role,
+        restaurantName: job.restaurantName,
+        city: job.city,
+      }).catch(() => {});
+
       return { success: true };
     }),
 
@@ -138,15 +149,32 @@ export const applicationsRouter = router({
       for (const other of allApps) {
         if (other.id !== input.applicationId && other.status === "pending") {
           await updateApplication(other.id, { status: "rejected" });
+          // SMS + email rejected workers
+          const rejectedWorker = await getUserById(other.workerId);
+          if (rejectedWorker) {
+            smsWorkerRejected({
+              workerPhone: rejectedWorker.phone,
+              workerName: rejectedWorker.name ?? "Worker",
+              role: job.role,
+            }).catch(() => {});
+            if (rejectedWorker.email) {
+              sendRejectionNotification(
+                rejectedWorker.email,
+                rejectedWorker.name ?? "Worker",
+                job.role
+              ).catch(() => {});
+            }
+          }
         }
       }
 
       // Mark job as filled
       await updateJob(app.jobId, { status: "filled", acceptedWorkerId: app.workerId });
 
-      // Send hire notification email to worker
+      // Send hire notification email + SMS to worker
       const worker = await getUserById(app.workerId);
       const employer = await getUserById(ctx.user.id);
+
       sendHireNotification({
         workerName: worker?.name ?? "Worker",
         workerEmail: worker?.email,
@@ -162,6 +190,17 @@ export const applicationsRouter = router({
         location: job.location,
         city: job.city,
         description: job.description,
+      }).catch(() => {});
+
+      smsWorkerHired({
+        workerPhone: worker?.phone,
+        workerName: worker?.name ?? "Worker",
+        role: job.role,
+        restaurantName: job.restaurantName,
+        startTime: job.startTime,
+        location: job.location,
+        contactName: job.contactName,
+        contactPhone: job.contactPhone,
       }).catch(() => {});
 
       notifyOwner({
@@ -180,6 +219,23 @@ export const applicationsRouter = router({
       if (!app) throw new TRPCError({ code: "NOT_FOUND" });
       if (app.employerId !== ctx.user.id) throw new TRPCError({ code: "FORBIDDEN" });
       await updateApplication(input.applicationId, { status: "rejected" });
+      // SMS + email worker about rejection
+      const rejectedWorker = await getUserById(app.workerId);
+      const job = await getJobById(app.jobId);
+      if (rejectedWorker && job) {
+        smsWorkerRejected({
+          workerPhone: rejectedWorker.phone,
+          workerName: rejectedWorker.name ?? "Worker",
+          role: job.role,
+        }).catch(() => {});
+        if (rejectedWorker.email) {
+          sendRejectionNotification(
+            rejectedWorker.email,
+            rejectedWorker.name ?? "Worker",
+            job.role
+          ).catch(() => {});
+        }
+      }
       return { success: true };
     }),
 

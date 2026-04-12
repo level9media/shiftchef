@@ -9,6 +9,7 @@ import { applications, jobs, payments, users } from "../../drizzle/schema";
 import { eq, and, isNotNull, isNull, lt } from "drizzle-orm";
 import { getStripe } from "../stripe";
 import { notifyOwner } from "../_core/notification";
+import { smsPaymentReleased } from "../_core/sms";
 
 const AUTO_RELEASE_DELAY_MS = 24 * 60 * 60 * 1000; // 24 hours
 
@@ -117,6 +118,17 @@ export async function runAutoReleasePayments() {
         title: "ShiftChef: Auto-Release Fired",
         content: `Payment auto-released for job ${app.jobId} | $${(payment.workerPayout / 100).toFixed(2)} to worker ${app.workerId}. Transfer: ${transferSucceeded ? "✅" : "⚠️ held in pendingBalance"}`,
       }).catch(() => {});
+
+      // SMS worker that their payment has been released
+      const [jobRow] = await db.select().from(jobs).where(eq(jobs.id, app.jobId)).limit(1);
+      if (worker) {
+        smsPaymentReleased({
+          workerPhone: worker.phone,
+          workerName: worker.name ?? "Worker",
+          amount: payment.workerPayout / 100,
+          restaurantName: jobRow?.restaurantName,
+        }).catch(() => {});
+      }
 
       console.log(`[AutoRelease] ✅ Released $${(payment.workerPayout / 100).toFixed(2)} for job ${app.jobId}`);
     } catch (err: any) {

@@ -1,6 +1,7 @@
 import { TRPCError } from "@trpc/server";
 import { z } from "zod";
 import { notifyOwner } from "../_core/notification";
+import { smsWorkerCheckedIn, smsWorkerCheckedOut } from "../_core/sms";
 import {
   getApplicationById,
   getJobById,
@@ -46,6 +47,17 @@ export const shiftsRouter = router({
         content: `Worker checked in for ${job.role} at ${job.restaurantName ?? "restaurant"}.`,
       }).catch(() => {});
 
+      // SMS employer that worker clocked in
+      const worker = await getUserById(ctx.user.id);
+      const employer = await getUserById(app.employerId);
+      smsWorkerCheckedIn({
+        employerPhone: employer?.phone,
+        workerName: worker?.name ?? "Your worker",
+        role: job.role,
+        restaurantName: job.restaurantName,
+        checkInTime: now,
+      }).catch(() => {});
+
       return { success: true, checkInAt: now };
     }),
 
@@ -85,6 +97,18 @@ export const shiftsRouter = router({
       notifyOwner({
         title: "ShiftChef: Shift Completed",
         content: `${job.role} shift at ${job.restaurantName ?? "restaurant"} completed. ${hoursWorked}h worked, $${totalWagesOwed} owed.`,
+      }).catch(() => {});
+
+      // SMS employer that worker clocked out with hours + total owed
+      const worker = await getUserById(ctx.user.id);
+      const employer = await getUserById(app.employerId);
+      smsWorkerCheckedOut({
+        employerPhone: employer?.phone,
+        workerName: worker?.name ?? "Your worker",
+        role: job.role,
+        restaurantName: job.restaurantName,
+        hoursWorked,
+        totalOwed: totalWagesOwed,
       }).catch(() => {});
 
       return { success: true, checkOutAt: now, hoursWorked, totalWagesOwed };
