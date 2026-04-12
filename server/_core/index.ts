@@ -5,6 +5,7 @@ import { createServer } from "http";
 import net from "net";
 import { createExpressMiddleware } from "@trpc/server/adapters/express";
 import { registerOAuthRoutes } from "./oauth";
+import { registerSeedRoute } from "./seed";
 import { appRouter } from "../routers";
 import { createContext } from "./context";
 import { serveStatic, setupVite } from "./vite";
@@ -98,6 +99,9 @@ async function startServer() {
 
   // OAuth callback
   registerOAuthRoutes(app);
+
+  // Seed route (dev/admin only)
+  registerSeedRoute(app);
 
   // tRPC API
   app.use(
