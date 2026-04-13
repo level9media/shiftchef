@@ -4,10 +4,9 @@ const config: CapacitorConfig = {
   appId: 'co.shiftchef.app',
   appName: 'ShiftChef',
   webDir: 'dist/public',
-  server: {
-    url: 'https://shiftchef-production.up.railway.app',
-    cleartext: false,
-  },
+  // NOTE: server.url intentionally removed for production builds.
+  // The app loads from bundled local files (dist/public) for reliability.
+  // API calls use the absolute URL via getApiBase() in platform.ts.
   ios: {
     contentInset: 'automatic',
     backgroundColor: '#0A0A0A',
